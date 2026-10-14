@@ -411,12 +411,12 @@ fn backlight_value(step: u8, max: u32) -> u32 {
 }
 
 impl Platform for DevicePlatform {
-    fn headphones(&self) -> bool {
-        fs::read_to_string(self.sysfs.join("kernel/debug/gpio")).is_ok_and(|g| headphones_in(&g))
-    }
-
     fn card_read_only(&self) -> bool {
         read_only(&self.root)
+    }
+
+    fn headphones(&self) -> bool {
+        fs::read_to_string(self.sysfs.join("kernel/debug/gpio")).is_ok_and(|g| headphones_in(&g))
     }
 
     fn set_backlight(&mut self, step: u8) {

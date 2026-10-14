@@ -1,7 +1,8 @@
 use std::ffi::c_void;
 use std::fmt;
 
-pub const OUT_W: u32 = 720;
+// 4:3 logical layout; source emulator framebuffer remains 240x160.
+pub const OUT_W: u32 = if cfg!(feature = "brick") { 640 } else { 720 };
 pub const OUT_H: u32 = 480;
 
 #[derive(Debug)]
@@ -59,10 +60,19 @@ pub fn blit_rect(window: (u32, u32), shake: f32) -> (i32, i32, i32, i32) {
         let dx = shake * w as f32 / OUT_W as f32;
         return (x + dx.round() as i32, window.1 as i32 - y - h, w, h);
     }
-    if window.0 < OUT_W || window.1 < OUT_H {
+    if cfg!(feature = "brick") || window.0 < OUT_W || window.1 < OUT_H {
         return blit_rect_fit(window, shake);
     }
     let (x, y, w, h) = fit_rect(window.0, window.1);
     let dx = shake * fit_scale(window.0, window.1) as f32;
     (x + dx.round() as i32, y, w, h)
+}
+
+#[cfg(all(test, feature = "brick"))]
+mod brick_tests {
+    #[test]
+    fn brick_uses_full_panel_with_native_four_three_layout() {
+        assert!(!crate::bezel::framed((1024, 768)));
+        assert_eq!(super::blit_rect((1024, 768), 0.0), (0, 0, 1024, 768));
+    }
 }

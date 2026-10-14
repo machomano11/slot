@@ -25,10 +25,18 @@ pub enum QuickRow {
     Wallpaper,
     General,
     Recents,
+    Lights,
+    LedMode,
+    LedTop,
+    LedButtons,
+    LedTriggers,
+    LedColor,
+    LedEffect,
+    Wifi,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 19] = [
+    pub const ALL: [QuickRow; 27] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -48,8 +56,17 @@ impl QuickRow {
         QuickRow::Wallpaper,
         QuickRow::General,
         QuickRow::Recents,
+        QuickRow::Lights,
+        QuickRow::LedMode,
+        QuickRow::LedTop,
+        QuickRow::LedButtons,
+        QuickRow::LedTriggers,
+        QuickRow::LedColor,
+        QuickRow::LedEffect,
+        QuickRow::Wifi,
     ];
 
+    #[cfg(not(feature = "brick"))]
     pub const MAIN: [QuickRow; 4] = [
         QuickRow::Screen,
         QuickRow::Game,
@@ -63,6 +80,26 @@ impl QuickRow {
         QuickRow::Theme,
         QuickRow::Recents,
     ];
+    #[cfg(feature = "brick")]
+    pub const MAIN: [QuickRow; 6] = [
+        QuickRow::Screen,
+        QuickRow::Game,
+        QuickRow::General,
+        QuickRow::Lights,
+        QuickRow::Wifi,
+        QuickRow::About,
+    ];
+    pub const LIGHTS: [QuickRow; 6] = [
+        QuickRow::LedMode,
+        QuickRow::LedTop,
+        QuickRow::LedButtons,
+        QuickRow::LedTriggers,
+        QuickRow::LedColor,
+        QuickRow::LedEffect,
+    ];
+    pub fn led_setting(self) -> bool {
+        Self::LIGHTS.contains(&self)
+    }
 
     pub const SCREEN: [QuickRow; 4] = [
         QuickRow::GbaShader,
@@ -87,6 +124,7 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
+            QuickRow::LedMode | QuickRow::LedTop | QuickRow::LedButtons | QuickRow::LedTriggers | QuickRow::LedColor | QuickRow::LedEffect => &QuickRow::LIGHTS,
             QuickRow::GbaShader
             | QuickRow::GbShader
             | QuickRow::ColourCorrection
@@ -107,6 +145,7 @@ impl QuickRow {
 
     pub fn parent(self) -> Option<QuickRow> {
         match self.page()[0] {
+            QuickRow::LedMode => Some(QuickRow::Lights),
             QuickRow::GbaShader => Some(QuickRow::Screen),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::Wallpaper => Some(QuickRow::General),
@@ -116,6 +155,7 @@ impl QuickRow {
 
     pub fn child(self) -> Option<QuickRow> {
         match self {
+            QuickRow::Lights => Some(QuickRow::LIGHTS[0]),
             QuickRow::Screen => Some(QuickRow::SCREEN[0]),
             QuickRow::Game => Some(QuickRow::GAME[0]),
             QuickRow::General => Some(QuickRow::GENERAL[0]),
@@ -129,6 +169,14 @@ impl QuickRow {
 
     pub fn label(self) -> &'static str {
         match self {
+            QuickRow::Wifi => "Wi-Fi",
+            QuickRow::Lights => "LEDs",
+            QuickRow::LedMode => "Lights",
+            QuickRow::LedTop => "Top Bar",
+            QuickRow::LedButtons => "Buttons",
+            QuickRow::LedTriggers => "Triggers",
+            QuickRow::LedColor => "Color",
+            QuickRow::LedEffect => "Effect",
             QuickRow::FastForward => "Fast Forward",
             QuickRow::FastForwardSound => "Fast Forward Sound",
             QuickRow::Screen => "Screen",
@@ -159,6 +207,8 @@ impl QuickRow {
                 | QuickRow::Screen
                 | QuickRow::Game
                 | QuickRow::General
+                | QuickRow::Lights
+                | QuickRow::Wifi
         )
     }
 
@@ -188,10 +238,23 @@ pub enum QuickValue {
     Frames1,
     Dark,
     Light,
+    Stock,
+    Low,
+    Medium,
+    High,
+    White,
+    Blue,
+    Green,
+    Amber,
+    Red,
+    Purple,
+    Steady,
+    Breathe,
+    Unavailable,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 13] = [
+    pub const ALL: [QuickValue; 26] = [
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -205,6 +268,19 @@ impl QuickValue {
         QuickValue::Frames1,
         QuickValue::Dark,
         QuickValue::Light,
+        QuickValue::Stock,
+        QuickValue::Low,
+        QuickValue::Medium,
+        QuickValue::High,
+        QuickValue::White,
+        QuickValue::Blue,
+        QuickValue::Green,
+        QuickValue::Amber,
+        QuickValue::Red,
+        QuickValue::Purple,
+        QuickValue::Steady,
+        QuickValue::Breathe,
+        QuickValue::Unavailable,
     ];
 
     pub fn index(self) -> usize {
@@ -226,6 +302,20 @@ impl QuickValue {
             QuickValue::Frames1 => "1 Frame",
             QuickValue::Dark => "Dark",
             QuickValue::Light => "Light",
+            QuickValue::Stock => "Stock",
+            QuickValue::Low => "Low",
+            QuickValue::Medium => "Medium",
+            QuickValue::High => "High",
+            QuickValue::White => "White",
+            QuickValue::Blue => "Blue",
+            QuickValue::Green => "Green",
+            QuickValue::Amber => "Amber",
+            QuickValue::Red => "Red",
+            QuickValue::Purple => "Purple",
+            QuickValue::Steady => "Steady",
+            QuickValue::Breathe => "Breathe",
+            QuickValue::Unavailable => "Unavailable",
+
         }
     }
 

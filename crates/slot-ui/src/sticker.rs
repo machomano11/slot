@@ -1,14 +1,9 @@
 use slot_gfx::{Draw, TexId};
 
-use crate::art::render_svg;
 use crate::barcode::{code39, CODE39_NARROW, CODE39_WIDE};
 use crate::bitmaps;
 use crate::plate::UndoFace;
 use crate::text;
-
-const WORDMARK_SVG: &str = include_str!("../assets/wordmark.svg");
-
-const WORDMARK_W: u32 = 250;
 
 pub const STICKER_W: u32 = 660;
 pub const STICKER_H: u32 = 228;
@@ -28,6 +23,7 @@ const HEAD_PX: f32 = 11.0;
 const BODY_PX: f32 = 8.5;
 const SERIAL_PX: f32 = 26.0;
 const SMALL_PX: f32 = 9.0;
+const TITLE_PX: f32 = 19.0;
 
 pub struct StickerFields<'a> {
     pub battery: Option<u8>,
@@ -35,30 +31,36 @@ pub struct StickerFields<'a> {
     pub dirty_digit: char,
 }
 
+/// Version of the TrimUI Brick port (kept in step with System/launch.sh).
+pub const PORT_VERSION: &str = "V0.23";
+
 pub const CREDITS: [&str; 11] = [
-    "EXQUISITE SKEUOMORPHIC",
-    "ARTWORK MADE BY MARKUS.",
-    "EMULATION POWERED BY MGBA",
-    "AND GPSP. UNDERLYING OS IS",
-    "BASEOS BY PVAIBHAV. TYPE IS",
-    "OPEN SANS AND NERD FONTS",
-    "SYMBOLS BY RYAN L MCINTYRE.",
-    "THE PANEL MASK IS DERIVED",
-    "FROM GIGAHERZ'S LCD3X. THE",
-    "CART SOUNDS ARE MY CHILDHOOD",
-    "GAMEBOY.",
+    "AN UNOFFICIAL PORT OF SLOT,",
+    "THE GB/GBC/GBA FRONTEND BY",
+    "BRANDON T. KOWALSKI FOR THE",
+    "ANBERNIC RG SP, TO THE",
+    "TRIMUI BRICK. PORT BY",
+    "LORDNORDYX. ARTWORK BY",
+    "MARKUS. EMULATION BY MGBA",
+    "AND GPSP. TYPE: OPEN SANS,",
+    "NERD FONTS. PANEL MASK FROM",
+    "GIGAHERZ'S LCD3X. BUILT",
+    "WITH CLAUDE.",
 ];
 
-pub const ORIGIN: [&str; 2] = ["S/LOT-USA", "MADE IN ITHACA"];
+pub const ORIGIN: [&str; 2] = ["S/LOT-BRICK", "PORT OF SLOT"];
 
-pub const COPYRIGHT: &str = "\u{a9} 2026 BRANDON T. KOWALSKI";
+/// Shown large where the original showed its handheld's wordmark.
+pub const TITLE: &str = "TRIMUI BRICK PORT";
 
-pub const HOME: &str = "SEE README.";
+pub const COPYRIGHT: &str = "SLOT \u{a9} 2026 BRANDON T. KOWALSKI";
+
+pub const HOME: &str = "BRICK PORT BY LORDNORDYX";
 
 pub fn head_rows(f: &StickerFields) -> [String; 3] {
     [
-        "MODEL NO. AGS-102".into(),
-        format!("INPUT : 5V{DC}1.5A"),
+        "DEVICE : TRIMUI BRICK".into(),
+        format!("PORT : SLOT BRICK {PORT_VERSION}"),
         match f.battery {
             Some(p) => format!("BATTERY : LI-ION ({p}%)"),
             None => "BATTERY : LI-ION".to_string(),
@@ -71,6 +73,7 @@ pub fn sticker_lines(f: &StickerFields) -> Vec<String> {
     out.extend(CREDITS.iter().map(|s| s.to_string()));
     out.extend(ORIGIN.iter().map(|s| s.to_string()));
     out.push(format!("{} {}", f.serial, f.dirty_digit));
+    out.push(TITLE.to_string());
     out.push(COPYRIGHT.to_string());
     out.push(HOME.to_string());
     out
@@ -138,28 +141,6 @@ impl Canvas {
             );
         }
         bar_w
-    }
-
-    fn blit(&mut self, x: u32, y: u32, src: &[u8], sw: u32, sh: u32) {
-        for row in 0..sh {
-            for col in 0..sw {
-                let s = ((row * sw + col) * 4) as usize;
-                let a = src[s + 3] as u32;
-                if a == 0 {
-                    continue;
-                }
-                let (dx, dy) = (x + col, y + row);
-                if dx >= self.w || dy >= self.h {
-                    continue;
-                }
-                let d = ((dy * self.w + dx) * 4) as usize;
-                for k in 0..3 {
-                    let under = self.px[d + k] as u32;
-                    self.px[d + k] = ((src[s + k] as u32 * a + under * (255 - a)) / 255) as u8;
-                }
-                self.px[d + 3] = 255;
-            }
-        }
     }
 
     fn outline(&mut self, x: f32, y: f32, w: f32, h: f32, t: f32, c: [u8; 3]) {
@@ -278,19 +259,10 @@ pub fn sticker_face(f: &StickerFields) -> UndoFace {
         BLACK,
     );
 
-    let mut ry = panel_y as f32 + panel_h as f32 + 10.0;
+    let mut ry = panel_y as f32 + panel_h as f32 + 8.0;
     let right_edge = (panel_x + panel_w) as f32;
-    if let Some(mark) = wordmark(WORDMARK_W) {
-        let (mw, mh) = mark.1;
-        c.blit(
-            (right_edge - mw as f32 - 10.0) as u32,
-            ry as u32,
-            &mark.0,
-            mw,
-            mh,
-        );
-        ry += mh as f32 + 4.0;
-    }
+    let tw = c.print_measure(TITLE, TITLE_PX);
+    ry = c.print(right_edge - tw - 10.0, ry, TITLE, TITLE_PX, WHITE) + 2.0;
     for line in [COPYRIGHT, HOME] {
         let lw = c.print_measure(line, SMALL_PX);
         ry = c.print(right_edge - lw - 10.0, ry, line, SMALL_PX, WHITE);
@@ -301,13 +273,6 @@ pub fn sticker_face(f: &StickerFields) -> UndoFace {
         w: STICKER_W,
         h: STICKER_H,
     }
-}
-
-fn wordmark(w: u32) -> Option<(Vec<u8>, (u32, u32))> {
-    let tree = usvg::Tree::from_str(WORDMARK_SVG, &usvg::Options::default()).ok()?;
-    let size = tree.size();
-    let h = (w as f32 * size.height() / size.width()).round() as u32;
-    Some((render_svg(WORDMARK_SVG, w, h)?, (w, h)))
 }
 
 pub fn draw_sticker(face: Option<TexId>, out: &mut Vec<Draw>) {

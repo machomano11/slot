@@ -241,7 +241,8 @@ fn b_leaves_the_menu_without_doing_anything() {
 
 #[test]
 fn each_row_commits_to_its_own_outcome() {
-    for (down, want) in [(0, "restart"), (1, "off")] {
+    for (down, choice) in PowerChoice::ALL.into_iter().enumerate() {
+        let want = if choice == PowerChoice::Restart { "restart" } else { "off" };
         let d = tmp_root_with_carts(&["Emerald"]);
         let mut a = app_playing_in(d.path(), "Emerald");
         a.apply(Action::PowerHold);
@@ -266,6 +267,7 @@ fn the_shutdown_screen_is_up_before_the_machine_may_stop() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let mut a = app_playing_in(d.path(), "Emerald");
     a.apply(Action::PowerHold);
+    #[cfg(not(feature = "brick"))]
     a.apply(Action::GbaDown(Btn::Down));
     a.apply(Action::GbaDown(Btn::A));
 
@@ -330,9 +332,10 @@ fn a_committed_shutdown_holds_the_core_still() {
     play(&mut s, &mut now);
 
     hold_power(&mut s, &mut now);
+    #[cfg(not(feature = "brick"))]
     s.app_mut().apply(Action::GbaDown(Btn::Down));
     s.app_mut().apply(Action::GbaDown(Btn::A));
-    assert!(s.app().powering_off(), "Power Off is the second row");
+    assert!(s.app().powering_off(), "selected the shutdown row");
     s.update(DT);
     await_paused(&mut s);
 }

@@ -39,3 +39,15 @@ pub mod state_writer;
 pub mod thumb;
 pub mod video_mode;
 pub mod wallpaper;
+
+#[cfg(feature = "brick")]
+pub mod brick_led;
+
+#[cfg(feature = "brick")]
+pub mod brick_power;
+
+#[cfg(feature = "brick")]
+pub mod brick_wifi;
+
+#[cfg(feature = "brick")]
+pub mod brick_link;

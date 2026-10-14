@@ -13,7 +13,12 @@ pub fn program(vert: &str, frag: &str) -> Result<gl::types::GLuint, GfxError> {
         true => (VERT_PREAMBLE_ES, FRAG_PREAMBLE_ES),
         false => (VERT_PREAMBLE, FRAG_PREAMBLE),
     };
-    crate::gl::program(&format!("{vp}{vert}"), &format!("{fp}{frag}"))
+    let brick = if cfg!(feature = "brick") {
+        "#define SLOT_BRICK\n"
+    } else {
+        ""
+    };
+    crate::gl::program(&format!("{vp}{vert}"), &format!("{fp}{brick}{frag}"))
 }
 
 pub const RECT_VERT: &str = r#"
@@ -76,6 +81,9 @@ void main() {
     vec3 c = texture2D(u_game, uv).rgb;
     bool inside = all(greaterThanEqual(uv, u_pic.xy)) && all(lessThan(uv, u_pic.zw));
     if (!inside) {
+#ifdef SLOT_BRICK
+        c = vec3(0.0);
+#endif
     } else if (u_mode > 3.5) {
         c = pow(c, vec3(1.05));
         vec2 d = abs(f - 0.5);

@@ -45,13 +45,13 @@ impl Session {
             root,
             emu: None,
             sink,
-            gestures: Gestures::new(),
+            gestures: if cfg!(feature = "brick") { Gestures::brick() } else { Gestures::new() },
+            prefetch: Prefetch::default(),
             pad: Pad::default(),
             rewinding: false,
             fast: false,
             motor: 0,
             pulse: None,
-            prefetch: Prefetch::default(),
             reloading: false,
             driven: false,
         };
@@ -171,6 +171,15 @@ impl Session {
         self.sync_pad();
     }
 
+    #[cfg(feature = "brick")]
+    pub fn reset_sleep_input(&mut self) {
+        self.gestures = Gestures::brick();
+        self.pad.clear();
+        self.rewinding = false;
+        self.fast = false;
+        self.sync_pad();
+    }
+
     fn sync_pad(&mut self) {
         for btn in self.app.taken_buttons() {
             self.pad.apply(Action::GbaUp(*btn));
@@ -191,6 +200,9 @@ impl Session {
     }
 
     fn act(&mut self, action: Action) {
+        // Keep the existing Select+B shortcut as an alias on Brick.
+        #[cfg(feature = "brick")]
+        let action = if action == Action::ShaderPrev { Action::LedToggle } else { action };
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
         }
@@ -266,6 +278,12 @@ impl Session {
         }
         self.sync_core();
         self.sync_reload();
+        if !self.reloading {
+            if let Some((stem, serial)) = self.app.take_solo_reload() {
+                eprintln!("slot: link: restoring single-player mode");
+                self.reload_for_link(&stem, serial);
+            }
+        }
         if !self.has_core() {
             for action in self.gestures.drop_ff_latch() {
                 self.act(action);
@@ -336,11 +354,11 @@ impl Session {
         }
     }
 
-    fn actually_rewinding(&self) -> bool {
+    pub(crate) fn actually_rewinding(&self) -> bool {
         self.rewinding && self.playing() && self.app.may_rewind()
     }
 
-    fn actually_fast_forwarding(&self) -> bool {
+    pub(crate) fn actually_fast_forwarding(&self) -> bool {
         self.fast && self.playing() && self.app.may_fast_forward()
     }
 
@@ -448,7 +466,9 @@ impl Session {
         self.app.set_core(core);
         self.app.set_platform(platform);
         self.app
-            .set_video_mode(crate::video_mode::video_mode_for(&self.root, stem));
+            .set_video_mode(crate::video_mode::video_mode_for_platform(
+                &self.root, stem, platform,
+            ));
         self.app.set_link_loaded(serial);
         let resume = (!self.app.starting_clean())
             .then(|| persist::read_resume(&self.root, platform, core, stem))

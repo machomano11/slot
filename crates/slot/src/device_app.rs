@@ -2,9 +2,16 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use slot::frontend::Frontend;
+#[cfg(feature = "brick")]
+use slot::input::BrickInput;
+#[cfg(not(feature = "brick"))]
 use slot::input::DeviceInput;
 use slot_gfx::{Compositor, FbdevSurface, Surface};
-use slot_power::{trace_first_frame, DevicePlatform};
+use slot_power::trace_first_frame;
+#[cfg(feature = "brick")]
+use slot_power::BrickPlatform;
+#[cfg(not(feature = "brick"))]
+use slot_power::DevicePlatform;
 
 const CARD: &str = "/mnt/sdcard";
 
@@ -63,6 +70,40 @@ impl Pacer {
     }
 }
 
+/// Runs System/sleep.sh without going deaf: a Power press that lands while the
+/// script is still preparing (Wi-Fi stop, sync) cancels the suspend instead of
+/// being swallowed, which used to need a second press to wake. Once the script
+/// has announced the kernel request (/tmp/slot-suspending) the press is the wake key.
+#[cfg(feature = "brick")]
+fn run_sleep_script(root: &std::path::Path, input: &mut BrickInput, frontend: &Frontend) -> (std::io::Result<std::process::ExitStatus>, bool) {
+    use slot_input::{Btn, InputSource, RawEvent};
+    const SUSPENDING: &str = "/tmp/slot-suspending";
+    let _ = std::fs::remove_file(SUSPENDING);
+    let mut child = match std::process::Command::new("/bin/sh")
+        .arg(root.join("System/sleep.sh")).env("SLOT_ROOT", root).spawn() {
+        Ok(c) => c,
+        Err(e) => return (Err(e), false),
+    };
+    // Any Power press seen while the script runs means "wake up", even when it
+    // came too late to cancel and only made the kernel abort the suspend.
+    let mut pressed = false;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return (Ok(status), pressed),
+            Ok(None) => {}
+            Err(e) => return (Err(e), pressed),
+        }
+        if !pressed && input.poll(frontend.now()).into_iter().any(|e| matches!(e, RawEvent::Down(Btn::Power))) {
+            pressed = true;
+            if !std::path::Path::new(SUSPENDING).exists() {
+                eprintln!("slot: sleep: Power pressed while preparing; cancelling the suspend");
+                unsafe { libc::kill(child.id() as i32, libc::SIGTERM) };
+            }
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
 pub fn run() {
     slot::boot_time::mark("start");
     let _ = std::thread::Builder::new()
@@ -78,7 +119,7 @@ pub fn run() {
         Ok(s) => s,
         Err(e) => {
             eprintln!("slot: {e}");
-            return;
+            std::process::exit(1);
         }
     };
     slot::boot_time::mark("surface");
@@ -86,7 +127,7 @@ pub fn run() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("slot: {e}");
-            return;
+            std::process::exit(1);
         }
     };
     slot::boot_time::mark("compositor");
@@ -106,9 +147,15 @@ pub fn run() {
             return;
         }
     }
+    #[cfg(not(feature = "brick"))]
     let platform = DevicePlatform::new(root.clone());
-    eprintln!("slot: {}", platform.report());
-    platform.trace_boot();
+    #[cfg(not(feature = "brick"))]
+    {
+        eprintln!("slot: {}", platform.report());
+        platform.trace_boot();
+    }
+    #[cfg(feature = "brick")]
+    let platform = BrickPlatform::new(root.clone());
     slot::boot_time::mark("platform");
     let sink = match audio.map(|h| h.join()) {
         Ok(Ok(sink)) => sink,
@@ -121,34 +168,114 @@ pub fn run() {
     slot::boot_time::mark("faces");
     frontend.upload_bezel(&mut compositor, window);
     slot::boot_time::mark("bezel");
+    #[cfg(not(feature = "brick"))]
     let mut input = DeviceInput::open(&root);
+    #[cfg(feature = "brick")]
+    let mut input = match BrickInput::open(&root) {
+        Ok(i) => i,
+        Err(e) => {
+            eprintln!("slot: {e}");
+            std::process::exit(1);
+        }
+    };
     slot::boot_time::mark("input");
+    #[cfg(not(feature = "brick"))]
     let card = root.clone();
+    #[cfg(not(feature = "brick"))]
     let _ = std::thread::Builder::new()
         .name("slot-bootlogo".into())
         .spawn(move || slot::bootlogo::refresh(&card));
+    #[cfg(feature = "brick")]
+    let mut cpu = slot::brick_power::CpuPower::open(&root);
     let mut drawn = false;
     frontend.drive_emulator();
     let mut pacer = Pacer::new();
     let (mut frames, mut missed, mut early) = (0u32, 0u32, 0u32);
+    #[cfg(feature = "brick")]
+    let mut sleep_since: Option<Instant> = None;
+    #[cfg(feature = "brick")]
+    let mut sleep_attempted = false;
     loop {
         pacer.wait();
         let began = Instant::now();
         frontend.advance(&mut input);
+        #[cfg(feature = "brick")]
+        if input.exit_requested() {
+            cpu.restore();
+            frontend.exit_to_launcher();
+            return;
+        }
         if frontend.restarting() {
+            #[cfg(feature = "brick")]
+            cpu.restore();
             frontend.restart();
         }
         if frontend.powering_off() {
+            #[cfg(feature = "brick")]
+            cpu.restore();
             frontend.poweroff();
             return;
         }
-        frontend.step_emulator(pacer.period, STEP_TIMEOUT);
+        #[cfg(feature = "brick")]
+        {
+            frontend.idle_sleep();
+            cpu.mode(frontend.power_mode(),frontend.audio_underruns());
+            if matches!(frontend.app().phase(), slot::app::Phase::Doze { .. }) {
+                let since = *sleep_since.get_or_insert_with(Instant::now);
+                // Let the paused audio sink release ALSA and pending saves finish.
+                if !sleep_attempted && since.elapsed() >= Duration::from_millis(3300) {
+                    sleep_attempted = true;
+                    if frontend.prepare_sleep() {
+                        slot::brick_link::quiesce();
+                        let suspended_before=slot::brick_power::suspended_seconds();
+                        let (result, cancelled) = run_sleep_script(&root, &mut input, &frontend);
+                        let returned = Instant::now();
+                        let suspended=slot::brick_power::suspended_seconds().zip(suspended_before).map(|(a,b)|(a-b).max(0.0));
+                        let confirmed=suspended.is_some_and(|v|v>0.05);
+                        cpu.mode(slot::brick_power::Mode::Boost,frontend.audio_underruns());
+                        let woke = match &result {
+                            Ok(status) if status.success() || confirmed || cancelled => {
+                                frontend.resume_sleep(&mut input);
+                                sleep_since = None;
+                                sleep_attempted = false;
+                                true
+                            }
+                            other => {eprintln!("slot: suspend unavailable ({other:?}); using standby"); false}
+                        };
+                        {
+                            use std::io::Write;
+                            if let Ok(mut log)=std::fs::OpenOptions::new().create(true).append(true).open(root.join("Logs/sleep.log")) {
+                                let _=writeln!(log,"Slot verification: suspended_seconds={suspended:?}, confirmed={confirmed}, power_pressed_during_sleep_entry={cancelled}, helper={result:?}, screen_on={woke} {} ms after the helper returned",returned.elapsed().as_millis());
+                            }
+                        }
+                    }
+                }
+                pacer = Pacer::new();
+                std::thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+            sleep_since = None;
+            sleep_attempted = false;
+        }
+        #[cfg(feature = "brick")]
+        if !frontend.needs_render() {
+            pacer = Pacer::new();
+            std::thread::sleep(Duration::from_millis(25));
+            continue;
+        }
+        let frame_ready = frontend.step_emulator(pacer.period, STEP_TIMEOUT);
+        #[cfg(not(feature = "brick"))]
+        let _ = frame_ready;
         frontend.render(&mut compositor, window);
         let swap = Instant::now();
         let work = swap - began;
+        #[cfg(feature = "brick")]
+        cpu.sample(frame_ready,work,pacer.period,frontend.audio_underruns());
         if let Err(e) = surface.swap() {
             eprintln!("slot: {e}");
-            return;
+            #[cfg(feature = "brick")]
+            cpu.restore();
+            std::process::exit(1);
         }
         let swap_took = swap.elapsed();
         slot::latency::swapped(swap_took.as_secs_f64() * 1000.0);
@@ -170,6 +297,12 @@ pub fn run() {
             drawn = true;
             slot::boot_time::mark("first frame");
             trace_first_frame();
+            #[cfg(feature = "brick")]
+            if let Some(path) = std::env::var_os("SLOT_READY_FILE") {
+                if let Err(e) = std::fs::write(path, "first frame displayed\n") {
+                    eprintln!("slot: ready marker: {e}");
+                }
+            }
         }
         if let Some(left) = MIN_FRAME.checked_sub(began.elapsed()) {
             std::thread::sleep(left);
