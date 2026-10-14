@@ -262,14 +262,15 @@ fn pause(cancel: &AtomicBool, ms: u64) -> Result<()> {
     }
     Ok(())
 }
-/// Stock Brick firmware ships no /etc/wifi/wifi_init.sh, so slot carries its own
-/// System/brick_wifi.sh. A firmware helper, where one exists, still wins.
+/// slot carries its own System/brick_wifi.sh, and it wins: an
+/// /etc/wifi/wifi_init.sh on a Brick is left over from another firmware and can
+/// call tools stock firmware lacks (rfkill.elf), leaving the radio blocked.
 fn helper(firmware: &Path, root: &Path) -> Option<PathBuf> {
-    if firmware.is_file() {
-        return Some(firmware.into());
-    }
     let own = root.join("System/brick_wifi.sh");
-    own.is_file().then_some(own)
+    if own.is_file() {
+        return Some(own);
+    }
+    firmware.is_file().then(|| firmware.into())
 }
 fn service(on: bool) -> Result<()> {
     let root =
@@ -936,16 +937,16 @@ mod tests {
         assert!(psk(&"z".repeat(64)).is_err());
     }
     #[test]
-    fn helper_prefers_firmware_then_card() {
+    fn helper_prefers_card_then_firmware() {
         let d = tempfile::tempdir().unwrap();
         let fw = d.path().join("wifi_init.sh");
         let root = d.path().join("Slot");
         assert_eq!(helper(&fw, &root), None);
+        fs::write(&fw, "").unwrap();
+        assert_eq!(helper(&fw, &root), Some(fw.clone()));
         fs::create_dir_all(root.join("System")).unwrap();
         fs::write(root.join("System/brick_wifi.sh"), "").unwrap();
         assert_eq!(helper(&fw, &root), Some(root.join("System/brick_wifi.sh")));
-        fs::write(&fw, "").unwrap();
-        assert_eq!(helper(&fw, &root), Some(fw.clone()));
     }
     #[test]
     fn all_keys() {

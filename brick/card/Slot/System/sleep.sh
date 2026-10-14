@@ -6,9 +6,10 @@ set -u
 ROOT=${SLOT_ROOT:-/mnt/SDCARD/Slot}
 SYS=${SLOT_SLEEP_SYSROOT:-/sys}
 ETC=${SLOT_SLEEP_ETC:-/etc}
-# Brick firmware has no $ETC/wifi/wifi_init.sh; use slot's own helper instead.
-WIFI_HELPER="$ETC/wifi/wifi_init.sh"
-[ -f "$WIFI_HELPER" ] || WIFI_HELPER="$ROOT/System/brick_wifi.sh"
+# slot's own helper wins; an $ETC/wifi/wifi_init.sh on a Brick is left over from
+# another firmware and can call tools this one lacks (rfkill.elf).
+WIFI_HELPER="$ROOT/System/brick_wifi.sh"
+[ -f "$WIFI_HELPER" ] || WIFI_HELPER="$ETC/wifi/wifi_init.sh"
 mkdir -p "$ROOT/Logs"
 LOG="$ROOT/Logs/sleep.log"
 if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 131072 ]; then mv "$LOG" "$ROOT/Logs/sleep.previous.log"; fi

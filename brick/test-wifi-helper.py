@@ -57,9 +57,12 @@ class WifiHelperTests(unittest.TestCase):
         (self.etc/'wifi').mkdir(); (self.etc/'wifi/wpa_supplicant.conf').write_text('ctrl_interface=/etc/wifi/sockets\nupdate_config=1\n')
         self.helper('start', timeout=20)
         self.assertTrue(any('-c ' + str(self.etc/'wifi/wpa_supplicant.conf') in c for c in self.lines()), self.lines())
-    def test_firmware_helper_takes_over(self):
+    def test_leftover_firmware_helper_is_ignored(self):
+        # Left by another firmware; it called rfkill.elf, missing on stock Brick.
         (self.etc/'wifi').mkdir(); f = self.etc/'wifi/wifi_init.sh'; f.write_text('echo "firmware $1" >> "$CALLS"\n')
-        self.assertEqual(self.helper('start')[0], 0); self.assertEqual(self.lines(), ['firmware start'])
+        self.assertEqual(self.helper('start', timeout=20)[0], 0)
+        self.assertNotIn('firmware start', self.lines())
+        self.assertIn('rfkill unblock wifi', self.lines())
     def test_missing_interface_fails(self):
         (self.net/'wlan0').rmdir()
         code, took = self.helper('start')
