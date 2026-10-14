@@ -124,7 +124,12 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
-            QuickRow::LedMode | QuickRow::LedTop | QuickRow::LedButtons | QuickRow::LedTriggers | QuickRow::LedColor | QuickRow::LedEffect => &QuickRow::LIGHTS,
+            QuickRow::LedMode
+            | QuickRow::LedTop
+            | QuickRow::LedButtons
+            | QuickRow::LedTriggers
+            | QuickRow::LedColor
+            | QuickRow::LedEffect => &QuickRow::LIGHTS,
             QuickRow::GbaShader
             | QuickRow::GbShader
             | QuickRow::ColourCorrection
@@ -315,7 +320,6 @@ impl QuickValue {
             QuickValue::Steady => "Steady",
             QuickValue::Breathe => "Breathe",
             QuickValue::Unavailable => "Unavailable",
-
         }
     }
 

@@ -1,9 +1,9 @@
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 
 use crate::link_net::{Cancel, TcpLink, HOST_BOUND};
-use crate::link_radio::{LinkRole, RadioFail};
-#[cfg(not(feature="brick"))]
+#[cfg(not(feature = "brick"))]
 use crate::link_radio;
+use crate::link_radio::{LinkRole, RadioFail};
 
 #[cfg(feature = "device")]
 pub const HOST_ADDR: &str = "10.42.0.1";
@@ -117,12 +117,16 @@ pub struct LinkStarter {
 
 impl LinkStarter {
     pub fn spawn(role: LinkRole, port: u16) -> LinkStarter {
-        #[cfg(feature="brick")]
-        let token=crate::brick_link::begin();
-        #[cfg(feature="brick")]
-        let (up,down): (RadioUp,RadioDown)=(Box::new(move |role,cancel|crate::brick_link::up(token,role,cancel)),Box::new(move ||crate::brick_link::down(token)));
-        #[cfg(not(feature="brick"))]
-        let (up,down): (RadioUp,RadioDown)=(Box::new(link_radio::up),Box::new(link_radio::down));
+        #[cfg(feature = "brick")]
+        let token = crate::brick_link::begin();
+        #[cfg(feature = "brick")]
+        let (up, down): (RadioUp, RadioDown) = (
+            Box::new(move |role, cancel| crate::brick_link::up(token, role, cancel)),
+            Box::new(move || crate::brick_link::down(token)),
+        );
+        #[cfg(not(feature = "brick"))]
+        let (up, down): (RadioUp, RadioDown) =
+            (Box::new(link_radio::up), Box::new(link_radio::down));
         LinkStarter::spawn_with(
             up,
             down,

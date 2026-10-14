@@ -2267,7 +2267,12 @@ fn home_x_toggles_a_gba_cart_between_3_2_and_full_screen_and_remembers_it() {
     let start = s.app().source_rect();
     let mut t = 100;
     let mut home_x = |s: &mut Session| {
-        for e in [RawEvent::Down(Btn::Select), RawEvent::Down(Btn::X), RawEvent::Up(Btn::X), RawEvent::Up(Btn::Select)] {
+        for e in [
+            RawEvent::Down(Btn::Select),
+            RawEvent::Down(Btn::X),
+            RawEvent::Up(Btn::X),
+            RawEvent::Up(Btn::Select),
+        ] {
             s.feed([e], t);
             t += 20;
         }
@@ -2275,11 +2280,22 @@ fn home_x_toggles_a_gba_cart_between_3_2_and_full_screen_and_remembers_it() {
     home_x(&mut s);
     assert_eq!(video_mode_for(d.path(), "Emerald"), VideoMode::Stretch);
     assert_eq!(s.app().toast(), Some(slot_ui::Toast::PictureFull));
-    assert_eq!(s.app().source_rect(), WHOLE_TEXTURE, "4:3 should fill the whole screen");
-    assert!(matches!(s.app().phase(), Phase::Playing { .. }), "Home+X opened a menu");
+    assert_eq!(
+        s.app().source_rect(),
+        WHOLE_TEXTURE,
+        "4:3 should fill the whole screen"
+    );
+    assert!(
+        matches!(s.app().phase(), Phase::Playing { .. }),
+        "Home+X opened a menu"
+    );
     drop(s);
     let mut s = session_playing(d.path());
-    assert_eq!(s.app().source_rect(), WHOLE_TEXTURE, "the game did not come back full screen");
+    assert_eq!(
+        s.app().source_rect(),
+        WHOLE_TEXTURE,
+        "the game did not come back full screen"
+    );
     home_x(&mut s);
     assert_eq!(video_mode_for(d.path(), "Emerald"), VideoMode::Actual);
     assert_eq!(s.app().toast(), Some(slot_ui::Toast::PictureOriginal));

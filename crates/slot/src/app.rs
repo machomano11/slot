@@ -523,7 +523,9 @@ impl App {
         let mut app = App::new(carts);
         app.root = Some(root.to_path_buf());
         #[cfg(feature = "brick")]
-        { app.brick_leds = Some(crate::brick_led::BrickLeds::open(root)); }
+        {
+            app.brick_leds = Some(crate::brick_led::BrickLeds::open(root));
+        }
         app.state = read_slot_state(root);
         app.restock_recents();
         if !app.shelves[0].1.carts.is_empty() {
@@ -696,7 +698,13 @@ impl App {
 
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
         #[cfg(feature = "brick")]
-        if row.led_setting() { return self.brick_leds.as_ref().and_then(|leds| leds.value(row)).or(Some(QuickValue::Unavailable)); }
+        if row.led_setting() {
+            return self
+                .brick_leds
+                .as_ref()
+                .and_then(|leds| leds.value(row))
+                .or(Some(QuickValue::Unavailable));
+        }
 
         match row {
             QuickRow::FastForward => QuickValue::speed(self.state.ff_speed),
@@ -1041,7 +1049,10 @@ impl App {
     /// Home+X on the Brick: GBA between its true 3:2 shape and 4:3 full screen.
     /// Remembered per game, like the L1/R1 choice for GB/GBC.
     fn toggle_gba_picture(&mut self) {
-        if !matches!(self.phase, Phase::Playing { .. }) || self.game_menu_open() || self.power_menu.is_some() {
+        if !matches!(self.phase, Phase::Playing { .. })
+            || self.game_menu_open()
+            || self.power_menu.is_some()
+        {
             return;
         }
         if self.platform != Platform::Gba {
@@ -1257,7 +1268,11 @@ impl App {
 
     pub fn restore_brick_leds(&self) {
         #[cfg(feature = "brick")]
-        if let Some(leds)=&self.brick_leds { if let Err(e)=leds.restore() { eprintln!("slot: LED restore: {e}"); } }
+        if let Some(leds) = &self.brick_leds {
+            if let Err(e) = leds.restore() {
+                eprintln!("slot: LED restore: {e}");
+            }
+        }
     }
 
     pub fn restart(&mut self) {
@@ -1299,21 +1314,29 @@ impl App {
     /// A failed/cancelled link can leave the core in expensive link mode.
     /// Session performs the normal save/resume reload once the attempt settles.
     pub fn take_solo_reload(&mut self) -> Option<(String, &'static str)> {
-        if self.link_active() || self.starting.is_some() || self.reload.is_some()
-            || self.link_reload.is_some() || self.shutting_down()
+        if self.link_active()
+            || self.starting.is_some()
+            || self.reload.is_some()
+            || self.link_reload.is_some()
+            || self.shutting_down()
             || matches!(self.game_menu, Some(GameMenu::Working { .. }))
-            || !matches!(self.phase, Phase::Playing { .. }) {
+            || !matches!(self.phase, Phase::Playing { .. })
+        {
             return None;
         }
         let serial = self.solo_serial?;
-        if self.snapshot.as_ref().is_some_and(|s| !s.resume_trusted()) {return None;}
+        if self.snapshot.as_ref().is_some_and(|s| !s.resume_trusted()) {
+            return None;
+        }
         let stem = self.seated()?.to_string();
         self.solo_serial = None;
         let was_link_player = self.link_player.take().is_some();
         self.radio.ask(RadioJob::Cool);
         if was_link_player || self.link_loaded != Some(serial) {
             Some((stem, serial))
-        } else { None }
+        } else {
+            None
+        }
     }
 
     pub fn link_player(&self) -> Option<u8> {
@@ -1401,9 +1424,15 @@ impl App {
 
     pub fn apply(&mut self, action: Action) {
         #[cfg(feature = "brick")]
-        if let Some(wifi)=&mut self.wifi {
-            if matches!(action,Action::PowerTap|Action::PowerHold|Action::LidClose) && wifi.busy() {
-                wifi.cancel();self.wifi_power=Some(action);return;
+        if let Some(wifi) = &mut self.wifi {
+            if matches!(
+                action,
+                Action::PowerTap | Action::PowerHold | Action::LidClose
+            ) && wifi.busy()
+            {
+                wifi.cancel();
+                self.wifi_power = Some(action);
+                return;
             }
         }
         if self.power_menu.is_some() {
@@ -1433,8 +1462,10 @@ impl App {
             _ => {}
         }
         #[cfg(feature = "brick")]
-        if let Some(wifi)=&mut self.wifi {
-            if wifi.input(action) {self.wifi=None;}
+        if let Some(wifi) = &mut self.wifi {
+            if wifi.input(action) {
+                self.wifi = None;
+            }
             return;
         }
         if let Phase::SetClock {
@@ -1557,8 +1588,10 @@ impl App {
         match row {
             QuickRow::Wifi => {
                 #[cfg(feature = "brick")]
-                {self.wifi=Some(crate::brick_wifi::WifiMenu::new());}
-            },
+                {
+                    self.wifi = Some(crate::brick_wifi::WifiMenu::new());
+                }
+            }
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
@@ -1605,8 +1638,11 @@ impl App {
         }
         #[cfg(feature = "brick")]
         if row.led_setting() {
-            if let Some(leds)=self.brick_leds.as_mut() {
-                if let Err(e)=leds.change(row,right) { eprintln!("slot: LED setting: {e}"); self.refuse(); }
+            if let Some(leds) = self.brick_leds.as_mut() {
+                if let Err(e) = leds.change(row, right) {
+                    eprintln!("slot: LED setting: {e}");
+                    self.refuse();
+                }
             }
             return;
         }
@@ -1696,9 +1732,15 @@ impl App {
     fn adjust(&mut self, action: Action) -> bool {
         if action == Action::LedToggle {
             #[cfg(feature = "brick")]
-            if matches!(self.phase, Phase::Playing { .. }) && !self.game_menu_open() && self.power_menu.is_none() {
+            if matches!(self.phase, Phase::Playing { .. })
+                && !self.game_menu_open()
+                && self.power_menu.is_none()
+            {
                 if let Some(leds) = &mut self.brick_leds {
-                    if let Err(e) = leds.toggle() { eprintln!("slot: LED shortcut: {e}"); self.refuse(); }
+                    if let Err(e) = leds.toggle() {
+                        eprintln!("slot: LED shortcut: {e}");
+                        self.refuse();
+                    }
                 }
             }
             return true;
@@ -1852,7 +1894,9 @@ impl App {
 
     #[cfg(feature = "brick")]
     pub fn set_brick_mute(&mut self, muted: bool) {
-        if self.brick_mute == Some(muted) {return;}
+        if self.brick_mute == Some(muted) {
+            return;
+        }
         let initial = self.brick_mute.is_none();
         self.brick_mute = Some(muted);
         if !muted && !initial {
@@ -1860,12 +1904,19 @@ impl App {
             self.state.muted_hp = false;
         }
         if !initial {
-            self.hud.show(HudKind::Volume,self.output_volume(),self.muted(),self.now());
+            self.hud.show(
+                HudKind::Volume,
+                self.output_volume(),
+                self.muted(),
+                self.now(),
+            );
         }
     }
     pub fn muted(&self) -> bool {
         #[cfg(feature = "brick")]
-        if self.brick_mute == Some(true) {return true;}
+        if self.brick_mute == Some(true) {
+            return true;
+        }
         if self.headphones {
             self.state.muted_hp
         } else {
@@ -2042,9 +2093,13 @@ impl App {
     fn timers(&mut self) {
         #[cfg(feature = "brick")]
         {
-            if let Some(wifi)=&mut self.wifi {wifi.poll();}
-            if self.wifi.as_ref().map(|w|!w.busy()).unwrap_or(true) {
-                if let Some(action)=self.wifi_power.take(){self.apply(action);}
+            if let Some(wifi) = &mut self.wifi {
+                wifi.poll();
+            }
+            if self.wifi.as_ref().map(|w| !w.busy()).unwrap_or(true) {
+                if let Some(action) = self.wifi_power.take() {
+                    self.apply(action);
+                }
             }
         }
         #[cfg(feature = "brick")]
@@ -2336,8 +2391,18 @@ impl App {
             return;
         }
         #[cfg(feature = "brick")]
-        if let Some(wifi)=&self.wifi {
-            if let Some(tex)=wifi.face {out.push(Draw::Tex{x:0.0,y:0.0,w:640.0,h:480.0,tex,alpha:1.0});return;}
+        if let Some(wifi) = &self.wifi {
+            if let Some(tex) = wifi.face {
+                out.push(Draw::Tex {
+                    x: 0.0,
+                    y: 0.0,
+                    w: 640.0,
+                    h: 480.0,
+                    tex,
+                    alpha: 1.0,
+                });
+                return;
+            }
         }
         match &self.phase {
             Phase::SetClock {
@@ -2963,7 +3028,9 @@ impl App {
 
     fn doze(&mut self) {
         #[cfg(feature = "brick")]
-        {self.wifi=None;}
+        {
+            self.wifi = None;
+        }
         if self.link_active() {
             self.end_link();
         }
@@ -2983,7 +3050,9 @@ impl App {
         self.dozed_at = self.now();
         #[cfg(feature = "brick")]
         if let Some(leds) = &mut self.brick_leds {
-            if let Err(e) = leds.sleep() { eprintln!("slot: LEDs sleep: {e}"); }
+            if let Err(e) = leds.sleep() {
+                eprintln!("slot: LEDs sleep: {e}");
+            }
         }
         self.radio.ask(RadioJob::Cool);
         if let Some(power) = &mut self.power {
@@ -2994,8 +3063,13 @@ impl App {
     /// Idle timeout: same as a power press, but only from calm screens and never mid-link.
     #[cfg(feature = "brick")]
     pub(crate) fn idle_doze(&mut self) {
-        if self.link_active() {return}
-        if matches!(self.phase, Phase::Shelf | Phase::QuickMenu { .. } | Phase::Playing { .. }) {
+        if self.link_active() {
+            return;
+        }
+        if matches!(
+            self.phase,
+            Phase::Shelf | Phase::QuickMenu { .. } | Phase::Playing { .. }
+        ) {
             self.doze();
         }
     }
@@ -3010,7 +3084,9 @@ impl App {
         };
         #[cfg(feature = "brick")]
         if let Some(leds) = &mut self.brick_leds {
-            if let Err(e) = leds.wake() { eprintln!("slot: LEDs wake: {e}"); }
+            if let Err(e) = leds.wake() {
+                eprintln!("slot: LEDs wake: {e}");
+            }
         }
         if let Some(power) = &mut self.power {
             power.on_open();
@@ -3900,13 +3976,13 @@ fn draw_menu_rows(
     top: f32,
     out: &mut Vec<Draw>,
 ) {
-    let row_w = faces.iter().map(|(_,w,_)|*w).max().unwrap_or(0) as f32;
+    let row_w = faces.iter().map(|(_, w, _)| *w).max().unwrap_or(0) as f32;
     for (row, (tex, w, h)) in faces.iter().copied().enumerate() {
         let y = top + POWER_MENU_PITCH * row as f32;
         let x = ((OUT_W as f32 - w as f32) / 2.0).round();
         if index == Some(row) {
             out.push(Draw::Rect {
-                x: ((OUT_W as f32-row_w)/2.0).round(),
+                x: ((OUT_W as f32 - row_w) / 2.0).round(),
                 y: y + POWER_MENU_BAR_INSET,
                 w: row_w,
                 h: POWER_MENU_PITCH - 2.0 * POWER_MENU_BAR_INSET,

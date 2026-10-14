@@ -695,29 +695,39 @@ fn gb_palettes_flips_on_either_arrow_and_saves() {
     }
 }
 
-#[cfg(feature="brick")]
+#[cfg(feature = "brick")]
 #[test]
 fn wifi_keeps_navigation_inside_overlay_and_b_returns_to_its_row() {
-    let (_d,mut a,_)=on_carousel();open_at(&mut a,QuickRow::Wifi);press(&mut a,Btn::A);
-    press(&mut a,Btn::Down);
-    assert_eq!(a.quick_menu(),Some(QuickRow::Wifi));
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Wifi);
+    press(&mut a, Btn::A);
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Wifi));
     // Status may still be running. B first cancels it, then closes the overlay.
     for i in 0..100 {
-        a.tick_ms(5000+i*10);press(&mut a,Btn::B);press(&mut a,Btn::Down);
-        if a.quick_menu()==Some(QuickRow::About){return}
+        a.tick_ms(5000 + i * 10);
+        press(&mut a, Btn::B);
+        press(&mut a, Btn::Down);
+        if a.quick_menu() == Some(QuickRow::About) {
+            return;
+        }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
     panic!("Wi-Fi overlay did not return to settings");
 }
 
-#[cfg(feature="brick")]
+#[cfg(feature = "brick")]
 #[test]
 fn wifi_status_finishes_before_a_pending_sleep_request() {
-    let (_d,mut a,_)=on_carousel();open_at(&mut a,QuickRow::Wifi);press(&mut a,Btn::A);
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Wifi);
+    press(&mut a, Btn::A);
     a.apply(Action::PowerTap);
     for i in 0..100 {
-        a.tick_ms(5000+i*10);
-        if matches!(a.phase(),Phase::Doze{..}) {return}
+        a.tick_ms(5000 + i * 10);
+        if matches!(a.phase(), Phase::Doze { .. }) {
+            return;
+        }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
     panic!("Pending sleep was not completed after the Wi-Fi worker stopped");

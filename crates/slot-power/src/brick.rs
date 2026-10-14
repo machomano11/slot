@@ -13,7 +13,10 @@ extern "C" {
     fn clock_settime(clock: i32, time: *const ClockTime) -> i32;
 }
 #[repr(C)]
-struct ClockTime { secs: std::os::raw::c_long, nanos: std::os::raw::c_long }
+struct ClockTime {
+    secs: std::os::raw::c_long,
+    nanos: std::os::raw::c_long,
+}
 impl BrickPlatform {
     pub fn new(root: PathBuf) -> Self {
         Self { root }
@@ -87,14 +90,21 @@ impl Platform for BrickPlatform {
     fn set_clock(&mut self, secs: i64) {
         let secs = match std::os::raw::c_long::try_from(secs) {
             Ok(value) => value,
-            Err(_) => {eprintln!("slot: Brick clock: timestamp out of range"); return;}
+            Err(_) => {
+                eprintln!("slot: Brick clock: timestamp out of range");
+                return;
+            }
         };
         let time = ClockTime { secs, nanos: 0 };
         if unsafe { clock_settime(0, &time) } != 0 {
-            eprintln!("slot: Brick clock: {}",std::io::Error::last_os_error()); return;
+            eprintln!("slot: Brick clock: {}", std::io::Error::last_os_error());
+            return;
         }
-        match std::process::Command::new("hwclock").args(["-w","-u"]).status() {
-            Ok(s) if s.success() => {},
+        match std::process::Command::new("hwclock")
+            .args(["-w", "-u"])
+            .status()
+        {
+            Ok(s) if s.success() => {}
             other => eprintln!("slot: Brick RTC write: {other:?}"),
         }
     }

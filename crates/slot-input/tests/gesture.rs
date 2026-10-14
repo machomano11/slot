@@ -538,7 +538,9 @@ fn select_and_either_volume_key_mutes_for_a_volume_wheel_with_no_chord() {
 #[test]
 fn unmatched_wake_release_does_not_sleep_again() {
     let mut g = slot_input::Gestures::new();
-    assert!(g.feed(slot_input::RawEvent::Up(slot_input::Btn::Power), 100).is_empty());
+    assert!(g
+        .feed(slot_input::RawEvent::Up(slot_input::Btn::Power), 100)
+        .is_empty());
 }
 
 #[test]
@@ -551,10 +553,19 @@ fn brick_home_shortcuts_consume_presses_releases_and_hold() {
             assert_eq!(g.feed(RawEvent::Down(button), 10), vec![action]);
             assert!(g.feed(RawEvent::Down(button), 20).is_empty());
             assert!(g.tick(MENU_HOLD_MS + 50).is_empty());
-            let releases = if home_first {[Btn::Menu,button]} else {[button,Btn::Menu]};
-            for b in releases { assert!(g.feed(RawEvent::Up(b), MENU_HOLD_MS + 100).is_empty()); }
+            let releases = if home_first {
+                [Btn::Menu, button]
+            } else {
+                [button, Btn::Menu]
+            };
+            for b in releases {
+                assert!(g.feed(RawEvent::Up(b), MENU_HOLD_MS + 100).is_empty());
+            }
             // Normal B still reaches the game after the chord.
-            assert_eq!(g.feed(RawEvent::Down(Btn::B), 2000), vec![Action::GbaDown(Btn::B)]);
+            assert_eq!(
+                g.feed(RawEvent::Down(Btn::B), 2000),
+                vec![Action::GbaDown(Btn::B)]
+            );
         }
     }
 }
@@ -565,14 +576,23 @@ fn brick_picture_shortcut_shares_the_colour_correction_button() {
     // Same button as Y (colour correction) and A (shaders).
     let mut g = Gestures::brick();
     assert!(g.feed(RawEvent::Down(Btn::Select), 0).is_empty());
-    assert_eq!(g.feed(RawEvent::Down(Btn::Y), 10), vec![Action::ColourCorrectionToggle]);
+    assert_eq!(
+        g.feed(RawEvent::Down(Btn::Y), 10),
+        vec![Action::ColourCorrectionToggle]
+    );
     assert!(g.feed(RawEvent::Up(Btn::Y), 30).is_empty());
-    assert_eq!(g.feed(RawEvent::Down(Btn::X), 40), vec![Action::PictureToggle]);
+    assert_eq!(
+        g.feed(RawEvent::Down(Btn::X), 40),
+        vec![Action::PictureToggle]
+    );
     assert!(g.feed(RawEvent::Up(Btn::X), 60).is_empty());
     assert!(g.feed(RawEvent::Up(Btn::Select), 80).is_empty());
     assert!(g.tick(2000).is_empty());
     assert!(g.feed(RawEvent::Down(Btn::Select), 3000).is_empty());
-    assert_eq!(g.feed(RawEvent::Down(Btn::X), 3010), vec![Action::PictureToggle]);
+    assert_eq!(
+        g.feed(RawEvent::Down(Btn::X), 3010),
+        vec![Action::PictureToggle]
+    );
 }
 
 #[test]
@@ -580,5 +600,7 @@ fn brick_menu_x_no_longer_changes_the_picture() {
     use slot_input::{Action, Btn, Gestures, RawEvent};
     let mut g = Gestures::brick();
     assert!(g.feed(RawEvent::Down(Btn::Menu), 0).is_empty());
-    assert!(!g.feed(RawEvent::Down(Btn::X), 10).contains(&Action::PictureToggle));
+    assert!(!g
+        .feed(RawEvent::Down(Btn::X), 10)
+        .contains(&Action::PictureToggle));
 }

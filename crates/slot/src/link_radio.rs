@@ -1,8 +1,8 @@
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 use std::sync::mpsc::{channel, Sender};
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 use std::sync::OnceLock;
 #[cfg(any(feature = "device", test))]
 use std::{path::Path, process::Command};
@@ -50,7 +50,7 @@ pub fn radio_jobs() -> Box<dyn RadioJobs> {
     Box::new(RadioQueue)
 }
 
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 impl RadioJobs for RadioQueue {
     fn ask(&mut self, job: RadioJob) {
         let _ = queue().send(job);
@@ -61,10 +61,10 @@ impl RadioJobs for RadioQueue {
     }
 }
 
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 static WARM: AtomicBool = AtomicBool::new(false);
 
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 fn queue() -> &'static Sender<RadioJob> {
     static Q: OnceLock<Sender<RadioJob>> = OnceLock::new();
     Q.get_or_init(|| {
@@ -103,7 +103,7 @@ fn link(verb: &str) -> Command {
     link_command(Path::new(&root), verb)
 }
 
-#[cfg(all(feature = "device",not(feature="brick")))]
+#[cfg(all(feature = "device", not(feature = "brick")))]
 fn run(sub: &str) -> bool {
     link(sub).status().is_ok_and(|status| status.success())
 }
@@ -156,14 +156,18 @@ impl RadioJobs for RadioQueue {
     }
 }
 
-#[cfg(feature="brick")]
+#[cfg(feature = "brick")]
 impl RadioJobs for RadioQueue {
     fn ask(&mut self, job: RadioJob) {
-        if job==RadioJob::Warm {return;}
-        let token=crate::brick_link::current();
-        std::thread::spawn(move ||crate::brick_link::down(token));
+        if job == RadioJob::Warm {
+            return;
+        }
+        let token = crate::brick_link::current();
+        std::thread::spawn(move || crate::brick_link::down(token));
     }
-    fn warmed(&self)->bool {false}
+    fn warmed(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]

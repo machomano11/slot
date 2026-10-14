@@ -47,11 +47,21 @@ pub fn hat_events(old: u8, new: u8) -> Vec<RawEvent> {
 // TrimUI exposes rear L2/R2 as ABS_Z/ABS_RZ (SDL axes 2/5).
 // Released is negative; require a positive excursion and use hysteresis.
 fn trigger_event(held: &mut [bool; 2], axis: u8, value: i16) -> Option<RawEvent> {
-    let (i, btn) = match axis { 2 => (0, Btn::L2), 5 => (1, Btn::R2), _ => return None };
+    let (i, btn) = match axis {
+        2 => (0, Btn::L2),
+        5 => (1, Btn::R2),
+        _ => return None,
+    };
     let down = if held[i] { value > 4000 } else { value > 16000 };
-    if down == held[i] { return None; }
+    if down == held[i] {
+        return None;
+    }
     held[i] = down;
-    Some(if down { RawEvent::Down(btn) } else { RawEvent::Up(btn) })
+    Some(if down {
+        RawEvent::Down(btn)
+    } else {
+        RawEvent::Up(btn)
+    })
 }
 
 // SDL_Event's ABI is 56 bytes and requires pointer alignment on aarch64.
@@ -208,7 +218,9 @@ impl InputSource for BrickInput {
                     }
                     out.extend(hat_events(self.hat, 0));
                     for (i, btn) in [Btn::L2, Btn::R2].into_iter().enumerate() {
-                        if self.triggers[i] { out.push(RawEvent::Up(btn)); }
+                        if self.triggers[i] {
+                            out.push(RawEvent::Up(btn));
+                        }
                     }
                     self.triggers = [false; 2];
                     self.hat = 0;
@@ -257,9 +269,15 @@ mod tests {
         let mut held = [false; 2];
         for (axis, btn) in [(2, Btn::L2), (5, Btn::R2)] {
             assert_eq!(trigger_event(&mut held, axis, -32768), None);
-            assert_eq!(trigger_event(&mut held, axis, 32767), Some(RawEvent::Down(btn)));
+            assert_eq!(
+                trigger_event(&mut held, axis, 32767),
+                Some(RawEvent::Down(btn))
+            );
             assert_eq!(trigger_event(&mut held, axis, 32767), None);
-            assert_eq!(trigger_event(&mut held, axis, -32768), Some(RawEvent::Up(btn)));
+            assert_eq!(
+                trigger_event(&mut held, axis, -32768),
+                Some(RawEvent::Up(btn))
+            );
         }
         assert_eq!(trigger_event(&mut held, 0, 32767), None);
     }

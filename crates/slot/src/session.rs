@@ -45,7 +45,11 @@ impl Session {
             root,
             emu: None,
             sink,
-            gestures: if cfg!(feature = "brick") { Gestures::brick() } else { Gestures::new() },
+            gestures: if cfg!(feature = "brick") {
+                Gestures::brick()
+            } else {
+                Gestures::new()
+            },
             prefetch: Prefetch::default(),
             pad: Pad::default(),
             rewinding: false,
@@ -202,7 +206,11 @@ impl Session {
     fn act(&mut self, action: Action) {
         // Keep the existing Select+B shortcut as an alias on Brick.
         #[cfg(feature = "brick")]
-        let action = if action == Action::ShaderPrev { Action::LedToggle } else { action };
+        let action = if action == Action::ShaderPrev {
+            Action::LedToggle
+        } else {
+            action
+        };
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
         }

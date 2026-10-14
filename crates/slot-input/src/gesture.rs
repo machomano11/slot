@@ -104,7 +104,10 @@ impl Gestures {
     }
 
     pub fn brick() -> Self {
-        Self { home_chords: true, ..Self::default() }
+        Self {
+            home_chords: true,
+            ..Self::default()
+        }
     }
 
     pub fn ff_latched(&self) -> bool {
@@ -174,7 +177,9 @@ impl Gestures {
                 Btn::A => (512, Action::ShaderNext),
                 _ => (1024, Action::LedToggle),
             };
-            if self.chord_held & bit != 0 { return Vec::new(); }
+            if self.chord_held & bit != 0 {
+                return Vec::new();
+            }
             self.chord_held |= bit;
             self.menu_eject_fired = true; // consume Home: no tap menu or hold eject
             return vec![action];
@@ -332,7 +337,9 @@ impl Gestures {
 
     fn power_up(&mut self) -> Vec<Action> {
         // A wake-key release can arrive after the input state was reset.
-        if self.power_down_at.is_none() { return Vec::new(); }
+        if self.power_down_at.is_none() {
+            return Vec::new();
+        }
         let held = self.power_hold_fired;
         self.power_down_at = None;
         self.power_hold_fired = false;

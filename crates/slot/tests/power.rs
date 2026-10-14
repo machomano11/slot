@@ -242,7 +242,11 @@ fn b_leaves_the_menu_without_doing_anything() {
 #[test]
 fn each_row_commits_to_its_own_outcome() {
     for (down, choice) in PowerChoice::ALL.into_iter().enumerate() {
-        let want = if choice == PowerChoice::Restart { "restart" } else { "off" };
+        let want = if choice == PowerChoice::Restart {
+            "restart"
+        } else {
+            "off"
+        };
         let d = tmp_root_with_carts(&["Emerald"]);
         let mut a = app_playing_in(d.path(), "Emerald");
         a.apply(Action::PowerHold);

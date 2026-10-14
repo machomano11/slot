@@ -986,14 +986,23 @@ fn a_host_on_another_bios_ends_the_session_and_says_so() {
 
 #[test]
 fn heartbeat_keeps_quiet_pair_alive_and_silent_dead_peer_times_out() {
-    let port=common::free_port();
-    let listener=TcpListener::bind(("127.0.0.1",port)).unwrap();
-    let accepted=std::thread::spawn(move||listener.accept().unwrap().0);
-    let dead=TcpLink::join("127.0.0.1",port).unwrap();let _silent=accepted.join().unwrap();
-    let port2=common::free_port();let flag=slot::link_net::Cancel::new();let cancel=flag.clone();
-    let host=std::thread::spawn(move||TcpLink::host_until("127.0.0.1",port2,Duration::from_secs(2),&cancel).unwrap());
-    let client=TcpLink::join_until("127.0.0.1",port2,Duration::from_secs(2),&flag).unwrap();let host=host.join().unwrap();
+    let port = common::free_port();
+    let listener = TcpListener::bind(("127.0.0.1", port)).unwrap();
+    let accepted = std::thread::spawn(move || listener.accept().unwrap().0);
+    let dead = TcpLink::join("127.0.0.1", port).unwrap();
+    let _silent = accepted.join().unwrap();
+    let port2 = common::free_port();
+    let flag = slot::link_net::Cancel::new();
+    let cancel = flag.clone();
+    let host = std::thread::spawn(move || {
+        TcpLink::host_until("127.0.0.1", port2, Duration::from_secs(2), &cancel).unwrap()
+    });
+    let client = TcpLink::join_until("127.0.0.1", port2, Duration::from_secs(2), &flag).unwrap();
+    let host = host.join().unwrap();
     std::thread::sleep(Duration::from_secs(9));
-    assert!(dead.is_closed(),"silent peer must time out");
-    assert!(!host.is_closed() && !client.is_closed(),"heartbeats must keep paused peers connected");
+    assert!(dead.is_closed(), "silent peer must time out");
+    assert!(
+        !host.is_closed() && !client.is_closed(),
+        "heartbeats must keep paused peers connected"
+    );
 }

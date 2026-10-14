@@ -47,7 +47,7 @@ pub struct Frontend {
     wake_guard: Option<Instant>,
     last_input: Instant,
     last_render: Instant,
-    rendered_effects: (f32,f32,f32,Option<f32>),
+    rendered_effects: (f32, f32, f32, Option<f32>),
     draws: Vec<Draw>,
     polaroid_texes: Vec<TexId>,
     title_tex: Option<TexId>,
@@ -162,7 +162,7 @@ impl Frontend {
             wake_guard: None,
             last_input: now,
             last_render: now,
-            rendered_effects: (0.0,0.0,0.0,None),
+            rendered_effects: (0.0, 0.0, 0.0, None),
             draws: Vec::new(),
             polaroid_texes: Vec::new(),
             title_tex: None,
@@ -448,31 +448,65 @@ impl Frontend {
     #[cfg(feature = "brick")]
     pub fn power_mode(&self) -> crate::brick_power::Mode {
         use crate::brick_power::Mode;
-        if matches!(self.app().phase(),Phase::Doze{..}) {return Mode::Standby}
-        if self.rebuild.is_some() || self.app().link_active() || self.session.actually_fast_forwarding() || self.session.actually_rewinding() {return Mode::Boost}
+        if matches!(self.app().phase(), Phase::Doze { .. }) {
+            return Mode::Standby;
+        }
+        if self.rebuild.is_some()
+            || self.app().link_active()
+            || self.session.actually_fast_forwarding()
+            || self.session.actually_rewinding()
+        {
+            return Mode::Boost;
+        }
         match self.app().phase() {
-            Phase::Playing{..} if self.session.observed_speed()==Some(crate::emu::Speed::Normal)=>Mode::Game,
-            Phase::Shelf|Phase::QuickMenu{..} if self.last_input.elapsed()>Duration::from_secs(2)=>Mode::Menu,
-            _=>Mode::Boost,
+            Phase::Playing { .. }
+                if self.session.observed_speed() == Some(crate::emu::Speed::Normal) =>
+            {
+                Mode::Game
+            }
+            Phase::Shelf | Phase::QuickMenu { .. }
+                if self.last_input.elapsed() > Duration::from_secs(2) =>
+            {
+                Mode::Menu
+            }
+            _ => Mode::Boost,
         }
     }
     #[cfg(feature = "brick")]
-    pub fn audio_underruns(&self)->u64 {self.session.audio_ring().underruns()}
+    pub fn audio_underruns(&self) -> u64 {
+        self.session.audio_ring().underruns()
+    }
     #[cfg(feature = "brick")]
-    pub fn needs_render(&self)->bool {
-        if self.app().wifi.as_ref().map(|w|w.dirty).unwrap_or(false) {return true}
-        if self.render_effects()!=self.rendered_effects {return true}
-        if self.rebuild.is_some() || !matches!(self.app().phase(),Phase::Shelf|Phase::QuickMenu{..}) || self.last_input.elapsed()<Duration::from_secs(2) || self.last_render.elapsed()>=Duration::from_secs(1) {return true}
-        let mut probe=Vec::new();self.app().draw(&mut probe);
-        probe!=self.draws
+    pub fn needs_render(&self) -> bool {
+        if self.app().wifi.as_ref().map(|w| w.dirty).unwrap_or(false) {
+            return true;
+        }
+        if self.render_effects() != self.rendered_effects {
+            return true;
+        }
+        if self.rebuild.is_some()
+            || !matches!(self.app().phase(), Phase::Shelf | Phase::QuickMenu { .. })
+            || self.last_input.elapsed() < Duration::from_secs(2)
+            || self.last_render.elapsed() >= Duration::from_secs(1)
+        {
+            return true;
+        }
+        let mut probe = Vec::new();
+        self.app().draw(&mut probe);
+        probe != self.draws
     }
 
-    fn render_effects(&self)->(f32,f32,f32,Option<f32>) {
-        (self.app().screen_power(),self.app().screen_shake(),self.app().frame_lift(),self.app().frame_split())
+    fn render_effects(&self) -> (f32, f32, f32, Option<f32>) {
+        (
+            self.app().screen_power(),
+            self.app().screen_shake(),
+            self.app().frame_lift(),
+            self.app().frame_split(),
+        )
     }
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
-        self.last_render=Instant::now();
-        self.rendered_effects=self.render_effects();
+        self.last_render = Instant::now();
+        self.rendered_effects = self.render_effects();
         compositor.fit(window);
         self.compose(compositor);
         compositor.end_frame(window);
@@ -540,11 +574,19 @@ impl Frontend {
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
         #[cfg(feature = "brick")]
-        if let Some(wifi)=&mut self.session.app_mut().wifi {
+        if let Some(wifi) = &mut self.session.app_mut().wifi {
             if wifi.dirty {
-                let f=wifi.render();
-                let tex=match self.wifi_tex {Some(id)=>{compositor.update_texture(id,f.w,f.h,&f.rgba);id},None=>compositor.create_texture(f.w,f.h,&f.rgba)};
-                self.wifi_tex=Some(tex);wifi.face=Some(tex);wifi.dirty=false;
+                let f = wifi.render();
+                let tex = match self.wifi_tex {
+                    Some(id) => {
+                        compositor.update_texture(id, f.w, f.h, &f.rgba);
+                        id
+                    }
+                    None => compositor.create_texture(f.w, f.h, &f.rgba),
+                };
+                self.wifi_tex = Some(tex);
+                wifi.face = Some(tex);
+                wifi.dirty = false;
             }
         }
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
@@ -697,12 +739,20 @@ impl Frontend {
         let now = self.now();
         let mut events = input.poll(now);
         if !events.is_empty() {
-            self.last_input=Instant::now();
+            self.last_input = Instant::now();
             #[cfg(feature = "brick")]
-            {self.woke_untouched=false;}
+            {
+                self.woke_untouched = false;
+            }
         }
         if self.wake_guard.is_some_and(|until| Instant::now() < until) {
-            events.retain(|e| !matches!(e, slot_input::RawEvent::Down(slot_input::Btn::Power) | slot_input::RawEvent::Up(slot_input::Btn::Power)));
+            events.retain(|e| {
+                !matches!(
+                    e,
+                    slot_input::RawEvent::Down(slot_input::Btn::Power)
+                        | slot_input::RawEvent::Up(slot_input::Btn::Power)
+                )
+            });
         }
         if self.rebuild.is_some() {
             return;
@@ -716,7 +766,9 @@ impl Frontend {
     #[cfg(feature = "brick")]
     pub fn prepare_sleep(&mut self) -> bool {
         self.session.app_mut().settle_saves();
-        self.session.observed_speed().is_none_or(|s| s == crate::emu::Speed::Paused)
+        self.session
+            .observed_speed()
+            .is_none_or(|s| s == crate::emu::Speed::Paused)
     }
 
     #[cfg(feature = "brick")]
@@ -734,15 +786,24 @@ impl Frontend {
     /// Doze after a stretch without input; device_app then suspends as for a power press.
     #[cfg(feature = "brick")]
     pub fn idle_sleep(&mut self) {
-        if !self.auto_sleep || self.rebuild.is_some() || self.app().link_active() {return}
+        if !self.auto_sleep || self.rebuild.is_some() || self.app().link_active() {
+            return;
+        }
         let limit = match self.app().phase() {
             Phase::Shelf | Phase::QuickMenu { .. } => IDLE_MENU,
             Phase::Playing { .. } => IDLE_GAME,
             _ => return,
         };
-        let limit = if self.woke_untouched {limit.min(IDLE_AFTER_WAKE)} else {limit};
+        let limit = if self.woke_untouched {
+            limit.min(IDLE_AFTER_WAKE)
+        } else {
+            limit
+        };
         if self.last_input.elapsed() >= limit {
-            eprintln!("slot: idle for {}s; sleeping", self.last_input.elapsed().as_secs());
+            eprintln!(
+                "slot: idle for {}s; sleeping",
+                self.last_input.elapsed().as_secs()
+            );
             self.woke_untouched = false;
             self.session.app_mut().idle_doze();
         }
@@ -1173,59 +1234,86 @@ fn platform_root_has(root: &std::path::Path, name: &str) -> bool {
     root.join(name).exists()
 }
 
-#[cfg(all(test,feature="brick"))]
+#[cfg(all(test, feature = "brick"))]
 mod power_render_tests {
     use super::*;
-    fn booted(dir:&std::path::Path)->Frontend {
+    fn booted(dir: &std::path::Path) -> Frontend {
         crate::root::ensure(dir);
-        let state=slot_store::SlotState{clock_set:true,..Default::default()};
-        slot_store::write_slot_state(dir,&state).unwrap();
+        let state = slot_store::SlotState {
+            clock_set: true,
+            ..Default::default()
+        };
+        slot_store::write_slot_state(dir, &state).unwrap();
         Frontend::boot(Box::new(slot_power::SimPlatform::at(dir.into())))
     }
     #[test]
     fn idle_shelf_dozes_after_limit_only() {
-        let dir=tempfile::tempdir().unwrap();let mut f=booted(dir.path());
-        assert!(matches!(f.app().phase(),Phase::Shelf));
-        f.last_input=Instant::now()-Duration::from_secs(4*60);f.idle_sleep();
-        assert!(matches!(f.app().phase(),Phase::Shelf),"4 minutes is not yet idle");
-        f.last_input=Instant::now()-Duration::from_secs(5*60+1);f.idle_sleep();
-        assert!(matches!(f.app().phase(),Phase::Doze{..}));
+        let dir = tempfile::tempdir().unwrap();
+        let mut f = booted(dir.path());
+        assert!(matches!(f.app().phase(), Phase::Shelf));
+        f.last_input = Instant::now() - Duration::from_secs(4 * 60);
+        f.idle_sleep();
+        assert!(
+            matches!(f.app().phase(), Phase::Shelf),
+            "4 minutes is not yet idle"
+        );
+        f.last_input = Instant::now() - Duration::from_secs(5 * 60 + 1);
+        f.idle_sleep();
+        assert!(matches!(f.app().phase(), Phase::Doze { .. }));
     }
     #[test]
     fn untouched_wake_sleeps_again_quickly() {
-        let dir=tempfile::tempdir().unwrap();let mut f=booted(dir.path());
-        f.woke_untouched=true;
-        f.last_input=Instant::now()-Duration::from_secs(60);f.idle_sleep();
-        assert!(matches!(f.app().phase(),Phase::Shelf));
-        f.last_input=Instant::now()-Duration::from_secs(91);f.idle_sleep();
-        assert!(matches!(f.app().phase(),Phase::Doze{..}));
+        let dir = tempfile::tempdir().unwrap();
+        let mut f = booted(dir.path());
+        f.woke_untouched = true;
+        f.last_input = Instant::now() - Duration::from_secs(60);
+        f.idle_sleep();
+        assert!(matches!(f.app().phase(), Phase::Shelf));
+        f.last_input = Instant::now() - Duration::from_secs(91);
+        f.idle_sleep();
+        assert!(matches!(f.app().phase(), Phase::Doze { .. }));
     }
     #[test]
     fn auto_sleep_can_be_disabled() {
-        let dir=tempfile::tempdir().unwrap();crate::root::ensure(dir.path());
-        std::fs::write(dir.path().join("DISABLE_AUTO_SLEEP"),"").unwrap();
-        let mut f=booted(dir.path());
-        f.last_input=Instant::now()-Duration::from_secs(3600);f.idle_sleep();
-        assert!(matches!(f.app().phase(),Phase::Shelf));
+        let dir = tempfile::tempdir().unwrap();
+        crate::root::ensure(dir.path());
+        std::fs::write(dir.path().join("DISABLE_AUTO_SLEEP"), "").unwrap();
+        let mut f = booted(dir.path());
+        f.last_input = Instant::now() - Duration::from_secs(3600);
+        f.idle_sleep();
+        assert!(matches!(f.app().phase(), Phase::Shelf));
     }
     #[test]
     fn idle_redraw_gate_preserves_input_effects_and_periodic_refresh() {
-        let dir=tempfile::tempdir().unwrap();
+        let dir = tempfile::tempdir().unwrap();
         crate::root::ensure(dir.path());
-        let state=slot_store::SlotState{clock_set:true,..Default::default()};
-        slot_store::write_slot_state(dir.path(),&state).unwrap();
-        let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(dir.path().into())));
-        assert!(matches!(f.app().phase(),Phase::Shelf));
-        f.last_input=Instant::now()-Duration::from_secs(3);
-        f.last_render=Instant::now();f.rendered_effects=f.render_effects();
-        let mut scene=vec![];f.app().draw(&mut scene);f.draws=scene;
-        assert!(!f.needs_render(),"unchanged shelf should not redraw");
-        f.last_input=Instant::now();assert!(f.needs_render(),"input must redraw immediately");
-        f.last_input=Instant::now()-Duration::from_secs(3);
-        f.rendered_effects.0 = -1.0;assert!(f.needs_render(),"screen transitions must animate");
-        f.rendered_effects=f.render_effects();f.last_render=Instant::now()-Duration::from_secs(2);
-        assert!(f.needs_render(),"clock and asynchronous artwork must refresh");
-        f.last_render=Instant::now();f.draws.clear();
-        assert!(f.needs_render(),"changed drawing commands must redraw");
+        let state = slot_store::SlotState {
+            clock_set: true,
+            ..Default::default()
+        };
+        slot_store::write_slot_state(dir.path(), &state).unwrap();
+        let mut f = Frontend::boot(Box::new(slot_power::SimPlatform::at(dir.path().into())));
+        assert!(matches!(f.app().phase(), Phase::Shelf));
+        f.last_input = Instant::now() - Duration::from_secs(3);
+        f.last_render = Instant::now();
+        f.rendered_effects = f.render_effects();
+        let mut scene = vec![];
+        f.app().draw(&mut scene);
+        f.draws = scene;
+        assert!(!f.needs_render(), "unchanged shelf should not redraw");
+        f.last_input = Instant::now();
+        assert!(f.needs_render(), "input must redraw immediately");
+        f.last_input = Instant::now() - Duration::from_secs(3);
+        f.rendered_effects.0 = -1.0;
+        assert!(f.needs_render(), "screen transitions must animate");
+        f.rendered_effects = f.render_effects();
+        f.last_render = Instant::now() - Duration::from_secs(2);
+        assert!(
+            f.needs_render(),
+            "clock and asynchronous artwork must refresh"
+        );
+        f.last_render = Instant::now();
+        f.draws.clear();
+        assert!(f.needs_render(), "changed drawing commands must redraw");
     }
 }

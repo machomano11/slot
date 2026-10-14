@@ -75,12 +75,19 @@ impl Pacer {
 /// being swallowed, which used to need a second press to wake. Once the script
 /// has announced the kernel request (/tmp/slot-suspending) the press is the wake key.
 #[cfg(feature = "brick")]
-fn run_sleep_script(root: &std::path::Path, input: &mut BrickInput, frontend: &Frontend) -> (std::io::Result<std::process::ExitStatus>, bool) {
+fn run_sleep_script(
+    root: &std::path::Path,
+    input: &mut BrickInput,
+    frontend: &Frontend,
+) -> (std::io::Result<std::process::ExitStatus>, bool) {
     use slot_input::{Btn, InputSource, RawEvent};
     const SUSPENDING: &str = "/tmp/slot-suspending";
     let _ = std::fs::remove_file(SUSPENDING);
     let mut child = match std::process::Command::new("/bin/sh")
-        .arg(root.join("System/sleep.sh")).env("SLOT_ROOT", root).spawn() {
+        .arg(root.join("System/sleep.sh"))
+        .env("SLOT_ROOT", root)
+        .spawn()
+    {
         Ok(c) => c,
         Err(e) => return (Err(e), false),
     };
@@ -93,7 +100,12 @@ fn run_sleep_script(root: &std::path::Path, input: &mut BrickInput, frontend: &F
             Ok(None) => {}
             Err(e) => return (Err(e), pressed),
         }
-        if !pressed && input.poll(frontend.now()).into_iter().any(|e| matches!(e, RawEvent::Down(Btn::Power))) {
+        if !pressed
+            && input
+                .poll(frontend.now())
+                .into_iter()
+                .any(|e| matches!(e, RawEvent::Down(Btn::Power)))
+        {
             pressed = true;
             if !std::path::Path::new(SUSPENDING).exists() {
                 eprintln!("slot: sleep: Power pressed while preparing; cancelling the suspend");
@@ -219,7 +231,7 @@ pub fn run() {
         #[cfg(feature = "brick")]
         {
             frontend.idle_sleep();
-            cpu.mode(frontend.power_mode(),frontend.audio_underruns());
+            cpu.mode(frontend.power_mode(), frontend.audio_underruns());
             if matches!(frontend.app().phase(), slot::app::Phase::Doze { .. }) {
                 let since = *sleep_since.get_or_insert_with(Instant::now);
                 // Let the paused audio sink release ALSA and pending saves finish.
@@ -227,12 +239,14 @@ pub fn run() {
                     sleep_attempted = true;
                     if frontend.prepare_sleep() {
                         slot::brick_link::quiesce();
-                        let suspended_before=slot::brick_power::suspended_seconds();
+                        let suspended_before = slot::brick_power::suspended_seconds();
                         let (result, cancelled) = run_sleep_script(&root, &mut input, &frontend);
                         let returned = Instant::now();
-                        let suspended=slot::brick_power::suspended_seconds().zip(suspended_before).map(|(a,b)|(a-b).max(0.0));
-                        let confirmed=suspended.is_some_and(|v|v>0.05);
-                        cpu.mode(slot::brick_power::Mode::Boost,frontend.audio_underruns());
+                        let suspended = slot::brick_power::suspended_seconds()
+                            .zip(suspended_before)
+                            .map(|(a, b)| (a - b).max(0.0));
+                        let confirmed = suspended.is_some_and(|v| v > 0.05);
+                        cpu.mode(slot::brick_power::Mode::Boost, frontend.audio_underruns());
                         let woke = match &result {
                             Ok(status) if status.success() || confirmed || cancelled => {
                                 frontend.resume_sleep(&mut input);
@@ -240,11 +254,18 @@ pub fn run() {
                                 sleep_attempted = false;
                                 true
                             }
-                            other => {eprintln!("slot: suspend unavailable ({other:?}); using standby"); false}
+                            other => {
+                                eprintln!("slot: suspend unavailable ({other:?}); using standby");
+                                false
+                            }
                         };
                         {
                             use std::io::Write;
-                            if let Ok(mut log)=std::fs::OpenOptions::new().create(true).append(true).open(root.join("Logs/sleep.log")) {
+                            if let Ok(mut log) = std::fs::OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open(root.join("Logs/sleep.log"))
+                            {
                                 let _=writeln!(log,"Slot verification: suspended_seconds={suspended:?}, confirmed={confirmed}, power_pressed_during_sleep_entry={cancelled}, helper={result:?}, screen_on={woke} {} ms after the helper returned",returned.elapsed().as_millis());
                             }
                         }
@@ -270,7 +291,7 @@ pub fn run() {
         let swap = Instant::now();
         let work = swap - began;
         #[cfg(feature = "brick")]
-        cpu.sample(frame_ready,work,pacer.period,frontend.audio_underruns());
+        cpu.sample(frame_ready, work, pacer.period, frontend.audio_underruns());
         if let Err(e) = surface.swap() {
             eprintln!("slot: {e}");
             #[cfg(feature = "brick")]

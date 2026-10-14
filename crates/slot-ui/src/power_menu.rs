@@ -10,7 +10,9 @@ pub enum PowerChoice {
 impl PowerChoice {
     pub const ALL: [PowerChoice; 2] = if cfg!(feature = "brick") {
         [PowerChoice::PowerOff, PowerChoice::Restart]
-    } else { [PowerChoice::Restart, PowerChoice::PowerOff] };
+    } else {
+        [PowerChoice::Restart, PowerChoice::PowerOff]
+    };
 
     pub fn index(self) -> usize {
         Self::ALL.iter().position(|choice| *choice == self).unwrap()
@@ -18,8 +20,20 @@ impl PowerChoice {
 
     pub fn text(self) -> &'static str {
         match self {
-            PowerChoice::Restart => if cfg!(feature = "brick") { "EXIT TO STOCK OS" } else { "Restart" },
-            PowerChoice::PowerOff => if cfg!(feature = "brick") { "SHUT DOWN DEVICE" } else { "Power Off" },
+            PowerChoice::Restart => {
+                if cfg!(feature = "brick") {
+                    "EXIT TO STOCK OS"
+                } else {
+                    "Restart"
+                }
+            }
+            PowerChoice::PowerOff => {
+                if cfg!(feature = "brick") {
+                    "SHUT DOWN DEVICE"
+                } else {
+                    "Power Off"
+                }
+            }
         }
     }
 }

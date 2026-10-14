@@ -92,4 +92,3 @@ pub use sticker::{
     HOME, ORIGIN, PORT_VERSION, STICKER_H, STICKER_W, TITLE,
 };
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
-
