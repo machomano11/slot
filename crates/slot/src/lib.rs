@@ -7,6 +7,7 @@ pub mod cable;
 pub mod cart_faces;
 pub mod core;
 pub mod core_picker;
+pub mod crash;
 pub mod drc;
 pub mod emu;
 pub mod face_builder;
@@ -23,10 +24,24 @@ pub mod link_screen;
 pub mod link_start;
 pub mod link_state;
 pub mod persist;
+pub mod prefetch;
 pub mod resample;
 pub mod rewind;
 pub mod root;
 pub mod session;
+pub mod state_writer;
 pub mod thumb;
 pub mod video_mode;
 pub mod wallpaper;
+
+#[cfg(feature = "brick")]
+pub mod brick_led;
+
+#[cfg(feature = "brick")]
+pub mod brick_power;
+
+#[cfg(feature = "brick")]
+pub mod brick_wifi;
+
+#[cfg(feature = "brick")]
+pub mod brick_link;

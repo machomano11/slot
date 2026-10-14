@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use slot_gfx::{OUT_H, OUT_W};
 use slot_input::{Action, Btn, MUTE_CHORD_MS};
@@ -44,6 +46,7 @@ const POWER_OFF_S: f32 = 0.16;
 const VOLUME_STEP: u8 = 5;
 
 const AUTOSAVE_MS: Millis = 60_000;
+const CARD_CHECK_MS: Millis = 2_000;
 
 const BATTERY_CRITICAL: u8 = 5;
 
@@ -257,6 +260,10 @@ pub enum Phase {
 }
 
 pub struct App {
+    #[cfg(feature = "brick")]
+    pub(crate) wifi: Option<crate::brick_wifi::WifiMenu>,
+    #[cfg(feature = "brick")]
+    wifi_power: Option<Action>,
     phase: Phase,
     shelves: Vec<(Platform, Shelf)>,
     shelf_at: usize,
@@ -302,6 +309,7 @@ pub struct App {
     palette_live: bool,
     palette_pending: Option<GbPalette>,
     link_player: Option<u8>,
+    solo_serial: Option<&'static str>,
     platform: Platform,
     named_core: bool,
     video_mode: VideoMode,
@@ -333,12 +341,22 @@ pub struct App {
     woke_on_press: bool,
     autosave_at: Millis,
     pending_save: Option<std::thread::JoinHandle<()>>,
+    card_failing: Arc<AtomicBool>,
+    card_read_only: bool,
+    card_check_at: Millis,
+    state_writer: crate::state_writer::StateWriter,
     battery_at: Millis,
     charge_at: Millis,
     headphones: bool,
     headphones_at: Millis,
     battery: Option<Battery>,
     last_led: Option<LedState>,
+    #[cfg(feature = "brick")]
+    brick_leds: Option<crate::brick_led::BrickLeds>,
+    #[cfg(feature = "brick")]
+    brick_mute: Option<bool>,
+    #[cfg(feature = "brick")]
+    brick_switch_at: Millis,
     powering_off: bool,
     radio: Box<dyn RadioJobs>,
 }
@@ -373,8 +391,14 @@ impl App {
             .iter()
             .position(|(_, s)| !s.carts.is_empty())
             .unwrap_or(0);
+        let state_writer = crate::state_writer::StateWriter::spawn();
+        let card_failing = state_writer.card_failing();
         App {
             radio: radio_jobs(),
+            state_writer,
+            card_failing,
+            card_read_only: false,
+            card_check_at: 0,
             phase: Phase::Shelf,
             shelves,
             shelf_at,
@@ -383,6 +407,10 @@ impl App {
             refused_from: None,
             alert_face: None,
             shutdown_faces: Vec::new(),
+            #[cfg(feature = "brick")]
+            wifi: None,
+            #[cfg(feature = "brick")]
+            wifi_power: None,
             power_menu: None,
             power_menu_faces: Vec::new(),
             core_picker: None,
@@ -420,6 +448,7 @@ impl App {
             palette_live: false,
             palette_pending: None,
             link_player: None,
+            solo_serial: None,
             platform: Platform::default(),
             named_core: false,
             video_mode: VideoMode::default(),
@@ -457,6 +486,12 @@ impl App {
             headphones_at: 0,
             battery: None,
             last_led: None,
+            #[cfg(feature = "brick")]
+            brick_leds: None,
+            #[cfg(feature = "brick")]
+            brick_mute: None,
+            #[cfg(feature = "brick")]
+            brick_switch_at: 0,
             powering_off: false,
         }
     }
@@ -466,6 +501,8 @@ impl App {
         slot_ui::set_theme(Theme::read(root));
         let mut app = App::new(scan(root).unwrap_or_default());
         app.root = Some(root.to_path_buf());
+        #[cfg(feature = "brick")]
+        { app.brick_leds = Some(crate::brick_led::BrickLeds::open(root)); }
         app.state = read_slot_state(root);
         if app.state.clock_set {
             app.start();
@@ -633,6 +670,9 @@ impl App {
     }
 
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
+        #[cfg(feature = "brick")]
+        if row.led_setting() { return self.brick_leds.as_ref().and_then(|leds| leds.value(row)).or(Some(QuickValue::Unavailable)); }
+
         match row {
             QuickRow::FastForward => QuickValue::speed(self.state.ff_speed),
             QuickRow::FastForwardSound => Some(QuickValue::flag(self.state.ff_sound)),
@@ -644,7 +684,7 @@ impl App {
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
             QuickRow::Rewind => Some(QuickValue::flag(self.state.rewind)),
-            QuickRow::DateTime | QuickRow::About | QuickRow::Screen | QuickRow::Game => None,
+            QuickRow::Wifi | QuickRow::DateTime | QuickRow::About | QuickRow::Screen | QuickRow::Game | QuickRow::Lights | QuickRow::LedMode | QuickRow::LedTop | QuickRow::LedButtons | QuickRow::LedTriggers | QuickRow::LedColor | QuickRow::LedEffect => None,
         }
     }
 
@@ -862,9 +902,29 @@ impl App {
         let (Some(root), Phase::Playing { cart }) = (self.root.clone(), &self.phase) else {
             return;
         };
-        if let Err(e) = video_mode::write_video_mode(&root, cart, mode) {
+        let written = video_mode::write_video_mode(&root, cart, mode);
+        if let Err(e) = &written {
             eprintln!("slot: video: could not write video_mode.ini: {e}");
         }
+        self.card_failing.store(written.is_err(), Ordering::Relaxed);
+    }
+
+    /// Home+X on the Brick: GBA between its true 3:2 shape and 4:3 full screen.
+    /// Remembered per game, like the L1/R1 choice for GB/GBC.
+    fn toggle_gba_picture(&mut self) {
+        if !matches!(self.phase, Phase::Playing { .. }) || self.game_menu_open() || self.power_menu.is_some() {
+            return;
+        }
+        if self.platform != Platform::Gba {
+            self.refuse();
+            return;
+        }
+        let (to, said) = match self.video_mode {
+            VideoMode::Actual => (VideoMode::Stretch, Toast::PictureFull),
+            VideoMode::Stretch => (VideoMode::Actual, Toast::PictureOriginal),
+        };
+        self.set_picture(to);
+        self.hud.toast(said, self.now());
     }
 
     pub fn set_link_loaded(&mut self, serial: &'static str) {
@@ -925,6 +985,7 @@ impl App {
     pub fn end_link(&mut self) {
         self.link = None;
         self.link_player = None;
+        self.solo_serial = None;
         self.sync_link_badge();
         self.radio.ask(RadioJob::Down);
         self.radio.ask(RadioJob::Cool);
@@ -1053,8 +1114,14 @@ impl App {
         self.restarting
     }
 
+    pub fn restore_brick_leds(&self) {
+        #[cfg(feature = "brick")]
+        if let Some(leds)=&self.brick_leds { if let Err(e)=leds.restore() { eprintln!("slot: LED restore: {e}"); } }
+    }
+
     pub fn restart(&mut self) {
         self.settle_saves();
+        self.restore_brick_leds();
         if let Some(power) = &mut self.power {
             power.restart();
         }
@@ -1086,6 +1153,26 @@ impl App {
 
     pub fn take_link_reload(&mut self) -> Option<(String, &'static str)> {
         self.link_reload.take()
+    }
+
+    /// A failed/cancelled link can leave the core in expensive link mode.
+    /// Session performs the normal save/resume reload once the attempt settles.
+    pub fn take_solo_reload(&mut self) -> Option<(String, &'static str)> {
+        if self.link_active() || self.starting.is_some() || self.reload.is_some()
+            || self.link_reload.is_some() || self.shutting_down()
+            || matches!(self.game_menu, Some(GameMenu::Working { .. }))
+            || !matches!(self.phase, Phase::Playing { .. }) {
+            return None;
+        }
+        let serial = self.solo_serial?;
+        if self.snapshot.as_ref().is_some_and(|s| !s.resume_trusted()) {return None;}
+        let stem = self.seated()?.to_string();
+        self.solo_serial = None;
+        let was_link_player = self.link_player.take().is_some();
+        self.radio.ask(RadioJob::Cool);
+        if was_link_player || self.link_loaded != Some(serial) {
+            Some((stem, serial))
+        } else { None }
     }
 
     pub fn link_player(&self) -> Option<u8> {
@@ -1172,6 +1259,12 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        #[cfg(feature = "brick")]
+        if let Some(wifi)=&mut self.wifi {
+            if matches!(action,Action::PowerTap|Action::PowerHold|Action::LidClose) && wifi.busy() {
+                wifi.cancel();self.wifi_power=Some(action);return;
+            }
+        }
         if self.power_menu.is_some() {
             match action {
                 Action::LidClose => return self.doze(),
@@ -1197,6 +1290,11 @@ impl App {
             Action::PowerHold => return self.open_power_menu(),
             Action::PowerOff => return,
             _ => {}
+        }
+        #[cfg(feature = "brick")]
+        if let Some(wifi)=&mut self.wifi {
+            if wifi.input(action) {self.wifi=None;}
+            return;
         }
         if let Phase::SetClock {
             picker, from_menu, ..
@@ -1316,11 +1414,15 @@ impl App {
 
     fn open_quick_row(&mut self, row: QuickRow) {
         match row {
+            QuickRow::Wifi => {
+                #[cfg(feature = "brick")]
+                {self.wifi=Some(crate::brick_wifi::WifiMenu::new());}
+            },
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
             QuickRow::About => self.phase = Phase::About,
-            QuickRow::Screen | QuickRow::Game => {
+            QuickRow::Screen | QuickRow::Game | QuickRow::Lights => {
                 if let Some(row) = row.child() {
                     self.phase = Phase::QuickMenu { row };
                 }
@@ -1334,11 +1436,19 @@ impl App {
             | QuickRow::GbaShader
             | QuickRow::GbShader
             | QuickRow::GbPalettes
-            | QuickRow::Rumble => {}
+            | QuickRow::Rumble | QuickRow::LedMode | QuickRow::LedTop | QuickRow::LedButtons | QuickRow::LedTriggers | QuickRow::LedColor | QuickRow::LedEffect => {}
         }
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        #[cfg(feature = "brick")]
+        if row.led_setting() {
+            if let Some(leds)=self.brick_leds.as_mut() {
+                if let Err(e)=leds.change(row,right) { eprintln!("slot: LED setting: {e}"); self.refuse(); }
+            }
+            return;
+        }
+
         let s = &mut self.state;
         match row {
             QuickRow::FastForward => {
@@ -1372,7 +1482,7 @@ impl App {
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::GbPalettes => s.gb_palettes = !s.gb_palettes,
-            QuickRow::DateTime | QuickRow::About | QuickRow::Screen | QuickRow::Game => return,
+            QuickRow::Wifi | QuickRow::DateTime | QuickRow::About | QuickRow::Screen | QuickRow::Game | QuickRow::Lights | QuickRow::LedMode | QuickRow::LedTop | QuickRow::LedButtons | QuickRow::LedTriggers | QuickRow::LedColor | QuickRow::LedEffect => return,
         }
         self.persist();
     }
@@ -1403,6 +1513,19 @@ impl App {
     }
 
     fn adjust(&mut self, action: Action) -> bool {
+        if action == Action::LedToggle {
+            #[cfg(feature = "brick")]
+            if matches!(self.phase, Phase::Playing { .. }) && !self.game_menu_open() && self.power_menu.is_none() {
+                if let Some(leds) = &mut self.brick_leds {
+                    if let Err(e) = leds.toggle() { eprintln!("slot: LED shortcut: {e}"); self.refuse(); }
+                }
+            }
+            return true;
+        }
+        if action == Action::PictureToggle {
+            self.toggle_gba_picture();
+            return true;
+        }
         if action == Action::MuteToggle {
             self.mute_toggle();
             return true;
@@ -1462,7 +1585,7 @@ impl App {
             power.set_backlight(value);
         }
         if moved || unmuted {
-            self.persist();
+            self.persist_soon();
         }
         true
     }
@@ -1491,7 +1614,7 @@ impl App {
         *self.muted_mut() = muted;
         self.hud
             .show(HudKind::Volume, self.output_volume(), muted, now);
-        self.persist();
+        self.persist_soon();
     }
 
     fn hud_value(&self, kind: HudKind, value: u8) -> u8 {
@@ -1546,7 +1669,22 @@ impl App {
         }
     }
 
+    #[cfg(feature = "brick")]
+    pub fn set_brick_mute(&mut self, muted: bool) {
+        if self.brick_mute == Some(muted) {return;}
+        let initial = self.brick_mute.is_none();
+        self.brick_mute = Some(muted);
+        if !muted && !initial {
+            self.state.muted = false;
+            self.state.muted_hp = false;
+        }
+        if !initial {
+            self.hud.show(HudKind::Volume,self.output_volume(),self.muted(),self.now());
+        }
+    }
     pub fn muted(&self) -> bool {
+        #[cfg(feature = "brick")]
+        if self.brick_mute == Some(true) {return true;}
         if self.headphones {
             self.state.muted_hp
         } else {
@@ -1717,6 +1855,24 @@ impl App {
     }
 
     fn timers(&mut self) {
+        #[cfg(feature = "brick")]
+        {
+            if let Some(wifi)=&mut self.wifi {wifi.poll();}
+            if self.wifi.as_ref().map(|w|!w.busy()).unwrap_or(true) {
+                if let Some(action)=self.wifi_power.take(){self.apply(action);}
+            }
+        }
+        #[cfg(feature = "brick")]
+        if self.now() >= self.brick_switch_at {
+            self.brick_switch_at = self.now() + 200;
+            if let Ok(value) = std::fs::read_to_string("/sys/class/gpio/gpio243/value") {
+                match value.trim() {
+                    "0" => self.set_brick_mute(false),
+                    "1" => self.set_brick_mute(true),
+                    _ => {}
+                }
+            }
+        }
         self.play_hold();
         let offer = self.undo_label();
         if let Some(p) = &mut self.polaroids {
@@ -1728,6 +1884,19 @@ impl App {
         if self.now() >= self.autosave_at {
             self.autosave();
         }
+        if self.now() >= self.card_check_at {
+            self.card_check_at = self.now() + CARD_CHECK_MS;
+            self.card_read_only = self.power.as_ref().is_some_and(|p| p.card_read_only());
+        }
+        let failing = self.card_failing.load(Ordering::Relaxed) || self.card_read_only;
+        if failing != self.hud.alarmed() {
+            eprintln!(
+                "slot: card: alarm {} (read-only {})",
+                if failing { "on" } else { "off" },
+                self.card_read_only
+            );
+        }
+        self.hud.set_alarm(failing, self.now());
         if self.now() >= self.battery_at {
             self.battery_at = self.now() + BATTERY_POLL_MS;
             self.battery = self.power.as_ref().and_then(|p| p.battery());
@@ -1815,9 +1984,23 @@ impl App {
         let Some(root) = &self.root else {
             return;
         };
-        if let Err(e) = write_slot_state(root, &self.state) {
+        self.state_writer.flush();
+        let written = write_slot_state(root, &self.state);
+        if let Err(e) = &written {
             eprintln!("slot: slot.state: {e}");
         }
+        self.card_failing.store(written.is_err(), Ordering::Relaxed);
+    }
+
+    /// Volume/brightness/mute: written in the background so held keys never stall a frame.
+    fn persist_soon(&self) {
+        if let Some(root) = &self.root {
+            self.state_writer.save(root, &self.state);
+        }
+    }
+
+    pub fn flush_state(&self) {
+        self.state_writer.flush();
     }
 
     pub fn on_core_ready(&mut self) {
@@ -1927,6 +2110,10 @@ impl App {
                 });
             }
             return;
+        }
+        #[cfg(feature = "brick")]
+        if let Some(wifi)=&self.wifi {
+            if let Some(tex)=wifi.face {out.push(Draw::Tex{x:0.0,y:0.0,w:640.0,h:480.0,tex,alpha:1.0});return;}
         }
         match &self.phase {
             Phase::SetClock {
@@ -2388,16 +2575,24 @@ impl App {
         matches!(self.phase, Phase::Shelf)
     }
 
+    pub fn browsed_rom(&self) -> Option<&std::path::Path> {
+        if !self.on_shelf() {
+            return None;
+        }
+        let shelf = self.shelf();
+        shelf.carts.get(shelf.index).map(|c| c.rom.as_path())
+    }
+
     fn insert(&mut self, clean: bool) {
         if !self.on_shelf() {
             return;
         }
-        let Some(cart) = self
-            .shelf()
-            .carts
-            .get(self.shelf().index)
-            .map(|c| c.stem.clone())
-        else {
+        // 1.6.0: the scan no longer opens every ROM; the header is read on insert.
+        let at = self.shelf().index;
+        let Some(cart) = self.shelf_mut().carts.get_mut(at).map(|c| {
+            c.read_header();
+            c.stem.clone()
+        }) else {
             return;
         };
         self.play_held = None;
@@ -2471,12 +2666,18 @@ impl App {
             Ok(()) => {
                 self.state.cart = None;
                 self.state.cart_platform = None;
+                self.card_failing.store(false, Ordering::Relaxed);
             }
-            Err(e) => eprintln!("slot: eject: {e}"),
+            Err(e) => {
+                eprintln!("slot: eject: {e}");
+                self.card_failing.store(true, Ordering::Relaxed);
+            }
         }
     }
 
     fn doze(&mut self) {
+        #[cfg(feature = "brick")]
+        {self.wifi=None;}
         if self.link_active() {
             self.end_link();
         }
@@ -2485,6 +2686,7 @@ impl App {
         if matches!(self.phase, Phase::Doze { .. }) {
             return;
         }
+        self.state_writer.flush();
         self.flush_resume();
         let cart = match &mut self.phase {
             Phase::Playing { cart } | Phase::Polaroids { cart } => Some(std::mem::take(cart)),
@@ -2493,13 +2695,26 @@ impl App {
         self.polaroids = None;
         self.phase = Phase::Doze { cart };
         self.dozed_at = self.now();
+        #[cfg(feature = "brick")]
+        if let Some(leds) = &mut self.brick_leds {
+            if let Err(e) = leds.sleep() { eprintln!("slot: LEDs sleep: {e}"); }
+        }
         self.radio.ask(RadioJob::Cool);
         if let Some(power) = &mut self.power {
             power.on_close();
         }
     }
 
-    fn wake(&mut self) {
+    /// Idle timeout: same as a power press, but only from calm screens and never mid-link.
+    #[cfg(feature = "brick")]
+    pub(crate) fn idle_doze(&mut self) {
+        if self.link_active() {return}
+        if matches!(self.phase, Phase::Shelf | Phase::QuickMenu { .. } | Phase::Playing { .. }) {
+            self.doze();
+        }
+    }
+
+    pub(crate) fn wake(&mut self) {
         let Phase::Doze { cart } = &mut self.phase else {
             return;
         };
@@ -2507,6 +2722,10 @@ impl App {
             Some(cart) => Phase::Playing { cart },
             None => Phase::Shelf,
         };
+        #[cfg(feature = "brick")]
+        if let Some(leds) = &mut self.brick_leds {
+            if let Err(e) = leds.wake() { eprintln!("slot: LEDs wake: {e}"); }
+        }
         if let Some(power) = &mut self.power {
             power.on_open();
         }
@@ -2773,6 +2992,7 @@ impl App {
             return;
         };
         let loaded = self.link_loaded.unwrap_or("auto");
+        self.solo_serial.get_or_insert(loaded);
         if self.core == Core::Mgba {
             let player = role.client_id() as u8;
             if self.link_player == Some(player) {
@@ -2955,6 +3175,7 @@ impl App {
     }
 
     pub fn settle_saves(&mut self) {
+        self.state_writer.flush();
         if let Some(h) = self.pending_save.take() {
             let _ = h.join();
         }
@@ -2974,17 +3195,20 @@ impl App {
         let (state, sav) = trusted_write(snapshot.as_ref(), state, "autosave");
         let (root, platform, core, cart) =
             (root.clone(), self.platform, self.core, cart.to_owned());
+        let failing = self.card_failing.clone();
         let write = move || {
-            if let Err(e) = persist::flush(
+            let written = persist::flush(
                 &root,
                 platform,
                 core,
                 &cart,
                 state.as_deref(),
                 sav.as_deref(),
-            ) {
+            );
+            if let Err(e) = &written {
                 eprintln!("slot: autosave: {e}");
             }
+            failing.store(written.is_err(), Ordering::Relaxed);
         };
         match std::thread::Builder::new()
             .name("slot-autosave".into())
@@ -3007,16 +3231,18 @@ impl App {
             return;
         };
         let (state, sav) = trusted_write(snapshot.as_ref(), state, "flush");
-        if let Err(e) = persist::flush(
+        let written = persist::flush(
             root,
             self.platform,
             self.core,
             cart,
             state.as_deref(),
             sav.as_deref(),
-        ) {
+        );
+        if let Err(e) = &written {
             eprintln!("slot: flush: {e}");
         }
+        self.card_failing.store(written.is_err(), Ordering::Relaxed);
     }
 
     fn ring(&self) -> Option<StateRing> {
@@ -3209,6 +3435,10 @@ impl App {
         self.hud.said(self.now())
     }
 
+    pub fn card_alarm(&self) -> bool {
+        self.hud.alarmed()
+    }
+
     pub fn undo(&mut self, now: Millis) {
         if !self.undo_available(now) {
             self.pending = None;
@@ -3377,14 +3607,15 @@ fn draw_menu_rows(
     top: f32,
     out: &mut Vec<Draw>,
 ) {
+    let row_w = faces.iter().map(|(_,w,_)|*w).max().unwrap_or(0) as f32;
     for (row, (tex, w, h)) in faces.iter().copied().enumerate() {
         let y = top + POWER_MENU_PITCH * row as f32;
         let x = ((OUT_W as f32 - w as f32) / 2.0).round();
         if index == Some(row) {
             out.push(Draw::Rect {
-                x,
+                x: ((OUT_W as f32-row_w)/2.0).round(),
                 y: y + POWER_MENU_BAR_INSET,
-                w: w as f32,
+                w: row_w,
                 h: POWER_MENU_PITCH - 2.0 * POWER_MENU_BAR_INSET,
                 colour: slot_ui::edge(),
             });

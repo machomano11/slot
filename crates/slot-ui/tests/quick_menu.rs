@@ -77,10 +77,10 @@ fn the_fast_forward_row_offers_the_four_ceilings_the_card_can_hold() {
 
 #[test]
 fn the_rows_run_in_the_order_the_user_chose() {
-    assert_eq!(
-        QuickRow::MAIN.map(QuickRow::label),
-        ["Screen", "Gameplay", "Date & Time", "About"]
-    );
+    #[cfg(not(feature="brick"))]
+    assert_eq!(QuickRow::MAIN.map(QuickRow::label), ["Screen", "Gameplay", "Date & Time", "About"]);
+    #[cfg(feature="brick")]
+    assert_eq!(QuickRow::MAIN.map(QuickRow::label), ["Screen", "Gameplay", "LEDs", "Wi-Fi", "Date & Time", "About"]);
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
         [
@@ -108,7 +108,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Screen,
             QuickRow::DateTime,
             QuickRow::About,
-            QuickRow::Game
+            QuickRow::Game,
+            QuickRow::Lights,
+            QuickRow::Wifi
         ]
     );
     for page in [
@@ -136,7 +138,7 @@ fn the_values_read_as_the_menu_prints_them() {
             "LCD3x",
             "Grid",
             "Dot",
-            "Simpletex"
+            "Simpletex", "Stock", "Low", "Medium", "High", "White", "Blue", "Green", "Amber", "Red", "Purple", "Steady", "Breathe", "Unavailable"
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);

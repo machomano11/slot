@@ -13,6 +13,8 @@ fn main() {
         slot::root::ensure(std::path::Path::new(&dir));
         return;
     }
+    // 1.6.0: on a crash, log the signal, thread and code location to stderr (slot.log).
+    slot::crash::install();
 
     #[cfg(feature = "host")]
     host_app::run();

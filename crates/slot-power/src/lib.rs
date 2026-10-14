@@ -1,11 +1,15 @@
+#[cfg(feature = "brick")]
+mod brick;
 mod device;
+#[cfg(feature = "brick")]
+pub use brick::BrickPlatform;
 mod motor;
 mod power;
 mod sim;
 
 pub use device::{
-    has_bit, motor_change, record_first_frame, rumble_node, trace_first_frame, uptime_seconds,
-    DevicePlatform,
+    has_bit, motor_change, read_only, read_only_in, record_first_frame, rumble_node,
+    trace_first_frame, uptime_seconds, DevicePlatform,
 };
 pub use motor::Motor;
 pub use power::Power;
@@ -54,6 +58,11 @@ pub trait Platform: Send {
     }
 
     fn headphones(&self) -> bool {
+        false
+    }
+
+    /// True when the card holding the root is mounted read-only (a failing SD card).
+    fn card_read_only(&self) -> bool {
         false
     }
 }

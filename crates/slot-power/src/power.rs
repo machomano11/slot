@@ -58,6 +58,10 @@ impl Power {
         self.platform.restart()
     }
 
+    pub fn card_read_only(&self) -> bool {
+        self.platform.card_read_only()
+    }
+
     pub fn now(&self) -> i64 {
         self.platform.now()
     }

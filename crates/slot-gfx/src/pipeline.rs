@@ -5,8 +5,9 @@ use crate::shaders::{GAME_FRAG, RECT_VERT};
 use crate::surface::{GfxError, OUT_H, OUT_W};
 
 pub const SCALE: u32 = 3;
-pub const SRC_W: u32 = OUT_W / SCALE;
-pub const SRC_H: u32 = OUT_H / SCALE;
+// Emulator frames have a fixed 240x160 canvas, independent of UI layout.
+pub const SRC_W: u32 = 240;
+pub const SRC_H: u32 = 160;
 
 pub const WHOLE_TEXTURE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
@@ -127,14 +128,24 @@ impl GamePass {
 
     pub fn draw(&self, quad: &Quad) {
         let src = match self.effect {
-            ScreenEffect::Grid => whole_scale_source(self.src, self.fbo_scale),
+            ScreenEffect::Grid if !cfg!(feature = "brick") => {
+                whole_scale_source(self.src, self.fbo_scale)
+            }
             _ => self.src,
         };
         self.draw_source(self.game, quad, src);
     }
 
     pub fn draw_still(&self, tex: gl::types::GLuint, quad: &Quad) {
-        self.draw_source(tex, quad, WHOLE_TEXTURE);
+        self.draw_source(
+            tex,
+            quad,
+            if cfg!(feature = "brick") {
+                self.src
+            } else {
+                WHOLE_TEXTURE
+            },
+        );
     }
 
     fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4]) {

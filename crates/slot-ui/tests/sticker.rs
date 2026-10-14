@@ -9,20 +9,21 @@ fn fields() -> StickerFields<'static> {
 }
 
 #[test]
-fn the_headline_rows_read_as_a_device_plate() {
+fn the_headline_rows_name_the_brick_port() {
     let all = sticker_lines(&fields()).join("\n");
-    assert!(all.contains("AGS-102"), "{all}");
-    assert!(all.contains("5V"), "{all}");
-    assert!(all.contains("1.5A"), "{all}");
+    assert!(all.contains("TRIMUI BRICK"), "{all}");
+    assert!(all.contains(slot_ui::PORT_VERSION), "{all}");
     assert!(all.contains("87"), "the gauge reading is missing: {all}");
     assert!(all.contains("0473885"), "the serial went missing: {all}");
+    assert!(!all.contains("AGS-102"), "the RG SP model plate is still there: {all}");
 }
 
 #[test]
-fn the_input_row_carries_the_real_dc_symbol() {
-    let all = sticker_lines(&fields()).join("\n");
-    assert!(all.contains(slot_ui::DC), "the rating row lost its symbol");
-    assert_eq!(slot_ui::DC, '\u{2393}');
+fn the_about_screen_says_it_is_a_port_of_the_original() {
+    let all = sticker_lines(&fields()).join(" ");
+    for owed in ["UNOFFICIAL PORT OF SLOT", "BRANDON T. KOWALSKI", "ANBERNIC RG SP", "TRIMUI BRICK PORT", "PORT BY LORDNORDYX"] {
+        assert!(all.contains(owed), "the About text does not mention {owed}: {all}");
+    }
 }
 
 #[test]
@@ -46,7 +47,6 @@ fn the_compliance_block_is_the_credits() {
     for owed in [
         "MGBA",
         "GPSP",
-        "BASEOS BY PVAIBHAV",
         "OPEN SANS",
         "NERD",
         "LCD3X",
@@ -70,26 +70,14 @@ fn every_line_is_already_upper_case() {
 }
 
 #[test]
-fn the_wordmarks_top_edge_is_antialiased_not_a_hard_step() {
-    use slot_ui::sticker_face;
-    const GROUND: [u8; 3] = [0x23, 0x1f, 0x20];
-    const INK: [u8; 3] = [0xff, 0xff, 0xff];
-    let face = sticker_face(&fields());
-    let get = |x: u32, y: u32| -> [u8; 3] {
-        let i = ((y * face.w + x) * 4) as usize;
-        [face.rgba[i], face.rgba[i + 1], face.rgba[i + 2]]
-    };
-    let edges: Vec<[u8; 3]> = (400..413)
-        .filter_map(|x| {
-            (129..142).find_map(|y| {
-                let above = get(x, y - 1);
-                let here = get(x, y);
-                (above == GROUND && here != GROUND).then_some(here)
-            })
-        })
-        .collect();
-    assert!(
-        edges.iter().any(|&e| e != GROUND && e != INK),
-        "every sampled column's top edge jumps straight from the ground to the ink: {edges:?}"
-    );
+fn every_credit_line_fits_its_column() {
+    // The left column ends where the barcode panel starts.
+    let left_column = 660.0 * 62.133 / 205.762 - 2.0 * 11.0;
+    let font = slot_ui::text::label_font().expect("label font");
+    for line in slot_ui::CREDITS.iter().chain(slot_ui::head_rows(&fields()).iter().map(|s| s.as_str()).collect::<Vec<_>>().iter()) {
+        let px = if slot_ui::CREDITS.contains(line) { 8.5 } else { 11.0 };
+        let layout = slot_ui::text::fit(font, line, f32::MAX, 1, px, px);
+        let w = slot_ui::text::line_width(font, &layout.lines[0], px, layout.tracking);
+        assert!(w <= left_column, "{line:?} is {w}px wide, column is {left_column}px");
+    }
 }

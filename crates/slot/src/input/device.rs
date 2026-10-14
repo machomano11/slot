@@ -37,12 +37,25 @@ impl DeviceInput {
     fn open_traced(dev: &Path, sys: &Path, trace: Option<Arc<Trace>>) -> Self {
         let pending: Arc<Mutex<Vec<RawEvent>>> = Arc::new(Mutex::new(Vec::new()));
         for node in pick_devices(dev, sys) {
+            #[cfg(feature = "brick")]
+            {
+                let Some(name) = node.file_name() else {
+                    continue;
+                };
+                let keys = std::fs::read_to_string(sys.join(name).join("device/capabilities/key"))
+                    .unwrap_or_default();
+                if !slot_power::has_bit(&keys, 116) {
+                    continue;
+                }
+            }
             eprintln!(
                 "slot: input {} ({})",
                 node.display(),
                 device_name(sys, &node)
             );
-            quicken_poll(sys, &node);
+            if !cfg!(feature = "brick") {
+                quicken_poll(sys, &node);
+            }
             let queue = pending.clone();
             let name = node.display().to_string();
             let trace = trace.clone();
@@ -55,7 +68,11 @@ impl DeviceInput {
         }
         DeviceInput {
             pending,
-            hall: find_hall(Path::new(PSY)),
+            hall: if cfg!(feature = "brick") {
+                None
+            } else {
+                find_hall(Path::new(PSY))
+            },
             lid_shut: None,
             next_lid_poll: 0,
         }
@@ -117,6 +134,11 @@ fn read_node(node: &Path, queue: &Mutex<Vec<RawEvent>>, trace: Option<&Trace>) {
             }
             if (ev.kind == EV_KEY && ev.value == 1) || (ev.kind == EV_ABS && ev.value != 0) {
                 crate::latency::read();
+            }
+            // Joystick input is read via SDL on Brick, only its separate power key
+            // comes through evdev. This avoids duplicate face/volume events.
+            if cfg!(feature = "brick") && !(ev.kind == EV_KEY && ev.code == 116) {
+                continue;
             }
             match ev.kind {
                 EV_ABS => events.extend(hat.feed(ev)),

@@ -381,6 +381,10 @@ fn headphones_in(gpio: &str) -> bool {
 }
 
 impl Platform for DevicePlatform {
+    fn card_read_only(&self) -> bool {
+        read_only(&self.root)
+    }
+
     fn headphones(&self) -> bool {
         fs::read_to_string(self.sysfs.join("kernel/debug/gpio")).is_ok_and(|g| headphones_in(&g))
     }
@@ -515,4 +519,22 @@ impl Platform for DevicePlatform {
             motor.play(on);
         }
     }
+}
+
+/// Whether the filesystem holding `path` is mounted read-only (from slot 1.6.0).
+pub fn read_only(path: &Path) -> bool {
+    fs::read_to_string("/proc/mounts").is_ok_and(|m| read_only_in(&m, path))
+}
+
+pub fn read_only_in(mounts: &str, path: &Path) -> bool {
+    mounts
+        .lines()
+        .filter_map(|l| {
+            let mut f = l.split_whitespace();
+            let point = Path::new(f.nth(1)?);
+            let options = f.nth(1)?;
+            path.starts_with(point).then_some((point, options))
+        })
+        .max_by_key(|(point, _)| point.as_os_str().len())
+        .is_some_and(|(_, options)| options.split(',').any(|o| o == "ro"))
 }

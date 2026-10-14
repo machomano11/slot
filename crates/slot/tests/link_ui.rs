@@ -1661,3 +1661,41 @@ fn the_shortcut_still_opens_the_screen_when_nothing_is_linked() {
     assert!(app.game_menu_open());
     assert_eq!(app.toast(), None);
 }
+
+#[test]
+fn cancelled_mgba_host_and_join_restore_solo_without_ejecting() {
+    for join in [false,true] {
+        let (mut app,_d)=playing_on(Core::Mgba);
+        app.set_link_loaded("auto");
+        app.apply(Action::GameMenu);
+        if join {app.apply(Action::GbaDown(Btn::Right));}
+        app.apply(Action::GbaDown(Btn::A));
+        assert_eq!(app.link_player(),Some(if join {1}else{0}));
+        assert!(app.take_link_reload().is_some());
+        assert!(app.take_solo_reload().is_none());
+        app.apply(Action::GbaDown(Btn::B));
+        assert!(app.take_solo_reload().is_none()); // finish loading before restoring
+        app.link_reload_done();
+        assert_eq!(app.take_solo_reload(),Some(("Emerald".into(),"auto")));
+        assert_eq!(app.link_player(),None);
+        assert!(app.take_solo_reload().is_none()); // only one recovery reload
+        assert!(matches!(app.phase(),Phase::Playing{..}));
+        assert!(!app.game_menu_open());
+    }
+}
+
+#[test]
+fn failed_mgba_search_restores_solo_while_showing_failure() {
+    let (mut app,_d)=playing_on(Core::Mgba);
+    app.set_link_loaded("auto");
+    app.apply(Action::GameMenu);app.apply(Action::GbaDown(Btn::A));
+    app.take_link_reload().unwrap();
+    app.apply(Action::GbaDown(Btn::B));app.link_reload_done();
+    // Inject a bounded failed search with the link-mode core still loaded.
+    app.start_link(fake_starter(|_,_|Err(io_err(io::ErrorKind::TimedOut))),0);
+    assert!(app.take_solo_reload().is_none());
+    settle(&mut app);
+    assert!(matches!(app.game_menu(),Some(GameMenu::Failed{..})));
+    assert_eq!(app.take_solo_reload(),Some(("Emerald".into(),"auto")));
+    assert_eq!(app.link_player(),None);
+}
