@@ -341,6 +341,7 @@ pub struct App {
     shelf_named: Option<Millis>,
     shelf_clock: slot_ui::Printed,
     hud: Hud,
+    messages: std::collections::VecDeque<(String, String)>,
     screen: f32,
     lift: f32,
     game_ready: bool,
@@ -486,6 +487,7 @@ impl App {
             shelf_named: None,
             shelf_clock: slot_ui::Printed::default(),
             hud: Hud::new(),
+            messages: std::collections::VecDeque::new(),
             screen: 0.0,
             lift: 1.0,
             game_ready: false,
@@ -3791,6 +3793,42 @@ impl App {
 
     pub fn set_toast_faces(&mut self, faces: Vec<TexId>) {
         self.hud.set_toasts(faces);
+    }
+
+    /// Queues a two-line banner, such as an unlocked achievement. Each one
+    /// waits for the one before it to fade.
+    pub fn show_message(&mut self, title: impl Into<String>, detail: impl Into<String>) {
+        const KEPT: usize = 8;
+        if self.messages.len() < KEPT {
+            self.messages.push_back((title.into(), detail.into()));
+        }
+    }
+
+    /// The next banner to raster, once the screen is free for it.
+    pub fn take_message(&mut self) -> Option<(String, String)> {
+        if self.hud.message_visible(self.now()) {
+            return None;
+        }
+        self.messages.pop_front()
+    }
+
+    pub fn message_texture(&self) -> Option<TexId> {
+        self.hud.message_texture()
+    }
+
+    /// The banner's face is in `tex`: put it up.
+    pub fn message_ready(&mut self, tex: TexId) {
+        self.hud.set_message_texture(tex);
+        let now = self.now();
+        self.hud.message(now);
+    }
+
+    pub fn message_pending(&self) -> bool {
+        !self.messages.is_empty()
+    }
+
+    pub fn message_shown(&self) -> bool {
+        self.hud.message_visible(self.now())
     }
 
     pub fn toast(&self) -> Option<Toast> {

@@ -9,6 +9,7 @@ use slot_ui::FfState;
 pub const RUMBLE_MIN_MS: Millis = 100;
 pub const RUMBLE_MAX_MS: Millis = 150;
 
+use crate::achievements::{console_for, Achievements};
 use crate::app::{App, Phase};
 use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
 use crate::core::open_core;
@@ -32,6 +33,7 @@ pub struct Session {
     prefetch: Prefetch,
     reloading: bool,
     driven: bool,
+    achievements: Option<Achievements>,
 }
 
 impl Session {
@@ -58,7 +60,9 @@ impl Session {
             pulse: None,
             reloading: false,
             driven: false,
+            achievements: None,
         };
+        session.achievements = Achievements::boot(&session.root);
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
         // left a cold boot (after a power off) idle on the slot for the whole load.
@@ -286,6 +290,7 @@ impl Session {
         }
         self.sync_core();
         self.sync_reload();
+        self.sync_achievements();
         if !self.reloading {
             if let Some((stem, serial)) = self.app.take_solo_reload() {
                 eprintln!("slot: link: restoring single-player mode");
@@ -498,14 +503,29 @@ impl Session {
         let sav = persist::read_sav(&self.root, platform, stem);
         launch("save read");
         let ring = self.sink.ring();
+        let cheevos_rom = self.achievements.as_ref().map(|_| rom.clone());
         let emu = match player.filter(|_| platform == Platform::Gba) {
             Some(p) => EmuHandle::spawn_linked(opened.core, rom, ring, sav, resume, p),
             None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
         };
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
+        if let (Some(a), Some(rom)) = (self.achievements.as_mut(), cheevos_rom) {
+            emu.watch_achievements(console_for(platform));
+            a.game_started(&rom, platform);
+        }
         self.app.set_snapshot(Box::new(emu.snapshot()));
         self.emu = Some(emu);
+    }
+
+    fn sync_achievements(&mut self) {
+        let Some(a) = self.achievements.as_mut() else {
+            return;
+        };
+        if self.emu.is_none() && a.playing() {
+            a.game_ended();
+        }
+        a.poll(&mut self.app);
     }
 
     fn reload_for_link(&mut self, stem: &str, serial: &'static str) {

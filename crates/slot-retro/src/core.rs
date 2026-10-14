@@ -75,6 +75,17 @@ impl From<std::io::Error> for CoreError {
     }
 }
 
+/// What RetroAchievements needs to read a loaded core's memory: its
+/// `retro_memory_map` (null when the core never set one) and its own
+/// `retro_get_memory_data` and `retro_get_memory_size`. Valid while the game
+/// stays loaded.
+#[derive(Clone, Copy, Debug)]
+pub struct CoreMemory {
+    pub map: *const std::ffi::c_void,
+    pub data: unsafe extern "C" fn(std::ffi::c_uint) -> *mut std::ffi::c_void,
+    pub size: unsafe extern "C" fn(std::ffi::c_uint) -> usize,
+}
+
 pub trait RetroCore: Send {
     fn load(&mut self, rom: &Path) -> Result<(), CoreError>;
     fn run_frame(&mut self, input: ButtonMask);
@@ -95,6 +106,9 @@ pub trait RetroCore: Send {
     }
     fn net(&self) -> Link {
         Link::default()
+    }
+    fn memory_access(&self) -> Option<CoreMemory> {
+        None
     }
     fn start_link(&mut self, _client_id: u16) {}
     fn pump_link(&mut self) {}

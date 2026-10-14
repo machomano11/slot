@@ -481,7 +481,7 @@ impl Frontend {
         if self.app().wifi.as_ref().map(|w| w.dirty).unwrap_or(false) {
             return true;
         }
-        if self.render_effects() != self.rendered_effects {
+        if self.render_effects() != self.rendered_effects || self.app().message_pending() {
             return true;
         }
         if self.rebuild.is_some()
@@ -589,6 +589,7 @@ impl Frontend {
                 wifi.dirty = false;
             }
         }
+        sync_message(self.session.app_mut(), compositor);
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
@@ -1013,6 +1014,21 @@ fn sync_switcher(app: &mut App, compositor: &mut Compositor, texes: Faces, state
         let id = upload(compositor, texes.title, face);
         app.set_polaroid_title_face(id);
     }
+}
+
+fn sync_message(app: &mut App, compositor: &mut Compositor) {
+    let Some((title, detail)) = app.take_message() else {
+        return;
+    };
+    let f = slot_ui::message_face(&title, &detail);
+    let tex = match app.message_texture() {
+        Some(id) => {
+            compositor.update_texture(id, f.w, f.h, &f.rgba);
+            id
+        }
+        None => compositor.create_texture(f.w, f.h, &f.rgba),
+    };
+    app.message_ready(tex);
 }
 
 fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {

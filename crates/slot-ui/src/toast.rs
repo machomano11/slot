@@ -173,6 +173,47 @@ pub fn toast_face(toast: Toast) -> CartFace {
     haloed(&cov, s.w, s.h + detail_h(toast), HUD_INK)
 }
 
+const MESSAGE_W: u32 = OUT_W - 80;
+const MESSAGE_TITLE_H: u32 = 20;
+const MESSAGE_TITLE_PX: f32 = 17.0;
+const MESSAGE_DETAIL_H: u32 = 16;
+const MESSAGE_DETAIL_PX: f32 = 13.0;
+const MESSAGE_MIN_PX: f32 = 11.0;
+
+/// A two-line banner with text only known at run time, such as an unlocked
+/// achievement and what it was for. Every message is the same size, so one
+/// texture is rewritten in place for each.
+pub fn message_box() -> (u32, u32) {
+    (
+        MESSAGE_W + 2 * HALO_PX,
+        MESSAGE_TITLE_H + MESSAGE_DETAIL_H + 2 * HALO_PX,
+    )
+}
+
+pub fn message_rect() -> (f32, f32, f32, f32) {
+    let (w, h) = message_box();
+    let (w, h) = (w as f32, h as f32);
+    ((OUT_W as f32 - w) / 2.0, (PLATE_H - h) / 2.0, w, h)
+}
+
+pub fn message_face(title: &str, detail: &str) -> CartFace {
+    let (w, h) = message_box();
+    let Some(font) = text::label_font() else {
+        return CartFace {
+            rgba: vec![0; (w * h * 4) as usize],
+            w,
+            h,
+        };
+    };
+    let line = |text: &str, h: u32, px: f32| {
+        let layout = text::fit(font, text, MESSAGE_W as f32, 1, px, MESSAGE_MIN_PX);
+        text::coverage(MESSAGE_W, h, &layout)
+    };
+    let mut cov = line(title, MESSAGE_TITLE_H, MESSAGE_TITLE_PX);
+    cov.extend(line(detail, MESSAGE_DETAIL_H, MESSAGE_DETAIL_PX));
+    haloed(&cov, MESSAGE_W, MESSAGE_TITLE_H + MESSAGE_DETAIL_H, HUD_INK)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

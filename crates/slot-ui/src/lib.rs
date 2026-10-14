@@ -54,7 +54,7 @@ pub use draw::{Draw, TexId, OUT_H, OUT_W};
 pub use footer::{draw_footer, Printed, FOOTER_Y};
 pub use hud::{
     badge_at, ff_badge, footer_ink, FfState, Hud, HudKind, LinkBadge, Millis, ALARM_BAND_H,
-    HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
+    HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, MESSAGE_MS, PLATE_H,
 };
 pub use icon::{badge_face, icon_box, icon_face, warm_fonts, Badge, Icon};
 pub use link_art::{
@@ -91,4 +91,6 @@ pub use sticker::{
     draw_sticker, head_rows, sticker_face, sticker_lines, StickerFields, COPYRIGHT, CREDITS, DC,
     HOME, ORIGIN, PORT_VERSION, STICKER_H, STICKER_W, TITLE,
 };
-pub use toast::{toast_box, toast_face, toast_rect, Toast};
+pub use toast::{
+    message_box, message_face, message_rect, toast_box, toast_face, toast_rect, Toast,
+};

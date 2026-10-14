@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use libloading::Library;
 
-use crate::core::{AvInfo, ButtonMask, CoreError, RetroCore, GBA_H, GBA_W};
+use crate::core::{AvInfo, ButtonMask, CoreError, CoreMemory, RetroCore, GBA_H, GBA_W};
 use crate::ffi::*;
 use crate::link::Link;
 use crate::rumble::Rumble;
@@ -38,6 +38,52 @@ struct Host {
     options: std::collections::HashMap<String, std::ffi::CString>,
     options_dirty: bool,
     declared: std::collections::HashMap<String, Vec<String>>,
+    memory_maps: MemoryMaps,
+}
+
+/// The core's own description of its address space, copied out of
+/// SET_MEMORY_MAPS as the API asks, for RetroAchievements to read through.
+#[derive(Default)]
+struct MemoryMaps {
+    descriptors: Vec<MemoryDescriptor>,
+    _names: Vec<CString>,
+    map: Option<Box<MemoryMap>>,
+}
+
+// The pointers are into the core's own memory and the names this struct owns;
+// both move with the core, which is only ever driven from one thread at a time.
+unsafe impl Send for MemoryMaps {}
+
+impl MemoryMaps {
+    unsafe fn copy(from: &MemoryMap) -> MemoryMaps {
+        let given = if from.descriptors.is_null() {
+            &[][..]
+        } else {
+            std::slice::from_raw_parts(from.descriptors, from.num_descriptors as usize)
+        };
+        let mut names = Vec::new();
+        let descriptors: Vec<MemoryDescriptor> = given
+            .iter()
+            .map(|d| {
+                let mut d = *d;
+                if !d.addrspace.is_null() {
+                    let name = std::ffi::CStr::from_ptr(d.addrspace).to_owned();
+                    d.addrspace = name.as_ptr();
+                    names.push(name);
+                }
+                d
+            })
+            .collect();
+        let map = Box::new(MemoryMap {
+            descriptors: descriptors.as_ptr(),
+            num_descriptors: descriptors.len() as c_uint,
+        });
+        MemoryMaps {
+            descriptors,
+            _names: names,
+            map: Some(map),
+        }
+    }
 }
 
 thread_local! {
@@ -200,6 +246,13 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             }
             let cb = std::ptr::read(data as *const AudioBufferStatusCallback);
             with_host(|h| h.audio_status = cb.callback).is_some()
+        }
+        SET_MEMORY_MAPS => {
+            if data.is_null() {
+                return false;
+            }
+            let maps = MemoryMaps::copy(&*(data as *const MemoryMap));
+            with_host(|h| h.memory_maps = maps).is_some()
         }
         SET_NETPACKET_INTERFACE => {
             if data.is_null() {
@@ -484,6 +537,7 @@ impl LibretroCore {
             options: std::collections::HashMap::new(),
             options_dirty: false,
             declared: std::collections::HashMap::new(),
+            memory_maps: MemoryMaps::default(),
         });
         unsafe {
             let _a = Active::bind(&mut host);
@@ -513,9 +567,12 @@ impl LibretroCore {
         if !self.loaded {
             return;
         }
-        let _a = Active::bind(&mut self.host);
-        unsafe { (self.api.unload_game)() };
+        {
+            let _a = Active::bind(&mut self.host);
+            unsafe { (self.api.unload_game)() };
+        }
         self.loaded = false;
+        self.host.memory_maps = MemoryMaps::default();
     }
 
     fn memory(&self, id: c_uint) -> Option<&[u8]> {
@@ -588,6 +645,22 @@ impl RetroCore for LibretroCore {
 
     fn run_frame(&mut self, input: ButtonMask) {
         self.run_frame_linked(input, ButtonMask::default());
+    }
+
+    fn memory_access(&self) -> Option<CoreMemory> {
+        if !self.loaded {
+            return None;
+        }
+        let maps = &self.host.memory_maps;
+        Some(CoreMemory {
+            map: maps
+                .map
+                .as_deref()
+                .filter(|_| !maps.descriptors.is_empty())
+                .map_or(ptr::null(), |m| m as *const MemoryMap as *const c_void),
+            data: self.api.get_memory_data,
+            size: self.api.get_memory_size,
+        })
     }
 
     fn run_frame_linked(&mut self, p1: ButtonMask, p2: ButtonMask) {
@@ -715,6 +788,7 @@ mod tests {
             options,
             options_dirty,
             declared: HashMap::new(),
+            memory_maps: MemoryMaps::default(),
         })
     }
 

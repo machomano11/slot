@@ -2,12 +2,15 @@ use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
 use slot_store::{BLUE_LIGHT_MAX, BRIGHTNESS_MAX, VOLUME_MAX};
 
 use crate::icon::icon_box;
-use crate::toast::toast_rect;
+use crate::toast::{message_rect, toast_rect};
 use crate::{Badge, Icon, Toast};
 
 pub type Millis = u64;
 
 pub const HUD_MS: Millis = 1500;
+
+/// How long a run-time message, such as an unlocked achievement, stays up.
+pub const MESSAGE_MS: Millis = 4000;
 const FADE_MS: Millis = 250;
 const PULSE_MS: Millis = 500;
 
@@ -153,6 +156,8 @@ pub struct Hud {
     alarm: Option<Millis>,
     icons: Vec<TexId>,
     toasts: Vec<TexId>,
+    message: Option<TexId>,
+    message_at: Option<Millis>,
     link: LinkBadge,
     link_faces: Vec<TexId>,
 }
@@ -172,6 +177,26 @@ impl Hud {
 
     pub fn toast(&mut self, toast: Toast, now: Millis) {
         self.said = Some((toast, now));
+        self.message_at = None;
+    }
+
+    /// The texture [`crate::message_face`] faces are written into.
+    pub fn set_message_texture(&mut self, tex: TexId) {
+        self.message = Some(tex);
+    }
+
+    pub fn message_texture(&self) -> Option<TexId> {
+        self.message
+    }
+
+    /// Shows whatever the message texture holds now, for [`MESSAGE_MS`].
+    pub fn message(&mut self, now: Millis) {
+        self.message_at = Some(now);
+        self.said = None;
+    }
+
+    pub fn message_visible(&self, now: Millis) -> bool {
+        self.message_alpha(now) > 0.0
     }
 
     pub fn set_alarm(&mut self, on: bool, now: Millis) {
@@ -245,7 +270,7 @@ impl Hud {
 
     pub fn draw(&self, now: Millis, out: &mut Vec<Draw>) {
         let alpha = self.alpha(now);
-        let toast = self.toast_alpha(now);
+        let toast = self.toast_alpha(now).max(self.message_alpha(now));
         if alpha > 0.0 || toast > 0.0 {
             out.push(Draw::Rect {
                 x: 0.0,
@@ -254,7 +279,9 @@ impl Hud {
                 h: PLATE_H,
                 colour: faded(PLATE, alpha.max(toast)),
             });
-            if toast > 0.0 {
+            if self.message_alpha(now) > 0.0 {
+                self.draw_message(now, out);
+            } else if toast > 0.0 {
                 self.draw_toast(now, out);
             } else {
                 self.draw_bar(alpha, out);
@@ -339,6 +366,28 @@ impl Hud {
         });
     }
 
+    fn draw_message(&self, now: Millis, out: &mut Vec<Draw>) {
+        let Some(tex) = self.message else {
+            return;
+        };
+        let (x, y, w, h) = message_rect();
+        out.push(Draw::Tex {
+            x,
+            y,
+            w,
+            h,
+            tex,
+            alpha: self.message_alpha(now),
+        });
+    }
+
+    fn message_alpha(&self, now: Millis) -> f32 {
+        match (self.message_at, self.message) {
+            (Some(shown), Some(_)) => fade_after(shown, now, MESSAGE_MS),
+            _ => 0.0,
+        }
+    }
+
     fn draw_toast(&self, now: Millis, out: &mut Vec<Draw>) {
         let alpha = self.toast_alpha(now);
         if alpha <= 0.0 {
@@ -396,11 +445,15 @@ impl Hud {
 }
 
 fn fade(shown: Millis, now: Millis) -> f32 {
+    fade_after(shown, now, HUD_MS)
+}
+
+fn fade_after(shown: Millis, now: Millis, lasts: Millis) -> f32 {
     let age = now.saturating_sub(shown);
-    if age >= HUD_MS {
+    if age >= lasts {
         return 0.0;
     }
-    ((HUD_MS - age) as f32 / FADE_MS as f32).min(1.0)
+    ((lasts - age) as f32 / FADE_MS as f32).min(1.0)
 }
 
 fn pulse(age: Millis) -> [f32; 4] {

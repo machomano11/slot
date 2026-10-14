@@ -1,0 +1,16 @@
+[package]
+name = "slot-cheevos"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "RetroAchievements for slot, through the rcheevos rc_client"
+
+[dependencies]
+ureq = { version = "2", default-features = false, features = ["tls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pki-types = { version = "1", features = ["std"] }
+webpki-roots = "0.26"
+
+[build-dependencies]
+cc = "1"

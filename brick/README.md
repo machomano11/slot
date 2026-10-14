@@ -112,6 +112,30 @@ No router is needed. This hasn't been tested on two physical devices yet. If it 
 
 ---
 
+## RetroAchievements (experimental)
+
+1. Connect the Brick to Wi-Fi.
+2. Create `Slot/Config/retroachievements.ini` with your
+   [retroachievements.org](https://retroachievements.org) account:
+
+   ```ini
+   username=YourName
+   password=YourPassword
+   ```
+
+3. Start a GBA, GB or GBC game. A banner shows when you sign in, how many achievements the game
+   has, and each one you unlock.
+
+After the first sign-in the password in the file is replaced by a login token. Add `enabled=0`
+to turn achievements off without deleting the file.
+
+Achievements are **softcore only** for now: save states, rewind and fast forward stay
+available, and unlocks count toward softcore. RetroAchievements has not approved Slot as an
+emulator yet, so the server may refuse it. If nothing appears, check `Slot/Logs/slot.log` for
+lines starting with `slot: cheevos`.
+
+---
+
 ## Troubleshooting
 
 | Problem                               | Fix                                                                 |

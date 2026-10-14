@@ -81,6 +81,7 @@ enum Cmd {
     EndLink,
     BeginCable(u8, Box<dyn LinkChannel>),
     SetOption(String, String),
+    WatchAchievements(slot_cheevos::Console),
 }
 
 struct Shared {
@@ -244,6 +245,11 @@ impl EmuHandle {
 
     pub fn end_link(&self) {
         request(&self.cmds, &self.shared, Cmd::EndLink);
+    }
+
+    /// Has RetroAchievements look at the core's memory after every frame.
+    pub fn watch_achievements(&self, console: slot_cheevos::Console) {
+        let _ = self.cmds.send(Cmd::WatchAchievements(console));
     }
 
     pub fn set_option(&self, key: &str, value: &str) {
@@ -572,9 +578,18 @@ impl Worker {
         let mut cable_wait = Duration::ZERO;
         let mut ff = (0u32, 0u32, Duration::ZERO, Instant::now());
         let mut runahead = RunAhead::default();
+        let mut watch: Option<slot_cheevos::FrameWatch> = None;
+        let mut was_rewinding = false;
         while !self.shared.stop.load(Ordering::Relaxed) {
             for cmd in self.cmds.try_iter() {
-                self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+                self.apply(
+                    cmd,
+                    core.as_mut(),
+                    &mut transport,
+                    &mut cable,
+                    &link,
+                    &mut watch,
+                );
             }
 
             if let Some(t) = transport.as_mut() {
@@ -654,6 +669,12 @@ impl Worker {
                 Speed::Normal => 1,
                 Speed::Fast => self.shared.fast_steps.load(Ordering::Relaxed),
             };
+            if rewinding != was_rewinding {
+                was_rewinding = rewinding;
+                if let (true, Some(w)) = (rewinding, watch.as_mut()) {
+                    w.reset();
+                }
+            }
             if rewinding {
                 if let Some(state) = rewind.pop() {
                     if let Err(e) = core.unserialize(&state) {
@@ -734,6 +755,9 @@ impl Worker {
                             }
                         },
                         None => core.run_frame(input),
+                    }
+                    if let Some(w) = watch.as_mut() {
+                        w.frame();
                     }
                     let took = frame_began.elapsed();
                     if last {
@@ -867,7 +891,14 @@ impl Worker {
                         }
                         Wait::Request => {
                             for cmd in self.cmds.try_iter() {
-                                self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+                                self.apply(
+                                    cmd,
+                                    core.as_mut(),
+                                    &mut transport,
+                                    &mut cable,
+                                    &link,
+                                    &mut watch,
+                                );
                             }
                             continue;
                         }
@@ -890,7 +921,14 @@ impl Worker {
             }
         }
         for cmd in self.cmds.try_iter() {
-            self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+            self.apply(
+                cmd,
+                core.as_mut(),
+                &mut transport,
+                &mut cable,
+                &link,
+                &mut watch,
+            );
         }
         ring.set_muted(false);
         ring.set_idle(false);
@@ -907,6 +945,7 @@ impl Worker {
         transport: &mut Option<Box<dyn LinkChannel>>,
         cable: &mut Option<Cable>,
         link: &Link,
+        watch: &mut Option<slot_cheevos::FrameWatch>,
     ) {
         match cmd {
             Cmd::Save(reply) => match core.serialize() {
@@ -919,7 +958,28 @@ impl Worker {
                 if let Err(e) = core.unserialize(&self.for_core(state)) {
                     eprintln!("slot: {e}");
                 }
+                if let Some(w) = watch.as_mut() {
+                    w.reset();
+                }
             }
+            Cmd::WatchAchievements(console) => match core.memory_access() {
+                Some(m) => {
+                    // The map and functions belong to the loaded core, which
+                    // outlives the watch: both are dropped with this worker.
+                    let (w, regions) =
+                        unsafe { slot_cheevos::FrameWatch::attach(m.map, m.data, m.size, console) };
+                    eprintln!(
+                        "slot: cheevos: watching {regions} memory regions ({})",
+                        if m.map.is_null() {
+                            "no memory map"
+                        } else {
+                            "memory map"
+                        }
+                    );
+                    *watch = Some(w);
+                }
+                None => eprintln!("slot: cheevos: this core does not expose its memory"),
+            },
             Cmd::Sav(reply) => {
                 let _ = reply.send(core.save_ram());
             }
