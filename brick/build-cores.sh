@@ -12,10 +12,13 @@ mgba_src="$PWD/brick/core-src/mgba-$MGBA"
 gpsp_src="$PWD/brick/core-src/gpsp-$GPSP"
 if [ ! -d "$mgba_src" ]; then
     tar --no-same-owner -xzf vendor/mgba-src.tar.gz -C brick/core-src
+    # Its own repository, so git apply works relative to the core source and not this checkout.
+    git -C "$mgba_src" init -q
     for p in cores/mgba/*.patch; do git -C "$mgba_src" apply "$PWD/$p"; done
 fi
 if [ ! -d "$gpsp_src" ]; then
     tar --no-same-owner -xzf vendor/gpsp-src.tar.gz -C brick/core-src
+    git -C "$gpsp_src" init -q
     for p in cores/gpsp/*.patch brick/gpsp-old-binutils.patch; do git -C "$gpsp_src" apply "$PWD/$p"; done
 fi
 cmake -S "$mgba_src" -B brick/core-build/mgba \

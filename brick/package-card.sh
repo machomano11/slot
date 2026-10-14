@@ -6,6 +6,7 @@ OUT="${1:-dist-brick}"
 if [ -e "$OUT" ]; then echo "Output already exists: $OUT. Choose a new directory." >&2; exit 1; fi
 mkdir -p "$OUT"
 cp -R brick/card/. "$OUT/"
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER="$BRICK_TOOLCHAIN/bin/aarch64-linux-gnu-gcc"
 
 # Boot Logo app: picture converter plus its own copy of the file checker.
 ( cd brick/bootlogo-tool && cargo build --locked --release --target aarch64-unknown-linux-gnu )
