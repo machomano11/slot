@@ -11,6 +11,14 @@ fail() { echo "INSTALL FAILED: $1"; echo "$1" > "$ROOT/Logs/autoboot-status.txt"
 strings "$BIN/MainUI" 2>/dev/null | grep -qx 'Trimui Brick' || fail 'Device not identified as original TrimUI Brick.'
 [ -s "$BIN/runtrimui.sh" ] || fail 'Original startup script missing.'
 [ -s "$ROOT/System/runtrimui-slot.sh" ] || fail 'Packaged startup hook missing.'
+# Finder on macOS doesn't show or copy dot-folders, so a card copied from a
+# Mac often arrives without .slot-boot. Put it back from the copy in System.
+if [ ! -s "$CARD/.slot-boot/boot.sh" ] && [ -s "$ROOT/System/slot-boot.sh" ]; then
+    echo 'Hidden .slot-boot folder missing; restoring it from System/slot-boot.sh.'
+    mkdir -p "$CARD/.slot-boot" && cp "$ROOT/System/slot-boot.sh" "$CARD/.slot-boot/boot.sh" \
+        && "$ROOT/System/slot-filecheck" compare "$ROOT/System/slot-boot.sh" "$CARD/.slot-boot/boot.sh" \
+        || fail 'Could not restore the hidden .slot-boot folder.'
+fi
 [ -s "$CARD/.slot-boot/boot.sh" ] || fail 'Missing hidden .slot-boot folder.'
 [ -s "$ROOT/System/slot" ] || fail 'Missing slot executable.'
 BACKUP="$BIN/runtrimui-slot-backup.sh"

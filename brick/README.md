@@ -17,6 +17,8 @@ doesn't flash anything to the device.
    verify the backup first, then delete everything on it (no reformat needed).
 3. **Copy Slot.** Copy everything **inside** the `SD-CARD` folder to the root of the card,
    including the hidden `.slot-boot` folder. Don't copy the `SD-CARD` folder itself.
+   On a Mac, Finder hides that folder: press `Cmd + Shift + .` to show it before selecting.
+   If it gets left behind anyway, opening **Slot** once from the stock Apps menu puts it back.
 4. **Restore your files** from the backup into the matching folders:
    - `Slot/Games`, `Slot/Saves`, `Slot/States`, `Slot/BIOS`
    - `Slot/Config`, `Slot/Labels`, `Slot/Wallpapers`

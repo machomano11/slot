@@ -17,6 +17,9 @@ cp vendor/mgba_libretro.so vendor/gpsp_libretro.so "$OUT/Slot/System/"
 for f in slot mgba_libretro.so gpsp_libretro.so; do "$BRICK_TOOLCHAIN/bin/aarch64-linux-gnu-strip" "$OUT/Slot/System/$f"; done
 for d in BIOS Config Games/GB Games/GBC Games/GBA Labels/GB Labels/GBC Labels/GBA Saves/GB Saves/GBC Saves/GBA States/GB States/GBC States/GBA Wallpapers Logs; do mkdir -p "$OUT/Slot/$d"; done
 cp brick/README.md "$OUT/Slot/README.md"
+# Spare copy of the hidden boot script: install-autoboot.sh restores it when a
+# Mac copy left .slot-boot behind.
+cp brick/card/.slot-boot/boot.sh "$OUT/Slot/System/slot-boot.sh"
 cp -R licenses "$OUT/Slot/System/"
 cp LICENSE "$OUT/Slot/System/licenses/slot-GPL-3.0.txt"
 chmod +x "$OUT/Slot/System/slot" "$OUT/Slot/System/"*.sh "$OUT/Apps/"*/launch.sh "$OUT/Apps/BootLogo/slot-bootlogo" "$OUT/Apps/BootLogo/slot-filecheck"
