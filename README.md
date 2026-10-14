@@ -54,6 +54,12 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 If you have one of the untested devices, or have tried slot on a device not listed,
 please [open an issue on GitHub](https://github.com/BrandonKowalski/slot/issues) and let me know how it went.
 
+## TrimUI Brick
+This fork adds support for the original TrimUI Brick on its stock firmware. The Brick work started as
+[Slot-Brick](https://github.com/LordNordyx/Slot-Brick) by LordNordyx and is merged here with current
+upstream slot. Brick-only code sits behind the `brick` Cargo feature, and the build scripts, SD card
+layout and install guide live in [`brick/`](brick/README.md).
+
 ## RG28XX Users
 RG28XX support was contributed by [GamerAnim](https://github.com/GamerAnim). The RG28XX has its panel mounted in a
 portrait orientation. slot turns the picture to fit it, but on some units it comes out upside down.
