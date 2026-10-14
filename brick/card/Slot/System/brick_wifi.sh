@@ -1,7 +1,6 @@
 #!/bin/sh
 # Wi-Fi helper for TrimUI Brick (tg5040).
-# The Anbernic firmware ships /etc/wifi/wifi_init.sh; the Brick firmware does
-# not, so slot (brick_wifi.rs), sleep.sh and slotlink.sh run this file instead.
+# slot (brick_wifi.rs), sleep.sh and slotlink.sh run this file to switch Wi-Fi.
 # Usage: brick_wifi.sh start|stop|radio
 # start: radio on, wpa_supplicant control socket up, DHCP client waiting.
 # stop:  DHCP + supplicant stopped, radio off.
@@ -21,10 +20,10 @@ mkdir -p "$RUN" "$ROOT/Logs" 2>/dev/null
 exec >> "$LOG" 2>&1 < /dev/null
 echo "--- $(date) brick_wifi.sh $*"
 
-# A firmware that does ship the real helper keeps using it.
-if [ -f "$ETC/wifi/wifi_init.sh" ]; then
-    exec /bin/sh "$ETC/wifi/wifi_init.sh" "$@"
-fi
+# An $ETC/wifi/wifi_init.sh is deliberately not used: on a Brick it is left over
+# from another firmware (NextUI, MinUI) and calls rfkill.elf, which stock
+# firmware lacks, so the radio stayed blocked and wpa_supplicant reported
+# INTERFACE_DISABLED.
 
 radio() {
     if command -v rfkill.elf >/dev/null 2>&1; then rfkill.elf "$1" wifi
