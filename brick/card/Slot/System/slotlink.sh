@@ -5,10 +5,11 @@ PATH=/usr/trimui/bin:/usr/sbin:/sbin:/usr/bin:/bin
 ROOT=${SLOT_ROOT:-/mnt/SDCARD/Slot}
 RUN=${SLOT_LINK_RUN:-/tmp/slot-brick-link}
 ETC=${SLOT_LINK_ETC:-/etc}
-# Brick: helper ships on the SD card; other firmware has $ETC/wifi/wifi_init.sh.
+# The card's own helper wins: an /etc/wifi/wifi_init.sh on a Brick is left over
+# from another firmware and can call tools this one lacks (rfkill.elf).
 CARD_HELPER="$ROOT/System/brick_wifi.sh"
 HELPER=${SLOT_WIFI_HELPER:-$CARD_HELPER}
-[ -f "$ETC/wifi/wifi_init.sh" ] && [ -z "${SLOT_WIFI_HELPER:-}" ] && HELPER="$ETC/wifi/wifi_init.sh"
+[ ! -f "$HELPER" ] && [ -f "$ETC/wifi/wifi_init.sh" ] && [ -z "${SLOT_WIFI_HELPER:-}" ] && HELPER="$ETC/wifi/wifi_init.sh"
 mkdir -p "$ROOT/Logs"
 LOG="$ROOT/Logs/multiplayer.log"
 [ ! -f "$LOG" ] || [ "$(wc -c < "$LOG")" -le 131072 ] || mv -f "$LOG" "$LOG.previous"
