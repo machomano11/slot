@@ -135,10 +135,12 @@ fn scan_rows(scan: &str, saved: &str) -> Vec<Network> {
 pub(crate) trait Supplicant {
     fn command(&self, s: &str) -> Result<String>;
     fn ok(&self, s: &str) -> Result<()> {
-        if self.command(s)? == "OK" {
-            Ok(())
-        } else {
-            Err("Wi-Fi service rejected the request".into())
+        match self.command(s)? {
+            r if r == "OK" => Ok(()),
+            r => {
+                let verb = s.split_whitespace().next().unwrap_or("");
+                Err(format!("Wi-Fi service rejected {verb} ({r})"))
+            }
         }
     }
 }
@@ -185,9 +187,9 @@ impl Control {
     }
 }
 impl Supplicant for Control {
-    fn command(&self, s: &str) -> Result<String> {
+    fn command(&self, command: &str) -> Result<String> {
         self.socket
-            .send(s.as_bytes())
+            .send(command.as_bytes())
             .map_err(|_| "Wi-Fi command failed")?;
         let mut b = [0; 32768];
         let n = self
@@ -198,10 +200,53 @@ impl Supplicant for Control {
             .trim_end_matches('\n')
             .to_string();
         if s.starts_with("FAIL") || s.starts_with("UNKNOWN") {
-            Err("Wi-Fi service rejected the request".into())
+            // Only the command word: arguments can carry a password.
+            let verb = command.split_whitespace().next().unwrap_or("");
+            eprintln!("slot: wifi: {verb} -> {s}");
+            Err(format!("Wi-Fi service rejected {verb} ({s})"))
         } else {
             Ok(s)
         }
+    }
+}
+/// Asks for a scan and returns what was found. Right after the radio comes
+/// up the supplicant answers SCAN with FAIL until the interface is ready, and
+/// with FAIL-BUSY while a scan of its own runs; both are waited out. If no
+/// scan of ours starts, its latest results from its own scans are used.
+fn scan(c: &impl Supplicant, cancel: &AtomicBool, settle_ms: u64) -> Result<Vec<Network>> {
+    let mut refused = None;
+    for _ in 0..12 {
+        match c.ok("SCAN") {
+            Ok(()) => {
+                refused = None;
+                break;
+            }
+            Err(e) if e.contains("FAIL-BUSY") => {
+                refused = None;
+                break;
+            }
+            Err(e) if e.starts_with("Wi-Fi service rejected") => {
+                refused = Some(e);
+                pause(cancel, 500)?;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    if refused.is_none() {
+        pause(cancel, settle_ms)?;
+    }
+    let networks = scan_rows(&c.command("SCAN_RESULTS")?, &c.command("LIST_NETWORKS")?);
+    match refused {
+        Some(e) if networks.is_empty() => {
+            let state = c
+                .command("STATUS")
+                .ok()
+                .and_then(|s| field(&s, "wpa_state").map(str::to_string))
+                .unwrap_or_else(|| "unknown".into());
+            eprintln!("slot: wifi: no scan: {e}, wpa_state={state}");
+            Err(format!("Wi-Fi isn't ready ({state}). Try scanning again"))
+        }
+        _ => Ok(networks),
     }
 }
 fn field<'a>(s: &'a str, key: &str) -> Option<&'a str> {
@@ -386,7 +431,15 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
             }
             pause(cancel, 250)?;
         }
-        return run(Job::Scan, cancel);
+        // The radio is on even if the first scan doesn't work out.
+        return match run(Job::Scan, cancel) {
+            Err(e) if e != "Cancelled" => Ok(Reply {
+                on: true,
+                status: e,
+                networks: Some(Vec::new()),
+            }),
+            r => r,
+        };
     }
     let c = match Control::open() {
         Ok(c) => c,
@@ -421,15 +474,11 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
         Job::Status => {}
         Job::Power(_) => unreachable!(),
         Job::Scan => {
-            c.ok("SCAN")?;
-            pause(cancel, 3500)?;
-            r.networks = Some(scan_rows(
-                &c.command("SCAN_RESULTS")?,
-                &c.command("LIST_NETWORKS")?,
-            ));
-            if r.networks.as_ref().unwrap().is_empty() {
+            let networks = scan(&c, cancel, 3500)?;
+            if networks.is_empty() {
                 r.status = "No networks found. Try scanning again".into();
             }
+            r.networks = Some(networks);
         }
         Job::Connect(n, p) => {
             r.status = connect(&c, &n, p, cancel)?;
@@ -826,6 +875,49 @@ mod tests {
             security: Security::Personal,
             saved: None,
         }
+    }
+    const RESULTS: &str = "bssid / frequency / signal level / flags / ssid\n00:11:22:33:44:55\t2412\t-40\t[WPA2-PSK-CCMP][ESS]\tHome";
+    const SAVED: &str = "network id / ssid / bssid / flags";
+    #[test]
+    fn a_busy_supplicant_still_gives_scan_results() {
+        let c = Mock::new(vec![
+            ("SCAN", Ok("FAIL-BUSY")),
+            ("SCAN_RESULTS", Ok(RESULTS)),
+            ("LIST_NETWORKS", Ok(SAVED)),
+        ]);
+        let n = scan(&c, &AtomicBool::new(false), 0).unwrap();
+        assert_eq!(n.len(), 1);
+        assert_eq!(n[0].ssid, b"Home");
+        c.done();
+    }
+    #[test]
+    fn a_scan_waits_for_the_interface_to_come_up() {
+        let c = Mock::new(vec![
+            ("SCAN", Ok("FAIL")),
+            ("SCAN", Ok("FAIL")),
+            ("SCAN", Ok("OK")),
+            ("SCAN_RESULTS", Ok(RESULTS)),
+            ("LIST_NETWORKS", Ok(SAVED)),
+        ]);
+        assert_eq!(scan(&c, &AtomicBool::new(false), 0).unwrap().len(), 1);
+        c.done();
+    }
+    #[test]
+    fn a_scan_that_never_starts_says_why() {
+        let mut steps = vec![("SCAN", Ok("FAIL")); 12];
+        steps.push((
+            "SCAN_RESULTS",
+            Ok("bssid / frequency / signal level / flags / ssid"),
+        ));
+        steps.push(("LIST_NETWORKS", Ok(SAVED)));
+        steps.push(("STATUS", Ok("wpa_state=INTERFACE_DISABLED")));
+        let c = Mock::new(steps);
+        let e = scan(&c, &AtomicBool::new(false), 0).unwrap_err();
+        assert_eq!(
+            e,
+            "Wi-Fi isn't ready (INTERFACE_DISABLED). Try scanning again"
+        );
+        c.done();
     }
     #[test]
     fn parse_scans() {
