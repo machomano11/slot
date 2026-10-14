@@ -7,10 +7,7 @@ license.workspace = true
 description = "RetroAchievements for slot, through the rcheevos rc_client"
 
 [dependencies]
-ureq = { version = "2", default-features = false, features = ["tls"] }
-rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-rustls-pki-types = { version = "1", features = ["std"] }
-webpki-roots = "0.26"
+slot-net = { path = "../slot-net" }
 
 [build-dependencies]
 cc = "1"

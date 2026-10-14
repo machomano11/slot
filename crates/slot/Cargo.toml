@@ -19,6 +19,7 @@ slot-retro = { path = "../slot-retro" }
 slot-store = { path = "../slot-store" }
 slot-ui = { path = "../slot-ui" }
 slot-cheevos = { path = "../slot-cheevos" }
+slot-cloud = { path = "../slot-cloud" }
 winit = { workspace = true, optional = true }
 cpal = { workspace = true, optional = true }
 gilrs = { workspace = true, optional = true }

@@ -2077,6 +2077,7 @@ dependencies = [
  "lz4_flex",
  "png 0.17.16",
  "slot-cheevos",
+ "slot-cloud",
  "slot-gfx",
  "slot-input",
  "slot-power",
@@ -2092,10 +2093,15 @@ name = "slot-cheevos"
 version = "0.1.0"
 dependencies = [
  "cc",
- "rustls",
- "rustls-pki-types",
- "ureq",
- "webpki-roots 0.26.11",
+ "slot-net",
+]
+
+[[package]]
+name = "slot-cloud"
+version = "0.1.0"
+dependencies = [
+ "slot-net",
+ "tempfile",
 ]
 
 [[package]]
@@ -2113,6 +2119,16 @@ dependencies = [
 [[package]]
 name = "slot-input"
 version = "0.1.0"
+
+[[package]]
+name = "slot-net"
+version = "0.1.0"
+dependencies = [
+ "rustls",
+ "rustls-pki-types",
+ "ureq",
+ "webpki-roots 0.26.11",
+]
 
 [[package]]
 name = "slot-power"

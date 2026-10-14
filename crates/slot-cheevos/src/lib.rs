@@ -11,7 +11,6 @@ use std::ffi::{c_char, c_int, c_uint, c_void, CStr, CString};
 use std::io::Read;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
 
 /// rcheevos console ids for the systems slot runs.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -111,8 +110,6 @@ const LEADERBOARD_SUBMITTED: c_int = 11;
 /// The HTTP status rc_client reads as "no response at all", so it retries.
 const NO_RESPONSE: c_int = -1;
 
-const HTTP_TIMEOUT: Duration = Duration::from_secs(30);
-
 struct Shared {
     events: Mutex<Sender<Event>>,
     user_agent: String,
@@ -196,41 +193,8 @@ extern "C" fn on_http(
         .expect("spawn the RetroAchievements request thread");
 }
 
-/// Mozilla's roots, plus any certificates in `SSL_CERT_FILE` (a proxy's, on a
-/// development machine), and the proxy named by the usual environment variables.
-fn agent() -> &'static ureq::Agent {
-    static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
-    AGENT.get_or_init(|| {
-        use rustls_pki_types::pem::PemObject;
-        let mut roots = rustls::RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-        };
-        if let Some(file) = std::env::var_os("SSL_CERT_FILE") {
-            match rustls_pki_types::CertificateDer::pem_file_iter(&file) {
-                Ok(certs) => {
-                    let (added, _) = roots.add_parsable_certificates(certs.flatten());
-                    eprintln!("slot: cheevos: {added} extra certificates from SSL_CERT_FILE");
-                }
-                Err(e) => eprintln!("slot: cheevos: SSL_CERT_FILE: {e}"),
-            }
-        }
-        let tls = rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(
-            rustls::crypto::ring::default_provider(),
-        ))
-        .with_safe_default_protocol_versions()
-        .expect("ring supports the default TLS versions")
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-        ureq::AgentBuilder::new()
-            .tls_config(std::sync::Arc::new(tls))
-            .try_proxy_from_env(true)
-            .timeout(HTTP_TIMEOUT)
-            .build()
-    })
-}
-
 fn fetch(url: &str, post: &str, content_type: &str, agent_name: &str) -> (c_int, Vec<u8>) {
-    let call = agent()
+    let call = slot_net::agent()
         .request(if post.is_empty() { "GET" } else { "POST" }, url)
         .set("User-Agent", agent_name);
     let sent = if post.is_empty() {
@@ -245,7 +209,7 @@ fn fetch(url: &str, post: &str, content_type: &str, agent_name: &str) -> (c_int,
     };
     let response = match sent {
         Ok(r) => r,
-        Err(ureq::Error::Status(_, r)) => r,
+        Err(slot_net::ureq::Error::Status(_, r)) => r,
         Err(e) => {
             eprintln!("slot: cheevos: request failed: {e}");
             return (NO_RESPONSE, Vec::new());

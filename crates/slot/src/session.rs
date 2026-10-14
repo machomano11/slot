@@ -12,6 +12,7 @@ pub const RUMBLE_MAX_MS: Millis = 150;
 use crate::achievements::{console_for, Achievements};
 use crate::app::{App, Phase};
 use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
+use crate::cloud::CloudSync;
 use crate::core::open_core;
 use crate::emu::{CoreState, EmuHandle, Speed};
 use crate::frames::FrameRef;
@@ -34,6 +35,7 @@ pub struct Session {
     reloading: bool,
     driven: bool,
     achievements: Option<Achievements>,
+    cloud: Option<CloudSync>,
 }
 
 impl Session {
@@ -61,8 +63,10 @@ impl Session {
             reloading: false,
             driven: false,
             achievements: None,
+            cloud: None,
         };
         session.achievements = Achievements::boot(&session.root);
+        session.cloud = CloudSync::boot(&session.root);
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
         // left a cold boot (after a power off) idle on the slot for the whole load.
@@ -291,6 +295,9 @@ impl Session {
         self.sync_core();
         self.sync_reload();
         self.sync_achievements();
+        if let Some(cloud) = self.cloud.as_mut() {
+            cloud.update(self.emu.is_some(), &mut self.app);
+        }
         if !self.reloading {
             if let Some((stem, serial)) = self.app.take_solo_reload() {
                 eprintln!("slot: link: restoring single-player mode");
@@ -474,6 +481,9 @@ impl Session {
         else {
             return;
         };
+        if let Some(cloud) = self.cloud.as_mut() {
+            cloud.game_started(stem, platform);
+        }
         let core = slot_store::core_for_platform(&self.root, stem, platform);
         launch(&format!("opening {stem} on {}", core.as_str()));
         self.app.set_core(core);

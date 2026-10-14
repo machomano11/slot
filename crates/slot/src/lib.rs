@@ -7,6 +7,7 @@ pub mod bootlogo;
 pub mod build_info;
 pub mod cable;
 pub mod cart_faces;
+pub mod cloud;
 pub mod core;
 pub mod core_picker;
 #[cfg(unix)]
