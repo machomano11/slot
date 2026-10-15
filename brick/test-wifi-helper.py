@@ -78,6 +78,23 @@ class WifiHelperTests(unittest.TestCase):
     def test_radio_only_powers_interface(self):
         self.assertEqual(self.helper('radio')[0], 0)
         self.assertEqual(self.lines(), ['rfkill unblock wifi', 'ifconfig wlan0 up'])
+    def test_dhcp_starts_a_client_when_none_is_asking(self):
+        self.assertEqual(self.helper('dhcp')[0], 0)
+        self.assertTrue(any(c.startswith('udhcpc -i wlan0') for c in self.lines()), self.lines())
+    def test_dhcp_makes_a_running_client_ask_again(self):
+        import signal
+        client = subprocess.Popen(['python3', '-c',
+            'import signal,sys,time\nsignal.signal(signal.SIGUSR1, lambda *a: (open(sys.argv[1], "a").write("renew\\n")))\ntime.sleep(30)',
+            str(self.p/'renewed'), 'wlan0'])
+        try:
+            time.sleep(0.5)
+            (self.bin/'pidof').write_text(f'#!/bin/sh\n[ "$1" = udhcpc ] && echo {client.pid} || exit 1\n')
+            self.assertEqual(self.helper('dhcp')[0], 0)
+            time.sleep(0.3)
+            self.assertEqual((self.p/'renewed').read_text(), 'renew\n')
+            self.assertFalse(any(c.startswith('udhcpc') for c in self.lines()), self.lines())
+        finally:
+            client.kill(); client.wait()
     def test_bad_verb(self):
         self.assertEqual(self.helper('restart')[0], 2)
 

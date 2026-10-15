@@ -1,9 +1,10 @@
 #!/bin/sh
 # Wi-Fi helper for TrimUI Brick (tg5040).
 # slot (brick_wifi.rs), sleep.sh and slotlink.sh run this file to switch Wi-Fi.
-# Usage: brick_wifi.sh start|stop|radio
+# Usage: brick_wifi.sh start|stop|radio|dhcp
 # start: radio on, wpa_supplicant control socket up, DHCP client waiting.
 # stop:  DHCP + supplicant stopped, radio off.
+# dhcp:  joined but no address: start a DHCP client, or make the running one ask now.
 # Never blocks for long and never leaves daemons attached to our stdout,
 # because slot waits for this script to exit.
 PATH=${SLOT_WIFI_PATH:+$SLOT_WIFI_PATH:}/usr/trimui/bin:/usr/sbin:/sbin:/usr/bin:/bin
@@ -102,6 +103,17 @@ start_dhcp() {
     udhcpc -i "$IFACE" -R -t 3 -T 2 -A 3 -p "$RUN/udhcpc.pid" -s "$script" &
 }
 
+# A client that kept an old lease, or backed off while the supplicant was still
+# joining, can sit quiet with no address: SIGUSR1 makes busybox udhcpc ask now.
+kick_dhcp() {
+    kicked=0
+    for p in $(pidof udhcpc 2>/dev/null); do
+        tr '\000' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q "$IFACE" || continue
+        kill -USR1 "$p" 2>/dev/null && kicked=1
+    done
+    if [ "$kicked" = 1 ]; then echo 'DHCP client asked to renew'; else start_dhcp; fi
+}
+
 stop_dhcp() {
     [ ! -f "$RUN/udhcpc.pid" ] || kill "$(cat "$RUN/udhcpc.pid")" 2>/dev/null
     for p in $(pidof udhcpc 2>/dev/null); do
@@ -137,6 +149,10 @@ radio)
     ifconfig "$IFACE" up || { echo "cannot bring $IFACE up"; exit 1; }
     exit 0
     ;;
+dhcp)
+    kick_dhcp
+    exit 0
+    ;;
 stop)
     stop_dhcp
     if dir=$(find_socket) && command -v wpa_cli >/dev/null 2>&1; then
@@ -150,6 +166,6 @@ stop)
     exit 0
     ;;
 *)
-    echo "usage: $0 start|stop|radio"; exit 2
+    echo "usage: $0 start|stop|radio|dhcp"; exit 2
     ;;
 esac

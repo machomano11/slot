@@ -8,7 +8,7 @@ use std::{
     process::{Command, Stdio},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
-        mpsc, Arc,
+        mpsc, Arc, Mutex,
     },
     thread,
     time::{Duration, Instant},
@@ -273,6 +273,45 @@ fn helper(firmware: &Path, root: &Path) -> Option<PathBuf> {
     firmware.is_file().then(|| firmware.into())
 }
 fn service(on: bool) -> Result<()> {
+    run_helper(if on { "start" } else { "stop" }, Duration::from_secs(15))
+}
+/// Joined but no address: have the helper start a DHCP client, or make the
+/// running one ask again. A client that kept an old lease or backed off while the
+/// supplicant was joining otherwise leaves the menu on "Waiting for IP".
+/// At most once every 10 s, so the menu's 2 s checks don't keep restarting it.
+fn request_address() {
+    static LAST: Mutex<Option<Instant>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    if last.is_some_and(|t| t.elapsed() < Duration::from_secs(10)) {
+        return;
+    }
+    *last = Some(Instant::now());
+    drop(last);
+    if let Err(e) = run_helper("dhcp", Duration::from_secs(5)) {
+        eprintln!("slot: wifi: {e}");
+    }
+}
+/// The firmware starts its own supplicant at boot, which joins a saved network
+/// but runs no DHCP client, so Wi-Fi sat on "Waiting for IP" until it was
+/// switched off and on. Watch it for a minute after boot and ask for an address
+/// once it has joined. Never blocks startup.
+pub fn ensure_address_at_boot() {
+    thread::spawn(|| {
+        let deadline = Instant::now() + Duration::from_secs(60);
+        while Instant::now() < deadline {
+            if let Ok(s) = Control::open().and_then(|c| c.command("STATUS")) {
+                if field(&s, "wpa_state") == Some("COMPLETED") {
+                    if field(&s, "ip_address").is_some() {
+                        return;
+                    }
+                    request_address();
+                }
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+}
+fn run_helper(verb: &str, limit: Duration) -> Result<()> {
     let root =
         PathBuf::from(std::env::var_os("SLOT_ROOT").unwrap_or_else(|| "/mnt/SDCARD/Slot".into()));
     let Some(script) = helper(Path::new("/etc/wifi/wifi_init.sh"), &root) else {
@@ -280,7 +319,7 @@ fn service(on: bool) -> Result<()> {
     };
     let mut child = Command::new("/bin/sh")
         .arg(&script)
-        .arg(if on { "start" } else { "stop" })
+        .arg(verb)
         .env("SLOT_ROOT", &root)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -296,7 +335,7 @@ fn service(on: bool) -> Result<()> {
                 Err("Could not switch Wi-Fi; see Logs/wifi.log".into())
             };
         }
-        if start.elapsed() > Duration::from_secs(15) {
+        if start.elapsed() > limit {
             let _ = child.kill();
             let _ = child.wait();
             return Err("Wi-Fi helper timed out; see Logs/wifi.log".into());
@@ -415,6 +454,8 @@ struct Reply {
     on: bool,
     status: String,
     networks: Option<Vec<Network>>,
+    /// Joined a network with no address yet: check again soon.
+    awaiting_ip: bool,
 }
 fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
     if let Job::Power(on) = job {
@@ -424,6 +465,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                 on: false,
                 status: "Wi-Fi off".into(),
                 networks: Some(Vec::new()),
+                awaiting_ip: false,
             });
         }
         for _ in 0..20 {
@@ -438,6 +480,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                 on: true,
                 status: e,
                 networks: Some(Vec::new()),
+                awaiting_ip: false,
             }),
             r => r,
         };
@@ -450,6 +493,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                     on: false,
                     status: "Wi-Fi off / service unavailable".into(),
                     networks: None,
+                    awaiting_ip: false,
                 })
             } else {
                 Err(e)
@@ -458,6 +502,10 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
     };
     let s = c.command("STATUS")?;
     let connected = field(&s, "wpa_state") == Some("COMPLETED");
+    let awaiting_ip = connected && field(&s, "ip_address").is_none();
+    if awaiting_ip {
+        request_address();
+    }
     let mut r = Reply {
         on: true,
         status: if connected {
@@ -470,6 +518,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
             "Not connected".into()
         },
         networks: None,
+        awaiting_ip,
     };
     match job {
         Job::Status => {}
@@ -483,6 +532,22 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
         }
         Job::Connect(n, p) => {
             r.status = connect(&c, &n, p, cancel)?;
+            r.awaiting_ip = false;
+            if r.status.ends_with("waiting for IP address") {
+                // Ask for an address and give it a moment, so the menu reads
+                // Connected rather than waiting whenever the network is quick.
+                request_address();
+                r.awaiting_ip = true;
+                for _ in 0..20 {
+                    pause(cancel, 500)?;
+                    let s = c.command("STATUS")?;
+                    if let Some(ip) = field(&s, "ip_address") {
+                        r.status = format!("Connected  {ip}");
+                        r.awaiting_ip = false;
+                        break;
+                    }
+                }
+            }
             r.networks = Some(scan_rows(
                 &c.command("SCAN_RESULTS")?,
                 &c.command("LIST_NETWORKS")?,
@@ -520,6 +585,7 @@ pub struct WifiMenu {
     row: usize,
     keyboard: Option<Keyboard>,
     refreshed: Instant,
+    awaiting_ip: bool,
 }
 impl WifiMenu {
     #[allow(clippy::new_without_default)] // new() starts a status query on a worker thread
@@ -534,6 +600,7 @@ impl WifiMenu {
             row: 0,
             keyboard: None,
             refreshed: Instant::now(),
+            awaiting_ip: false,
         };
         s.start(Job::Status);
         s
@@ -581,6 +648,7 @@ impl WifiMenu {
                         Ok(r) => {
                             self.on = r.on;
                             self.status = r.status;
+                            self.awaiting_ip = r.awaiting_ip;
                             if let Some(n) = r.networks {
                                 self.networks = n;
                             }
@@ -601,10 +669,9 @@ impl WifiMenu {
             }
         }
         // Poll only while this menu is open; scanning is always explicit.
-        if !self.busy()
-            && self.keyboard.is_none()
-            && self.refreshed.elapsed() > Duration::from_secs(15)
-        {
+        // While an address is on its way, check every 2 s instead of every 15.
+        let every = Duration::from_secs(if self.awaiting_ip { 2 } else { 15 });
+        if !self.busy() && self.keyboard.is_none() && self.refreshed.elapsed() > every {
             self.start(Job::Status);
         }
     }
@@ -1066,6 +1133,7 @@ mod tests {
             status: "Password is case sensitive".into(),
             networks: Vec::new(),
             row: 0,
+            awaiting_ip: false,
             keyboard: Some(Keyboard {
                 network: network(),
                 password: "Test".into(),
