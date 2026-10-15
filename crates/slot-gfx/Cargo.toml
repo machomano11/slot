@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [features]
+brick = ["device"]
 default = ["host"]
 host = ["dep:glutin", "dep:glutin-winit", "dep:winit", "dep:raw-window-handle"]
 device = []

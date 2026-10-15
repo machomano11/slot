@@ -1,4 +1,8 @@
+#[cfg(feature = "brick")]
+mod brick;
 mod device;
+#[cfg(feature = "brick")]
+pub use brick::BrickPlatform;
 mod motor;
 mod power;
 mod sim;

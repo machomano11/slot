@@ -92,9 +92,15 @@ fn the_run_ahead_row_offers_off_and_one_frame() {
 
 #[test]
 fn the_rows_run_in_the_order_the_user_chose() {
+    #[cfg(not(feature = "brick"))]
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
         ["Screen", "Gameplay", "General", "About"]
+    );
+    #[cfg(feature = "brick")]
+    assert_eq!(
+        QuickRow::MAIN.map(QuickRow::label),
+        ["Screen", "Gameplay", "General", "LEDs", "Wi-Fi", "About"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -129,7 +135,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::DateTime,
             QuickRow::About,
             QuickRow::Game,
-            QuickRow::General
+            QuickRow::General,
+            QuickRow::Lights,
+            QuickRow::Wifi
         ]
     );
     for page in [
@@ -162,6 +170,19 @@ fn the_values_read_as_the_menu_prints_them() {
             "1 Frame",
             "Dark",
             "Light",
+            "Stock",
+            "Low",
+            "Medium",
+            "High",
+            "White",
+            "Blue",
+            "Green",
+            "Amber",
+            "Red",
+            "Purple",
+            "Steady",
+            "Breathe",
+            "Unavailable"
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);

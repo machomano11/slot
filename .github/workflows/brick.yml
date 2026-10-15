@@ -1,0 +1,97 @@
+name: brick
+
+on:
+  push:
+    branches: [main, brick]
+    tags: ['brick-v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TOOLCHAIN_URL: https://github.com/trimui/toolchain_sdk_smartpro/releases/download/20231018/aarch64-linux-gnu-7.5.0-linaro.tgz
+  TOOLCHAIN_SHA256: 604d97c1f5fadc88d6ebff577ea648d0fbc650411af98a3bd8783dbe4e3ed154
+
+jobs:
+  card:
+    name: TrimUI Brick SD card
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Restore the TrimUI toolchain
+        id: toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/trimui-toolchain
+          key: trimui-toolchain-${{ env.TOOLCHAIN_SHA256 }}
+
+      - name: Download the TrimUI toolchain
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        run: |
+          set -eu
+          mkdir -p ~/trimui-toolchain
+          curl -fsSL "$TOOLCHAIN_URL" -o /tmp/toolchain.tgz
+          echo "$TOOLCHAIN_SHA256  /tmp/toolchain.tgz" | sha256sum -c -
+          tar -xzf /tmp/toolchain.tgz -C ~/trimui-toolchain
+          rm /tmp/toolchain.tgz
+
+      - name: Install the Rust target
+        run: rustup target add aarch64-unknown-linux-gnu
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            brick/bootlogo-tool/target
+          key: cargo-brick-${{ hashFiles('Cargo.lock', 'brick/bootlogo-tool/Cargo.lock', 'rust-toolchain.toml') }}
+
+      - name: Build the emulator cores
+        run: BRICK_TOOLCHAIN=~/trimui-toolchain/aarch64-linux-gnu-7.5.0-linaro sh brick/build-cores.sh
+
+      - name: Build the frontend
+        run: BRICK_TOOLCHAIN=~/trimui-toolchain/aarch64-linux-gnu-7.5.0-linaro sh brick/build-frontend.sh
+
+      - name: Lay out the card
+        run: BRICK_TOOLCHAIN=~/trimui-toolchain/aarch64-linux-gnu-7.5.0-linaro sh brick/package-card.sh SD-CARD
+
+      - name: Check what is about to ship
+        run: |
+          set -eu
+          for f in SD-CARD/Slot/System/slot SD-CARD/Slot/System/mgba_libretro.so \
+                   SD-CARD/Slot/System/gpsp_libretro.so SD-CARD/Apps/BootLogo/slot-bootlogo; do
+            file "$f" | grep -q aarch64
+          done
+          test -x SD-CARD/Slot/System/slot
+          test -f SD-CARD/.slot-boot/boot.sh
+
+      - name: Package
+        id: package
+        run: |
+          set -eu
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then version="${GITHUB_REF_NAME#brick-}"; else version="$(git rev-parse --short HEAD)"; fi
+          zip="slot-brick-${version}-sd-card.zip"
+          zip -qry "$zip" SD-CARD
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package.outputs.zip }}
+          path: ${{ steps.package.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/brick-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ZIP: ${{ steps.package.outputs.zip }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" \
+            --title "Slot for TrimUI Brick ${GITHUB_REF_NAME#brick-}" \
+            --notes "Copy everything inside SD-CARD, hidden .slot-boot included, to the root of a FAT32 card. See brick/README.md for the full install guide."
+    permissions:
+      contents: write

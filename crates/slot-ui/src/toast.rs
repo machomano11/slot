@@ -23,11 +23,13 @@ pub enum Toast {
     ShaderDot,
     ShaderSimpletex,
     CardUnwritable,
+    PictureFull,
+    PictureOriginal,
     Palette(GbPalette),
 }
 
 impl Toast {
-    const FIXED: [Toast; 15] = [
+    const FIXED: [Toast; 17] = [
         Toast::StateSaved,
         Toast::StateLoaded,
         Toast::NeedsGpsp,
@@ -43,6 +45,8 @@ impl Toast {
         Toast::ShaderDot,
         Toast::ShaderSimpletex,
         Toast::CardUnwritable,
+        Toast::PictureFull,
+        Toast::PictureOriginal,
     ];
 
     pub fn all() -> Vec<Toast> {
@@ -87,6 +91,8 @@ impl Toast {
             Toast::ShaderDot => "Shader: Dot",
             Toast::ShaderSimpletex => "Shader: Simpletex",
             Toast::CardUnwritable => "Can't write to SD card",
+            Toast::PictureFull => "Screen: 4:3 Full",
+            Toast::PictureOriginal => "Screen: 3:2 Original",
             Toast::Palette(p) => p.label(),
         }
     }

@@ -42,6 +42,9 @@ pub enum Action {
     PalettePrev,
     ShaderNext,
     ShaderPrev,
+    LedToggle,
+    /// Brick Home+X: switch the GBA picture between 3:2 and full-screen 4:3.
+    PictureToggle,
     PowerPress,
     PowerTap,
     PowerHold,
@@ -65,6 +68,7 @@ enum Select {
 #[derive(Default)]
 pub struct Gestures {
     select: Select,
+    home_chords: bool,
     chord_held: u16,
     menu_down_at: Option<Millis>,
     menu_last_tap: Option<Millis>,
@@ -97,6 +101,13 @@ fn ramp_due(down: Option<Millis>, last: Option<Millis>, now: Millis) -> bool {
 impl Gestures {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn brick() -> Self {
+        Self {
+            home_chords: true,
+            ..Self::default()
+        }
     }
 
     pub fn ff_latched(&self) -> bool {
@@ -161,6 +172,24 @@ impl Gestures {
     }
 
     fn down(&mut self, b: Btn, now: Millis) -> Vec<Action> {
+        if self.home_chords && self.menu_down_at.is_some() && matches!(b, Btn::A | Btn::B) {
+            let (bit, action) = match b {
+                Btn::A => (512, Action::ShaderNext),
+                _ => (1024, Action::LedToggle),
+            };
+            if self.chord_held & bit != 0 {
+                return Vec::new();
+            }
+            self.chord_held |= bit;
+            self.menu_eject_fired = true; // consume Home: no tap menu or hold eject
+            return vec![action];
+        }
+        // Brick: the picture shortcut sits with Y (colour correction) and A (shaders).
+        if self.home_chords && b == Btn::X && self.chording(now) {
+            self.mark_chorded();
+            self.chord_held |= HOME_X;
+            return vec![Action::PictureToggle];
+        }
         if let (true, Some((bit, action))) = (self.chording(now), chord(b)) {
             self.mark_chorded();
             self.chord_held |= bit;
@@ -187,6 +216,10 @@ impl Gestures {
     }
 
     fn up(&mut self, b: Btn, now: Millis) -> Vec<Action> {
+        if b == Btn::X && self.chord_held & HOME_X != 0 {
+            self.chord_held &= !HOME_X;
+            return Vec::new();
+        }
         if let Some((bit, _)) = chord(b) {
             if self.chord_held & bit != 0 {
                 self.chord_held &= !bit;
@@ -303,6 +336,10 @@ impl Gestures {
     }
 
     fn power_up(&mut self) -> Vec<Action> {
+        // A wake-key release can arrive after the input state was reset.
+        if self.power_down_at.is_none() {
+            return Vec::new();
+        }
         let held = self.power_hold_fired;
         self.power_down_at = None;
         self.power_hold_fired = false;
@@ -405,6 +442,9 @@ impl Gestures {
         vec![Action::FfStop]
     }
 }
+
+/// Held-bit for the Brick's picture shortcut on X (X has no shared chord).
+const HOME_X: u16 = 2048;
 
 fn chord(b: Btn) -> Option<(u16, Action)> {
     Some(match b {

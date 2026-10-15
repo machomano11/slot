@@ -98,7 +98,12 @@ impl TcpLink {
                     "cancelled while reaching for the host",
                 ));
             }
-            if let Ok(stream) = TcpStream::connect((addr, port)) {
+            if let Ok(stream) = TcpStream::connect_timeout(
+                &format!("{addr}:{port}").parse().map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid link address")
+                })?,
+                Duration::from_millis(250),
+            ) {
                 return TcpLink::wrap(stream);
             }
             if Instant::now() >= deadline {
@@ -117,6 +122,9 @@ impl TcpLink {
 
     fn wrap(stream: TcpStream) -> std::io::Result<TcpLink> {
         stream.set_nodelay(true)?;
+        // Heartbeats distinguish a lost radio from a quiet/paused game.
+        stream.set_read_timeout(Some(Duration::from_secs(8)))?;
+        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
         let mut reader = stream.try_clone()?;
         let mut writer = stream.try_clone()?;
         let (rtx, inbox) = channel();
@@ -156,8 +164,30 @@ impl TcpLink {
             }
         });
 
+        let writer_closed = closed.clone();
         std::thread::spawn(move || {
-            for out in wrx.iter() {
+            struct CloseOnExit(TcpStream, Arc<AtomicBool>);
+            impl Drop for CloseOnExit {
+                fn drop(&mut self) {
+                    self.1.store(true, Ordering::Release);
+                    let _ = self.0.shutdown(Shutdown::Both);
+                }
+            }
+            let _guard = CloseOnExit(
+                writer.try_clone().expect("cloned TCP socket"),
+                writer_closed,
+            );
+            loop {
+                let out = match wrx.recv_timeout(Duration::from_secs(1)) {
+                    Ok(out) => out,
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                        if writer.write_all(&[0, 0, 0, 1, 1]).is_err() {
+                            return;
+                        }
+                        continue;
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
+                };
                 match out {
                     Out::Packet(buf) => {
                         let Ok(len) = u16::try_from(buf.len()) else {

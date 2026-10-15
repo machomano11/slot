@@ -167,13 +167,7 @@ fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
         Some(QuickRow::About),
         "up from the top did not wrap to the bottom"
     );
-    for want in [
-        QuickRow::Screen,
-        QuickRow::Game,
-        QuickRow::General,
-        QuickRow::About,
-        QuickRow::Screen,
-    ] {
+    for want in QuickRow::MAIN.into_iter().chain([QuickRow::MAIN[0]]) {
         press(&mut a, Btn::Down);
         assert_eq!(a.quick_menu(), Some(want));
     }
@@ -699,4 +693,42 @@ fn gb_palettes_flips_on_either_arrow_and_saves() {
             Some(QuickValue::flag(want))
         );
     }
+}
+
+#[cfg(feature = "brick")]
+#[test]
+fn wifi_keeps_navigation_inside_overlay_and_b_returns_to_its_row() {
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Wifi);
+    press(&mut a, Btn::A);
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Wifi));
+    // Status may still be running. B first cancels it, then closes the overlay.
+    for i in 0..100 {
+        a.tick_ms(5000 + i * 10);
+        press(&mut a, Btn::B);
+        press(&mut a, Btn::Down);
+        if a.quick_menu() == Some(QuickRow::About) {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    panic!("Wi-Fi overlay did not return to settings");
+}
+
+#[cfg(feature = "brick")]
+#[test]
+fn wifi_status_finishes_before_a_pending_sleep_request() {
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Wifi);
+    press(&mut a, Btn::A);
+    a.apply(Action::PowerTap);
+    for i in 0..100 {
+        a.tick_ms(5000 + i * 10);
+        if matches!(a.phase(), Phase::Doze { .. }) {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    panic!("Pending sleep was not completed after the Wi-Fi worker stopped");
 }

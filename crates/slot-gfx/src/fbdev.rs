@@ -4,7 +4,11 @@ use libloading::Library;
 
 use crate::surface::{GfxError, Surface};
 
-const FALLBACK_PANEL: (u32, u32) = (720, 480);
+const FALLBACK_PANEL: (u32, u32) = if cfg!(feature = "brick") {
+    (1024, 768)
+} else {
+    (720, 480)
+};
 
 const FB0: &str = "/sys/class/graphics/fb0";
 
@@ -210,7 +214,13 @@ impl FbdevSurface {
                 width: hint.0 as u16,
                 height: hint.1 as u16,
             });
-            let native = &mut *window as *mut FbdevWindow as Ptr;
+            // TrimUI's PowerVR EGL uses a null native window (official GE8300 SDL backend).
+            // Never pass a Mali window struct into the PowerVR driver.
+            let native = if cfg!(feature = "brick") {
+                std::ptr::null_mut()
+            } else {
+                &mut *window as *mut FbdevWindow as Ptr
+            };
             let mut surface =
                 (egl.create_window_surface)(display, config, native, std::ptr::null());
             if surface.is_null() {

@@ -22,3 +22,11 @@
 # Parallel implementation worktrees, never content.
 /.worktrees
 .superpowers/
+
+# Slot-Brick port
+brick/bootlogo-tool/target/
+brick/core-src/
+brick/core-build/
+__pycache__/
+dist-brick/
+SD-CARD/

@@ -17,3 +17,6 @@ slot-store = { path = "../slot-store" }
 [dev-dependencies]
 slot-gfx = { path = "../slot-gfx", default-features = false, features = ["test-support"] }
 tempfile.workspace = true
+
+[features]
+brick = []

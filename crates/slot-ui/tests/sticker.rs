@@ -9,20 +9,33 @@ fn fields() -> StickerFields<'static> {
 }
 
 #[test]
-fn the_headline_rows_read_as_a_device_plate() {
+fn the_headline_rows_name_the_brick_port() {
     let all = sticker_lines(&fields()).join("\n");
-    assert!(all.contains("AGS-102"), "{all}");
-    assert!(all.contains("5V"), "{all}");
-    assert!(all.contains("1.5A"), "{all}");
+    assert!(all.contains("TRIMUI BRICK"), "{all}");
+    assert!(all.contains(slot_ui::PORT_VERSION), "{all}");
     assert!(all.contains("87"), "the gauge reading is missing: {all}");
     assert!(all.contains("0473885"), "the serial went missing: {all}");
+    assert!(
+        !all.contains("AGS-102"),
+        "the RG SP model plate is still there: {all}"
+    );
 }
 
 #[test]
-fn the_input_row_carries_the_real_dc_symbol() {
-    let all = sticker_lines(&fields()).join("\n");
-    assert!(all.contains(slot_ui::DC), "the rating row lost its symbol");
-    assert_eq!(slot_ui::DC, '\u{2393}');
+fn the_about_screen_says_it_is_a_port_of_the_original() {
+    let all = sticker_lines(&fields()).join(" ");
+    for owed in [
+        "UNOFFICIAL PORT OF SLOT",
+        "BRANDON T. KOWALSKI",
+        "ANBERNIC RG SP",
+        "TRIMUI BRICK PORT",
+        "PORT BY LORDNORDYX",
+    ] {
+        assert!(
+            all.contains(owed),
+            "the About text does not mention {owed}: {all}"
+        );
+    }
 }
 
 #[test]
@@ -43,15 +56,7 @@ fn a_missing_gauge_is_not_drawn_as_empty() {
 #[test]
 fn the_compliance_block_is_the_credits() {
     let all = sticker_lines(&fields()).join("\n").to_uppercase();
-    for owed in [
-        "MGBA",
-        "GPSP",
-        "BASEOS BY PVAIBHAV",
-        "OPEN SANS",
-        "NERD",
-        "LCD3X",
-        "MARKUS",
-    ] {
+    for owed in ["MGBA", "GPSP", "OPEN SANS", "NERD", "LCD3X", "MARKUS"] {
         assert!(all.contains(owed), "the credits do not mention {owed}");
     }
 }
@@ -67,29 +72,4 @@ fn every_line_is_already_upper_case() {
     for line in sticker_lines(&fields()) {
         assert_eq!(line, line.to_uppercase(), "{line}");
     }
-}
-
-#[test]
-fn the_wordmarks_top_edge_is_antialiased_not_a_hard_step() {
-    use slot_ui::sticker_face;
-    const INK: [u8; 3] = [0xff, 0xff, 0xff];
-    let face = sticker_face(&fields());
-    let get = |x: u32, y: u32| -> [u8; 3] {
-        let i = ((y * face.w + x) * 4) as usize;
-        [face.rgba[i], face.rgba[i + 1], face.rgba[i + 2]]
-    };
-    let dark = |c: [u8; 3]| (c[0] as u32 + c[1] as u32 + c[2] as u32) < 120;
-    let edges: Vec<[u8; 3]> = (400..413)
-        .filter_map(|x| {
-            (129..142).find_map(|y| {
-                let above = get(x, y - 1);
-                let here = get(x, y);
-                (dark(above) && !dark(here)).then_some(here)
-            })
-        })
-        .collect();
-    assert!(
-        edges.iter().any(|&e| e != INK),
-        "every sampled column's top edge jumps straight from the ground to the ink: {edges:?}"
-    );
 }
