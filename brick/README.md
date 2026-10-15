@@ -125,6 +125,9 @@ No router is needed. This hasn't been tested on two physical devices yet. If it 
    password=YourPassword
    ```
 
+   It must be **plain text**. On a Mac, TextEdit saves rich text (`.rtf`) unless you choose
+   *Format → Make Plain Text* first; Slot shows a banner if it finds the wrong kind of file.
+
 3. Start a GBA, GB or GBC game. A banner shows when you sign in, how many achievements the game
    has, and each one you unlock.
 

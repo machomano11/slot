@@ -18,6 +18,29 @@ pub const ACCOUNT_FILE: &str = "Config/retroachievements.ini";
 
 const IDLE_EVERY: Duration = Duration::from_secs(1);
 
+/// A file next to [`ACCOUNT_FILE`] that was meant to be it: TextEdit saves
+/// `retroachievements.ini.rtf`, Notepad `retroachievements.ini.txt`.
+pub fn misnamed_account(root: &Path) -> Option<String> {
+    if root.join(ACCOUNT_FILE).exists() {
+        return None;
+    }
+    let dir = root.join(ACCOUNT_FILE).parent()?.to_path_buf();
+    std::fs::read_dir(dir).ok()?.flatten().find_map(|e| {
+        let name = e.file_name().to_string_lossy().into_owned();
+        (name.to_ascii_lowercase().starts_with("retroachievements") && !name.starts_with("._"))
+            .then_some(name)
+    })
+}
+
+/// The banner for [`misnamed_account`].
+pub fn misnamed_hint(name: &str) -> String {
+    if name.to_ascii_lowercase().ends_with(".rtf") {
+        format!("{name} is rich text: save it as plain text named retroachievements.ini")
+    } else {
+        format!("Rename Config/{name} to retroachievements.ini")
+    }
+}
+
 pub struct Achievements {
     root: PathBuf,
     cheevos: Cheevos,
@@ -193,5 +216,33 @@ impl Achievements {
             Ok(_) => {}
             Err(e) => eprintln!("slot: cheevos: saving the token: {e}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_text_edit_file_is_pointed_out() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        std::fs::create_dir_all(root.join("Config")).unwrap();
+        assert_eq!(misnamed_account(root), None);
+        std::fs::write(root.join("Config/._retroachievements.ini.rtf"), "").unwrap();
+        assert_eq!(
+            misnamed_account(root),
+            None,
+            "macOS resource forks don't count"
+        );
+        std::fs::write(root.join("Config/retroachievements.ini.rtf"), "").unwrap();
+        let name = misnamed_account(root).unwrap();
+        assert_eq!(name, "retroachievements.ini.rtf");
+        assert_eq!(
+            misnamed_hint(&name),
+            "retroachievements.ini.rtf is rich text: save it as plain text named retroachievements.ini"
+        );
+        std::fs::write(root.join(ACCOUNT_FILE), "username=a\n").unwrap();
+        assert_eq!(misnamed_account(root), None);
     }
 }
