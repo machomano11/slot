@@ -167,6 +167,8 @@ impl Frontend {
         let now = Instant::now();
         let cart_faces = CartFaces::spawn(platform.root().to_path_buf());
         #[cfg(feature = "brick")]
+        crate::brick_wifi::ensure_address_at_boot();
+        #[cfg(feature = "brick")]
         let session_root = platform.root().to_path_buf();
         let mut session = Session::boot_with(platform.root().to_path_buf(), sink);
         crate::boot_time::mark("session");
