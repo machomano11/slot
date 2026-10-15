@@ -49,6 +49,19 @@ cleanup() {
     [ -z "$INPUT_PID" ] || kill "$INPUT_PID" 2>/dev/null || :
 }
 trap cleanup 0
+# Stock runtrimui.sh drives PD11 high to power the USB-C OTG port (VCC-5V).
+# Slot's startup hook runs instead of it, so without this a USB-C DAC or
+# other OTG device gets no power and never shows up.
+if [ ! -d /sys/class/gpio/gpio107 ]; then
+    echo 107 > /sys/class/gpio/export 2>/dev/null || :
+fi
+if [ -d /sys/class/gpio/gpio107 ]; then
+    echo -n out > /sys/class/gpio/gpio107/direction 2>/dev/null || :
+    echo -n 1 > /sys/class/gpio/gpio107/value 2>/dev/null || :
+    echo "USB-C port power (gpio107): $(cat /sys/class/gpio/gpio107/value 2>/dev/null)"
+else
+    echo 'WARNING: could not power the USB-C port (gpio107)'
+fi
 # Wait for the daemon's virtual joystick instead of checking only framebuffer.
 count=0
 while [ ! -e /dev/input/js0 ] && [ "$count" -lt 30 ]; do
