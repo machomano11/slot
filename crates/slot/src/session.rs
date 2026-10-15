@@ -67,6 +67,16 @@ impl Session {
         };
         session.achievements = Achievements::boot(&session.root);
         session.cloud = CloudSync::boot(&session.root);
+        if let Some(name) = crate::achievements::misnamed_account(&session.root) {
+            eprintln!(
+                "slot: cheevos: found Config/{name} but no {}",
+                crate::achievements::ACCOUNT_FILE
+            );
+            session.app.show_message(
+                "RetroAchievements",
+                crate::achievements::misnamed_hint(&name),
+            );
+        }
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
         // left a cold boot (after a power off) idle on the slot for the whole load.
