@@ -34,9 +34,26 @@ stop_owned() {
     elif command -v rfkill >/dev/null 2>&1; then rfkill block wifi || :; fi
     rm -f "$RUN/hostapd.pid" "$RUN/wpa_supplicant.pid" "$RUN/hostapd.conf" "$RUN/join.conf"
 }
+# Ends a link: radio off, or home Wi-Fi back on if it was on before.
+finish() {
+    stop_owned
+    rm -f "$RUN/active"
+    if [ -f "$RUN/restore-station" ] && [ "$HELPER" = "$CARD_HELPER" ]; then
+        rm -f "$RUN/restore-station"
+        sh "$HELPER" start || :
+        echo 'Home Wi-Fi back on'
+    else
+        rm -f "$RUN/restore-station"
+        echo 'Wi-Fi off'
+    fi
+}
 case "${2:-}" in
     warm) exit 0;;
-    down|cool) stop_owned; echo 'Wi-Fi off'; exit 0;;
+    down|cool)
+        # Slot asks for this whenever a game or menu closes. Only undo a link
+        # this script set up: home Wi-Fi the player turned on stays on.
+        [ ! -f "$RUN/active" ] || finish
+        exit 0;;
     host|join) role=$2;;
     *) echo 'Invalid multiplayer action'; exit 2;;
 esac
@@ -46,9 +63,12 @@ mkdir -p "$RUN"
 chmod 700 "$RUN"
 # Firmware helper loads/unblocks its driver. Stop DHCP and station mode before
 # taking over wlan0, then unblock again for our private temporary daemons.
-trap 'stop_owned' EXIT
-trap 'exit 1' HUP INT TERM
 [ -f "$HELPER" ] || { echo 'Missing firmware Wi-Fi helper'; exit 1; }
+# Home Wi-Fi in use: turn it back on once the link is over.
+if [ ! -f "$RUN/active" ] && pidof wpa_supplicant >/dev/null 2>&1; then : > "$RUN/restore-station"; fi
+: > "$RUN/active"
+trap 'finish' EXIT
+trap 'exit 1' HUP INT TERM
 stop_owned
 if [ "$HELPER" = "$CARD_HELPER" ]; then
     # Slot's own helper: station mode is already stopped; just power the radio.
