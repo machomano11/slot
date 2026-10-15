@@ -24,6 +24,9 @@ tempfile = "3"
 unicode-normalization = "0.1"
 resvg = { version = "0.48", default-features = false }
 usvg = { version = "0.48", default-features = false }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = "1"
+cc = "1"
 
 [profile.device]
 inherits = "release"

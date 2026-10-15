@@ -623,7 +623,7 @@ fn fake_faces(a: &mut App) {
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
         labels: (0..QuickRow::ALL.len())
-            .map(|i| [(id(100 + i), 200, 40), (id(130 + i), 200, 40)])
+            .map(|i| [(id(100 + i), 200, 40), (id(1000 + i), 200, 40)])
             .collect(),
         pointer: (id(700), 32, 48),
         values: (0..QuickValue::ALL.len())
@@ -637,7 +637,7 @@ fn fake_faces(a: &mut App) {
 
 fn label(row: QuickRow, lit: bool) -> usize {
     if lit {
-        130 + row.index()
+        1000 + row.index()
     } else {
         100 + row.index()
     }
@@ -833,7 +833,7 @@ fn wifi_keeps_navigation_inside_overlay_and_b_returns_to_its_row() {
         a.tick_ms(5000 + i * 10);
         press(&mut a, Btn::B);
         press(&mut a, Btn::Down);
-        if a.quick_menu() == Some(QuickRow::About) {
+        if a.quick_menu() == Some(QuickRow::Achievements) {
             return;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));

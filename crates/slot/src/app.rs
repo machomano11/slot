@@ -56,6 +56,11 @@ const BATTERY_POLL_MS: Millis = 10_000;
 const MENU_REVEAL_MS: Millis = 180;
 
 const CHARGE_POLL_MS: Millis = 1_000;
+/// How long a toast stays up, and how long it takes to slide in and out.
+const BANNER_MS: Millis = 4500;
+const BANNER_SLIDE: Millis = 300;
+/// The longest a toast waits for its badge to download.
+const BADGE_WAIT: Millis = 1500;
 const HEADPHONES_POLL_MS: Millis = 500;
 
 const BATTERY_LOW: u8 = 20;
@@ -390,6 +395,14 @@ pub struct App {
     shelf_clock: slot_ui::Printed,
     hud: Hud,
     messages: std::collections::VecDeque<(String, String)>,
+    /// Two-line notices waiting their turn in the top-right corner (RetroAchievements).
+    /// Title, detail, badge image, when it was queued.
+    banners: std::collections::VecDeque<(String, String, Option<std::path::PathBuf>, Millis)>,
+    /// The one showing: id, title, detail, badge image, when it came up.
+    banner: Option<(u64, String, String, Option<std::path::PathBuf>, Millis)>,
+    banner_seq: u64,
+    /// The rendered face, for the banner of that id.
+    banner_face: Option<(u64, TexId)>,
     screen: f32,
     lift: f32,
     eject_overlay: f32,
@@ -549,6 +562,10 @@ impl App {
             shelf_clock: slot_ui::Printed::default(),
             hud: Hud::new(),
             messages: std::collections::VecDeque::new(),
+            banners: std::collections::VecDeque::new(),
+            banner: None,
+            banner_seq: 0,
+            banner_face: None,
             screen: 0.0,
             lift: 1.0,
             eject_overlay: 0.0,
@@ -945,6 +962,7 @@ impl App {
             | QuickRow::General
             | QuickRow::Wallpaper
             | QuickRow::Wifi
+            | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
             | QuickRow::LedTop
@@ -2130,6 +2148,12 @@ impl App {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::new());
                 }
             }
+            QuickRow::Achievements => {
+                #[cfg(feature = "brick")]
+                {
+                    self.wifi = Some(crate::brick_wifi::WifiMenu::achievements());
+                }
+            }
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
@@ -2299,6 +2323,7 @@ impl App {
             | QuickRow::Game
             | QuickRow::General
             | QuickRow::Wifi
+            | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
             | QuickRow::LedTop
@@ -2769,10 +2794,39 @@ impl App {
     }
 
     fn timers(&mut self) {
+        let now = self.now();
+        if self
+            .banner
+            .as_ref()
+            .is_some_and(|b| now.saturating_sub(b.4) >= BANNER_MS)
+        {
+            self.banner = None;
+        }
+        // A toast whose badge is still downloading waits for it, but not for long.
+        let ready = |b: &(String, String, Option<std::path::PathBuf>, Millis)| {
+            b.2.as_ref().is_none_or(|p| p.exists()) || now.saturating_sub(b.3) >= BADGE_WAIT
+        };
+        if self.banner.is_none() && self.banners.front().is_some_and(ready) {
+            if let Some((title, detail, badge, _)) = self.banners.pop_front() {
+                self.banner_seq += 1;
+                self.banner = Some((self.banner_seq, title, detail, badge, now));
+            }
+        }
         #[cfg(feature = "brick")]
         {
             if let Some(wifi) = &mut self.wifi {
                 wifi.poll();
+            }
+            if let Some(t) = self.wifi.as_mut().and_then(|w| w.take_test_unlock()) {
+                self.achievement_notice(
+                    slot_cheevos::Notice::Unlocked {
+                        title: t.title,
+                        description: t.description,
+                        points: t.points,
+                        badge: String::new(),
+                    },
+                    t.badge,
+                );
             }
             if self.wifi.as_ref().map(|w| !w.busy()).unwrap_or(true) {
                 if let Some(action) = self.wifi_power.take() {
@@ -3082,6 +3136,109 @@ impl App {
     }
 
     pub fn draw(&self, out: &mut Vec<Draw>) {
+        self.draw_scene(out);
+        self.draw_banner(out);
+    }
+
+    /// Shows a toast in the corner, after any already waiting.
+    pub fn announce(&mut self, title: &str, detail: &str) {
+        self.announce_with(title, detail, None);
+    }
+
+    /// A toast with an image beside it (a badge, cached at `badge` or on its way there).
+    pub fn announce_with(&mut self, title: &str, detail: &str, badge: Option<std::path::PathBuf>) {
+        const KEPT: usize = 8;
+        if self.banners.len() < KEPT {
+            self.banners
+                .push_back((title.to_string(), detail.to_string(), badge, self.now()));
+        }
+    }
+
+    /// What RetroAchievements said, as a toast (or nothing worth interrupting play for).
+    /// `badge`: where its image is cached, for unlocks and the game's own icon.
+    pub fn achievement_notice(
+        &mut self,
+        notice: slot_cheevos::Notice,
+        badge: Option<std::path::PathBuf>,
+    ) {
+        use slot_cheevos::Notice;
+        match notice {
+            Notice::LoggedIn(Ok(())) | Notice::LeaderboardFailed { .. } => {}
+            Notice::LoggedIn(Err(e)) => self.announce("Not logged in", &e),
+            // "Title: 3 of 40 achievements": the game on top, its count below.
+            Notice::GameLoaded(Ok((summary, _))) => match summary.rsplit_once(": ") {
+                Some((game, count)) if !game.is_empty() => self.announce_with(game, count, badge),
+                _ => self.announce_with("Achievements", &summary, badge),
+            },
+            Notice::GameLoaded(Err(e)) => self.announce("No achievements", &e),
+            Notice::Unlocked {
+                title,
+                description,
+                points,
+                ..
+            } => self.announce_with(&title, &format!("{points} pts - {description}"), badge),
+            Notice::GameCompleted { title, .. } => {
+                self.announce_with("Every achievement earned", &title, badge)
+            }
+            Notice::LeaderboardStarted { title, .. } => {
+                self.announce("Leaderboard attempt", &title)
+            }
+            Notice::LeaderboardSubmitted { title, score } => self.announce(&title, &score),
+            Notice::ServerError { message, .. } => self.announce("Server error", &message),
+            Notice::Disconnected => self.announce("Offline", "Unlocks will be sent later"),
+            Notice::Reconnected => self.announce("Back online", "Unlocks sent"),
+        }
+    }
+
+    /// The toast showing, if its face still has to be rendered: (id, title, detail, badge).
+    pub fn banner_to_render(&self) -> Option<(u64, String, String, Option<std::path::PathBuf>)> {
+        let (id, title, detail, badge, _) = self.banner.as_ref()?;
+        (self.banner_face.map(|(f, _)| f) != Some(*id))
+            .then(|| (*id, title.clone(), detail.clone(), badge.clone()))
+    }
+
+    pub fn set_banner_face(&mut self, id: u64, tex: TexId) {
+        self.banner_face = Some((id, tex));
+    }
+
+    /// A banner is up or waiting, so the screen must keep being drawn.
+    pub fn banner_active(&self) -> bool {
+        self.banner.is_some() || !self.banners.is_empty()
+    }
+
+    /// The toast showing now: title and detail, for tests.
+    pub fn banner_text(&self) -> Option<(&str, &str)> {
+        self.banner
+            .as_ref()
+            .map(|(_, t, d, _, _)| (t.as_str(), d.as_str()))
+    }
+
+    fn draw_banner(&self, out: &mut Vec<Draw>) {
+        let (Some((id, _, _, _, since)), Some((face_id, tex))) = (&self.banner, self.banner_face)
+        else {
+            return;
+        };
+        if *id != face_id {
+            return;
+        }
+        // Slides in from past the right edge, rests in the corner, slides back out.
+        let age = self.now().saturating_sub(*since);
+        let shown = (age as f32 / BANNER_SLIDE as f32)
+            .min(BANNER_MS.saturating_sub(age) as f32 / BANNER_SLIDE as f32)
+            .clamp(0.0, 1.0);
+        let eased = 1.0 - (1.0 - shown) * (1.0 - shown);
+        let away = slot_gfx::OUT_W as f32 - slot_ui::BANNER_X;
+        out.push(Draw::Tex {
+            x: (slot_ui::BANNER_X + away * (1.0 - eased)).round(),
+            y: slot_ui::BANNER_Y,
+            w: slot_ui::BANNER_W as f32,
+            h: slot_ui::BANNER_H as f32,
+            tex,
+            alpha: 1.0,
+        });
+    }
+
+    fn draw_scene(&self, out: &mut Vec<Draw>) {
         if let Some(index) = self.power_menu {
             self.draw_power_menu(index, out);
             return;

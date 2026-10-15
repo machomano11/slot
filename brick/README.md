@@ -117,27 +117,22 @@ No router is needed. This hasn't been tested on two physical devices yet. If it 
 ## RetroAchievements (experimental)
 
 1. Connect the Brick to Wi-Fi.
-2. Create `Slot/Config/retroachievements.ini` with your
-   [retroachievements.org](https://retroachievements.org) account:
+2. Press **HOME** and open **RetroAchievements**. Enter your
+   [retroachievements.org](https://retroachievements.org) username and password with the
+   on-screen keyboard (START when done), then choose **Log in**.
+3. Start a GBA, GB or GBC game. A small pop-up in the top-right corner shows the game's
+   achievement count and each one you unlock, with its badge.
 
-   ```ini
-   username=YourName
-   password=YourPassword
-   ```
+Only a login token is kept, in `Slot/Config/retroachievements.txt`; your password is never
+saved. The same screen can test the connection, show a test pop-up, and log out. If the game
+starts before Wi-Fi has an address, Slot signs in again once it does.
 
-   It must be **plain text**. On a Mac, TextEdit saves rich text (`.rtf`) unless you choose
-   *Format → Make Plain Text* first; Slot shows a banner if it finds the wrong kind of file.
-
-3. Start a GBA, GB or GBC game. A banner shows when you sign in, how many achievements the game
-   has, and each one you unlock.
-
-After the first sign-in the password in the file is replaced by a login token. Add `enabled=0`
-to turn achievements off without deleting the file.
+The `retroachievements.ini` file used by earlier builds is no longer read. Delete it, since it
+holds your password in plain text.
 
 Achievements are **softcore only** for now: save states, rewind and fast forward stay
-available, and unlocks count toward softcore. RetroAchievements has not approved Slot as an
-emulator yet, so the server may refuse it. If nothing appears, check `Slot/Logs/slot.log` for
-lines starting with `slot: cheevos`.
+available, and unlocks count toward softcore. If nothing appears, check `Slot/Logs/slot.log`
+for lines starting with `slot: cheevos`.
 
 ---
 

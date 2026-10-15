@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use libloading::Library;
 
-use crate::core::{AvInfo, ButtonMask, CoreError, CoreMemory, RetroCore, GBA_H, GBA_W};
+use crate::core::{AvInfo, ButtonMask, CoreError, RetroCore, GBA_H, GBA_W};
 use crate::ffi::*;
 use crate::link::Link;
 use crate::rumble::Rumble;
@@ -47,7 +47,6 @@ struct Host {
 struct MemoryMaps {
     descriptors: Vec<MemoryDescriptor>,
     _names: Vec<CString>,
-    map: Option<Box<MemoryMap>>,
 }
 
 // The pointers are into the core's own memory and the names this struct owns;
@@ -74,14 +73,9 @@ impl MemoryMaps {
                 d
             })
             .collect();
-        let map = Box::new(MemoryMap {
-            descriptors: descriptors.as_ptr(),
-            num_descriptors: descriptors.len() as c_uint,
-        });
         MemoryMaps {
             descriptors,
             _names: names,
-            map: Some(map),
         }
     }
 }
@@ -647,20 +641,21 @@ impl RetroCore for LibretroCore {
         self.run_frame_linked(input, ButtonMask::default());
     }
 
-    fn memory_access(&self) -> Option<CoreMemory> {
+    fn memory_map(&self) -> (*const c_void, u32) {
+        let d = &self.host.memory_maps.descriptors;
+        match (self.loaded, d.is_empty()) {
+            (true, false) => (d.as_ptr() as *const c_void, d.len() as u32),
+            _ => (ptr::null(), 0),
+        }
+    }
+
+    fn memory_region(&mut self, id: u32) -> Option<(*mut u8, usize)> {
         if !self.loaded {
             return None;
         }
-        let maps = &self.host.memory_maps;
-        Some(CoreMemory {
-            map: maps
-                .map
-                .as_deref()
-                .filter(|_| !maps.descriptors.is_empty())
-                .map_or(ptr::null(), |m| m as *const MemoryMap as *const c_void),
-            data: self.api.get_memory_data,
-            size: self.api.get_memory_size,
-        })
+        let data = unsafe { (self.api.get_memory_data)(id) };
+        let len = unsafe { (self.api.get_memory_size)(id) };
+        (!data.is_null() && len > 0).then_some((data as *mut u8, len))
     }
 
     fn run_frame_linked(&mut self, p1: ButtonMask, p2: ButtonMask) {
