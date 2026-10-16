@@ -88,6 +88,9 @@ pub struct Gestures {
     r2_refused: bool,
     r2_last_release: Option<Millis>,
     rewinding: bool,
+    /// L2 and R2 are the game's (a PlayStation's): rewind is off and HOME + R2 switches
+    /// fast-forward on and off.
+    triggers_to_game: bool,
 }
 
 fn ramp_due(down: Option<Millis>, last: Option<Millis>, now: Millis) -> bool {
@@ -114,6 +117,14 @@ impl Gestures {
 
     pub fn set_menu_dpad_display(&mut self, enabled: bool) {
         self.menu_dpad_display = enabled;
+    }
+
+    pub fn set_triggers_to_game(&mut self, on: bool) {
+        self.triggers_to_game = on;
+    }
+
+    pub fn triggers_to_game(&self) -> bool {
+        self.triggers_to_game
     }
 
     pub fn ff_latched(&self) -> bool {
@@ -209,6 +220,23 @@ impl Gestures {
             self.chord_held |= bit;
             return vec![action];
         }
+        if self.triggers_to_game && matches!(b, Btn::L2 | Btn::R2) {
+            if b == Btn::R2 && self.menu_down_at.is_some() {
+                self.menu_eject_fired = true; // consume Home: no tap menu or hold eject
+                self.chord_held |= HOME_R2;
+                return match self.ff_on {
+                    true => self.ff_clear(),
+                    false => {
+                        self.ff_on = true;
+                        self.ff_latched = true;
+                        vec![Action::FfStart]
+                    }
+                };
+            }
+            let mut out = self.hand_over_select(now);
+            out.push(Action::GbaDown(b));
+            return out;
+        }
         match b {
             Btn::Select => self.select_down(now),
             Btn::Menu => self.menu_down(now),
@@ -234,6 +262,10 @@ impl Gestures {
             self.chord_held &= !HOME_X;
             return Vec::new();
         }
+        if b == Btn::R2 && self.chord_held & HOME_R2 != 0 {
+            self.chord_held &= !HOME_R2;
+            return Vec::new();
+        }
         if let Some((bit, _)) = chord(b) {
             if self.chord_held & bit != 0 {
                 self.chord_held &= !bit;
@@ -246,6 +278,7 @@ impl Gestures {
             Btn::Power => self.power_up(),
             Btn::Lid => vec![Action::LidOpen],
             Btn::VolUp | Btn::VolDown => self.volume_release(b),
+            Btn::L2 | Btn::R2 if self.triggers_to_game => vec![Action::GbaUp(b)],
             Btn::L2 => self.rewind_stop(),
             Btn::R2 => self.ff_up(now),
             _ => vec![Action::GbaUp(b)],
@@ -466,6 +499,7 @@ impl Gestures {
 
 /// Held-bit for the Brick's picture shortcut on X (X has no shared chord).
 const HOME_X: u16 = 2048;
+const HOME_R2: u16 = 8192;
 
 impl Gestures {
     fn menu_display_chord(&self, b: Btn) -> Option<(u16, Action)> {

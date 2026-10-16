@@ -251,6 +251,20 @@ pub fn apply_core_options(
             core.set_option(key, value);
         }
     }
+    if which == Core::PcsxRearmed {
+        // A real BIOS in Slot/BIOS if there is one, else the built-in one; frames skipped
+        // only when the audio would run dry; the memory card saved as Slot's .sav.
+        for (key, value) in [
+            ("pcsx_rearmed_bios", "auto"),
+            ("pcsx_rearmed_show_bios_bootlogo", "disabled"),
+            ("pcsx_rearmed_drc", "enabled"),
+            ("pcsx_rearmed_frameskip_type", "auto"),
+            ("pcsx_rearmed_memcard1", "libretro"),
+            ("pcsx_rearmed_neon_enhancement_enable", "disabled"),
+        ] {
+            core.set_option(key, value);
+        }
+    }
     if which == Core::MednafenWswan {
         // Software rotation (Slot turns no frames itself), the pad turned with the screen.
         for (key, value) in [

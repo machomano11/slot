@@ -309,7 +309,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Md => Some(PlainCart::MegaDrive),
         Platform::Ngp | Platform::Ngpc => Some(PlainCart::NeoGeoPocket),
         Platform::Ws | Platform::Wsc => Some(PlainCart::WonderSwan),
-        Platform::Scd => Some(PlainCart::DiscCase),
+        Platform::Scd | Platform::Ps => Some(PlainCart::DiscCase),
         Platform::S32x => Some(PlainCart::Sega32x),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }

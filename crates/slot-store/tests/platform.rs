@@ -7,7 +7,7 @@ fn every_platform_has_a_directory() {
         names,
         vec![
             "GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC",
-            "SEGACD", "32X"
+            "SEGACD", "32X", "PS"
         ]
     );
 }
@@ -30,7 +30,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Ws,
             Platform::Wsc,
             Platform::Scd,
-            Platform::S32x
+            Platform::S32x,
+            Platform::Ps
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -106,12 +107,12 @@ fn a_wonderswan_canvas_holds_its_screen_either_way_up() {
     for p in [Platform::Ws, Platform::Wsc] {
         assert!(p.accepts(std::path::Path::new("Gunpey.ws")));
         assert!(p.accepts(std::path::Path::new("Judgement Silversword.wsc")));
-        assert!(p.turns());
+        assert!(p.picture_follows_frames());
         let (w, h) = p.picture();
         let (cw, ch) = p.canvas();
         assert!(w <= cw && h <= ch && h <= cw && w <= ch);
     }
-    assert!(!Platform::Gba.turns());
+    assert!(!Platform::Gba.picture_follows_frames());
 }
 
 #[test]
@@ -142,4 +143,22 @@ fn a_32x_game_is_its_own_shelf_and_shown_like_a_mega_drive_one() {
     assert!(!Platform::S32x.accepts(std::path::Path::new("Sonic.md")));
     assert_eq!(Platform::S32x.picture(), Platform::Md.picture());
     assert_eq!(Platform::S32x.canvas(), Platform::Md.canvas());
+}
+
+#[test]
+fn a_playstation_game_is_a_disc_with_its_own_triggers() {
+    for name in [
+        "Ridge Racer.cue",
+        "Final Fantasy VII.m3u",
+        "Crash.chd",
+        "Spyro.pbp",
+    ] {
+        assert!(Platform::Ps.accepts(std::path::Path::new(name)), "{name}");
+    }
+    assert!(!Platform::Ps.accepts(std::path::Path::new("Track 01.bin")));
+    assert!(Platform::Ps.discs());
+    assert!(Platform::Ps.uses_triggers());
+    assert!(Platform::Ps.picture_follows_frames());
+    assert!(Platform::Ps.bios().is_empty());
+    assert!(!Platform::Md.uses_triggers());
 }

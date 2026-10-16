@@ -197,7 +197,9 @@ impl Session {
 
     #[cfg(feature = "brick")]
     pub fn reset_sleep_input(&mut self) {
+        let triggers = self.gestures.triggers_to_game();
         self.gestures = Gestures::brick();
+        self.gestures.set_triggers_to_game(triggers);
         self.pad.clear();
         self.rewinding = false;
         self.fast = false;
@@ -514,6 +516,7 @@ impl Session {
         else {
             return;
         };
+        self.gestures.set_triggers_to_game(platform.uses_triggers());
         if let Some(names) = platform.missing_bios(&crate::root::bios_dir(&self.root)) {
             // No core is started, so the cart comes back out with this said.
             self.app
@@ -548,7 +551,7 @@ impl Session {
             palette,
             player,
         );
-        if platform.turns() {
+        if matches!(platform, Platform::Ws | Platform::Wsc) {
             // Held the way the game's header says: upright games are shown upright.
             let held = crate::core::wonderswan_held(&rom);
             opened.core.set_option("wswan_rotate_display", held);
@@ -581,6 +584,7 @@ impl Session {
                 Platform::Ws | Platform::Wsc => slot_cheevos::Console::Ws,
                 Platform::Scd => slot_cheevos::Console::Scd,
                 Platform::S32x => slot_cheevos::Console::S32x,
+                Platform::Ps => slot_cheevos::Console::Ps,
             };
             emu.achievements(&account.user, &account.token, console);
             self.ra.console = Some(console);

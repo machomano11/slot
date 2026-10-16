@@ -17,10 +17,11 @@ pub enum Platform {
     Wsc,
     Scd,
     S32x,
+    Ps,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 14] = [
+    pub const ALL: [Platform; 15] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -35,6 +36,7 @@ impl Platform {
         Platform::Wsc,
         Platform::Scd,
         Platform::S32x,
+        Platform::Ps,
     ];
 
     pub fn name(self) -> &'static str {
@@ -53,6 +55,7 @@ impl Platform {
             Platform::Wsc => "WonderSwan Color",
             Platform::Scd => "Sega CD",
             Platform::S32x => "Sega 32X",
+            Platform::Ps => "PlayStation",
         }
     }
 
@@ -72,6 +75,7 @@ impl Platform {
             Platform::Wsc => "WSC",
             Platform::Scd => "SEGACD",
             Platform::S32x => "32X",
+            Platform::Ps => "PS",
         }
     }
 
@@ -88,6 +92,7 @@ impl Platform {
             Platform::Ws | Platform::Wsc => &["ws", "wsc"],
             Platform::Scd => &["cue", "chd", "iso", "m3u"],
             Platform::S32x => &["32x"],
+            Platform::Ps => &["cue", "chd", "m3u", "pbp", "iso"],
         }
     }
 
@@ -98,6 +103,8 @@ impl Platform {
             Platform::Sms => (256, 192),
             // H40 mode; the H32 games' 256 columns sit in its middle.
             Platform::Md | Platform::Scd | Platform::S32x => (320, 224),
+            // Most games; the picture follows each frame (256 to 640 wide, 240 or 480 tall).
+            Platform::Ps => (320, 240),
             Platform::Ngp | Platform::Ngpc => (160, 152),
             // Held flat; a game played upright draws 144x224 (App::picture follows it).
             Platform::Ws | Platform::Wsc => (224, 144),
@@ -121,6 +128,8 @@ impl Platform {
             | Platform::Ngpc => (240, 160),
             Platform::Nes | Platform::Snes | Platform::Sms => (256, 240),
             Platform::Md | Platform::Scd | Platform::S32x => (320, 240),
+            // The largest frame a PlayStation draws.
+            Platform::Ps => (640, 480),
             // 4:3 and room for the screen held either way (224x144 or 144x224), so it keeps
             // its shape on a 4:3 screen whichever way the game is played.
             Platform::Ws | Platform::Wsc => (300, 225),
@@ -175,7 +184,7 @@ impl Platform {
     /// A console whose games are disc images: they may sit in a folder of their own, and the
     /// discs an .m3u playlist names are one game, not one each.
     pub fn discs(self) -> bool {
-        matches!(self, Platform::Scd)
+        matches!(self, Platform::Scd | Platform::Ps)
     }
 
     /// The BIOS files a console cannot start without, any one of which will do (by region),
@@ -211,10 +220,16 @@ impl Platform {
         }
     }
 
-    /// A console whose games may turn the screen upright, so its picture follows the frames
-    /// the core draws rather than one fixed size.
-    pub fn turns(self) -> bool {
-        matches!(self, Platform::Ws | Platform::Wsc)
+    /// A console whose pad has L2 and R2 of its own, which then go to the game rather than
+    /// to rewind and fast-forward.
+    pub fn uses_triggers(self) -> bool {
+        self == Platform::Ps
+    }
+
+    /// A console whose picture follows the frames the core draws rather than one fixed size:
+    /// a WonderSwan game may turn the screen upright, a PlayStation one changes resolution.
+    pub fn picture_follows_frames(self) -> bool {
+        matches!(self, Platform::Ws | Platform::Wsc | Platform::Ps)
     }
 
     pub fn accepts(self, path: &Path) -> bool {

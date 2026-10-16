@@ -125,6 +125,15 @@ RetroAchievements work for `.cue` and `.iso` images, not yet `.chd`.
 **Sega 32X:** put `.32x` ROMs in `Slot/Games/32X`. No BIOS is needed and the controls are the
 Mega Drive's. Most games run at full speed; a few of the heaviest (Virtua Racing Deluxe) may not.
 
+**PlayStation:** put `.cue` (with its `.bin` tracks), `.chd`, `.pbp`, `.iso` or `.m3u` images in
+`Slot/Games/PS`, loose or each game in a folder of its own; they run on PCSX ReARMed with its
+recompiler. A BIOS is optional: with `scph5501.bin` (US), `scph5502.bin` (Europe) or
+`scph5500.bin` (Japan) in `Slot/BIOS` games are most compatible, and without one PCSX ReARMed's
+built-in BIOS runs them. `L2` / `R2` are the pad's own L2 and R2, so fast-forward is
+`HOME + R2` (on or off) and there is no rewind. A game of several discs plays from an `.m3u`
+and `SELECT + L2` / `R2` changes disc. `SELECT + X` switches between the original and
+full-screen picture. RetroAchievements work for `.cue` and `.iso` images, not yet `.chd` or `.pbp`.
+
 **WonderSwan and Color:** put `.ws` ROMs in `Slot/Games/WS` and `.wsc` ROMs in `Slot/Games/WSC`;
 they run on Beetle Cygne. No BIOS is needed. Held flat, the D-pad is the X pad, `A` / `B` are A
 and B and `L1` / `R1` the Y pad's left and right. A game made to be played upright (Gunpey,

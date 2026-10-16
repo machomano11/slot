@@ -1562,7 +1562,11 @@ impl App {
     /// the screen (a WonderSwan held upright) the last frame's.
     pub fn picture(&self) -> (u32, u32) {
         match self.frame_size {
-            Some((platform, size)) if platform == self.platform && platform.turns() => size,
+            Some((platform, size))
+                if platform == self.platform && platform.picture_follows_frames() =>
+            {
+                size
+            }
             _ => self.platform.picture(),
         }
     }
@@ -1632,6 +1636,7 @@ impl App {
                 | Platform::Md
                 | Platform::Scd
                 | Platform::S32x
+                | Platform::Ps
                 | Platform::Ws
                 | Platform::Wsc
         ) {
@@ -1683,7 +1688,8 @@ impl App {
     }
 
     pub fn records_rewind(&self) -> bool {
-        self.state.rewind
+        // A console whose L2 is the game's has no rewind to record for (and its states are big).
+        self.state.rewind && !self.platform.uses_triggers()
     }
 
     /// The canvas the running core draws into.

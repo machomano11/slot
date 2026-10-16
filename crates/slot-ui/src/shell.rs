@@ -67,6 +67,8 @@ pub const SEGA_SHELL: Shell = shell([0x2b, 0x2b, 0x2e], Finish::Solid);
 pub const NGP_SHELL: Shell = shell([0x3b, 0x3d, 0x44], Finish::Solid);
 /// Bandai's WonderSwan carts were a near-black grey.
 pub const WS_SHELL: Shell = shell([0x26, 0x27, 0x2b], Finish::Solid);
+/// A PlayStation jewel case: black, its tray showing through the clear front.
+pub const DISC_SHELL: Shell = shell([0x1d, 0x1d, 0x20], Finish::Solid);
 
 pub const SNES_PAL_SHELL: Shell = shell([0xab, 0xab, 0xa7], Finish::Solid);
 
@@ -119,6 +121,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
         Platform::Gg | Platform::Sms | Platform::Md | Platform::Scd | Platform::S32x => SEGA_SHELL,
         Platform::Ngp | Platform::Ngpc => NGP_SHELL,
         Platform::Ws | Platform::Wsc => WS_SHELL,
+        Platform::Ps => DISC_SHELL,
         Platform::Snes => match crate::cart::snes_shell_of(cart) {
             Some(crate::SnesShell::Pal) => SNES_PAL_SHELL,
             _ => SNES_SHELL,

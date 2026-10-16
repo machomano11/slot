@@ -693,3 +693,28 @@ fn menu_dpad_display_chord_resets_when_menu_is_released() {
     g.feed(Down(Menu), 300);
     assert_eq!(g.tick(300 + MENU_HOLD_MS), vec![Eject]);
 }
+
+#[test]
+fn a_console_with_its_own_triggers_gets_l2_and_r2_and_home_r2_fast_forwards() {
+    let mut g = Gestures::brick();
+    g.set_triggers_to_game(true);
+    assert_eq!(g.feed(Down(L2), 0), vec![GbaDown(L2)]);
+    assert_eq!(g.feed(Up(L2), 50), vec![GbaUp(L2)]);
+    assert_eq!(g.feed(Down(R2), 100), vec![GbaDown(R2)]);
+    assert_eq!(g.feed(Up(R2), 150), vec![GbaUp(R2)]);
+    // HOME + R2 latches fast-forward on, and again off; HOME opens no menu for it.
+    assert!(g.feed(Down(Menu), 200).is_empty());
+    assert_eq!(g.feed(Down(R2), 220), vec![FfStart]);
+    assert!(g.feed(Up(R2), 260).is_empty());
+    assert!(g.feed(Up(Menu), 280).is_empty(), "HOME opened its menu");
+    assert!(g.ff_latched());
+    assert!(g.feed(Down(Menu), 400).is_empty());
+    assert_eq!(g.feed(Down(R2), 420), vec![FfStop]);
+    assert!(g.feed(Up(R2), 440).is_empty());
+    assert!(g.feed(Up(Menu), 460).is_empty());
+    // SELECT + L2 / R2 still reach their chord (a disc change).
+    assert!(g.feed(Down(Select), 1_000).is_empty());
+    assert_eq!(g.feed(Down(R2), 1_050), vec![PaletteNext]);
+    assert!(g.feed(Up(R2), 1_080).is_empty());
+    assert!(g.feed(Up(Select), 1_100).is_empty());
+}

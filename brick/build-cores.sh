@@ -10,6 +10,7 @@ SNES9X=fae2fea08f74180759ef540ee94259213f503480
 PICODRIVE=1890c2932234c9d30f4cd3851d02228baae8f09e
 BEETLE_NGP=a50d5ac288a81f2104ddf43195a4efdd15c72227
 BEETLE_WSWAN=4b01295838ea89e3f1355bbe4cb5cf98aa6108cd
+PCSX_REARMED=c8816799b50388e61cfe237fe2cdbb7d8175f20a
 mkdir -p vendor brick/core-src
 [ -f vendor/mgba-src.tar.gz ] || curl -fL "https://github.com/libretro/mgba/archive/$MGBA.tar.gz" -o vendor/mgba-src.tar.gz
 [ -f vendor/gpsp-src.tar.gz ] || curl -fL "https://github.com/libretro/gpsp/archive/$GPSP.tar.gz" -o vendor/gpsp-src.tar.gz
@@ -54,6 +55,13 @@ if [ ! -d "$wswan_src" ]; then
     git clone -q https://github.com/libretro/beetle-wswan-libretro "$wswan_src"
     git -C "$wswan_src" checkout -q "$BEETLE_WSWAN"
 fi
+pcsx_src="$PWD/brick/core-src/pcsx-rearmed-$PCSX_REARMED"
+if [ ! -d "$pcsx_src" ]; then
+    git clone -q https://github.com/libretro/pcsx_rearmed "$pcsx_src"
+    git -C "$pcsx_src" checkout -q "$PCSX_REARMED"
+    git -C "$pcsx_src" submodule update -q --init --recursive
+    git -C "$pcsx_src" apply "$PWD/brick/pcsx-old-binutils.patch"
+fi
 cmake -S "$mgba_src" -B brick/core-build/mgba \
     -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
     -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
@@ -77,6 +85,8 @@ CFLAGS="-mcpu=cortex-a53" CXXFLAGS="-mcpu=cortex-a53" LDFLAGS="-static-libstdc++
 # Beetle Cygne: WonderSwan and Color, built the same way.
 CFLAGS="-mcpu=cortex-a53" CXXFLAGS="-mcpu=cortex-a53" LDFLAGS="-static-libstdc++ -static-libgcc" \
     make -C "$wswan_src" platform=unix CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar -j8
+# PCSX ReARMed: PlayStation, with its ARM64 recompiler. h5 is its Cortex-A53 target.
+make -C "$pcsx_src" -f Makefile.libretro platform=h5 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar -j8
 cp brick/core-build/mgba/mgba_libretro.so vendor/
 cp "$gpsp_src/gpsp_libretro.so" vendor/
 cp "$fceumm_src/fceumm_libretro.so" vendor/
@@ -84,3 +94,4 @@ cp "$snes9x_src/libretro/snes9x_libretro.so" vendor/
 cp "$picodrive_src/picodrive_libretro.so" vendor/
 cp "$ngp_src/mednafen_ngp_libretro.so" vendor/
 cp "$wswan_src/mednafen_wswan_libretro.so" vendor/
+cp "$pcsx_src/pcsx_rearmed_libretro.so" vendor/
