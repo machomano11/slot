@@ -5,7 +5,7 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD"]
+        vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC"]
     );
 }
 
@@ -21,7 +21,9 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Snes,
             Platform::Gg,
             Platform::Sms,
-            Platform::Md
+            Platform::Md,
+            Platform::Ngp,
+            Platform::Ngpc
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -78,5 +80,16 @@ fn a_nes_picture_fits_its_canvas_and_the_game_boys_keep_theirs() {
     assert_eq!(Platform::Nes.canvas(), (256, 240));
     for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
         assert_eq!(p.canvas(), (240, 160), "{p:?}");
+    }
+}
+
+#[test]
+fn both_neo_geo_pockets_take_either_extension() {
+    for p in [Platform::Ngp, Platform::Ngpc] {
+        for name in ["Metal Slug.ngp", "Metal Slug.ngc", "Metal Slug.NGPC"] {
+            assert!(p.accepts(std::path::Path::new(name)), "{p:?} {name}");
+        }
+        assert_eq!(p.picture(), (160, 152));
+        assert_eq!(p.canvas(), (240, 160));
     }
 }

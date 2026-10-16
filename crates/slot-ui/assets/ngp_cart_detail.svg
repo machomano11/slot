@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 228">
+  <defs>
+    <g id="grip">
+      <rect x="60" y="10.0" width="120" height="2.4" rx="1.2"/>
+      <rect x="60" y="18.0" width="120" height="2.4" rx="1.2"/>
+      <rect x="60" y="26.0" width="120" height="2.4" rx="1.2"/>
+      <rect x="0" y="214" width="240" height="1.6"/>
+    </g>
+  </defs>
+  <g fill="#fff">
+    <use href="#grip" x="1.1" y="1.1"/>
+  </g>
+  <g fill="#000">
+    <use href="#grip"/>
+  </g>
+</svg>

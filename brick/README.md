@@ -40,7 +40,7 @@ doesn't flash anything to the device.
 | Button           | Action                                  |
 | ---------------- | --------------------------------------- |
 | `Left` / `Right` | Browse games                            |
-| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS, MD) |
+| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS, MD, NGP, NGPC) |
 | Tap `A`          | Resume from the last save state         |
 | Hold `A`         | Start the game fresh                    |
 | `START`          | Cart colour and finish (GBA: and core)   |
@@ -62,7 +62,7 @@ doesn't flash anything to the device.
 | `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
 | `SELECT + Left` / `Right`   | Blue light filter                                   |
-| `L1` / `R1`                 | GB/GBC/NES/GG/SMS: stretched / original picture     |
+| `L1` / `R1`                 | GB/GBC/NES/GG/SMS/NGP: stretched / original picture |
 | Hold `L2`                   | Rewind                                              |
 | Hold `R2`                   | Fast-forward (double-tap to lock it on)             |
 
@@ -109,6 +109,11 @@ black Mega Drive cartridges and run on PicoDrive. No BIOS is needed. The pad is 
 one: `Y`, `B`, `A` are A, B, C, and `X`, `L1`, `R1` are Y, X, Z. As on the SNES, `SELECT + X`
 switches between the original and full-screen picture. RetroAchievements work; labels go in
 `Slot/Labels/MD`.
+
+**Neo Geo Pocket and Color:** put `.ngp` ROMs in `Slot/Games/NGP` and `.ngc` ROMs in
+`Slot/Games/NGPC` (either extension works in either folder); they run on Beetle NeoPop, set to
+English. No BIOS is needed. `B` and `A` are the console's A and B, `START` is Option, and
+`L1` / `R1` switch between the original and stretched picture. RetroAchievements work.
 
 **Cart art:** connect to Wi-Fi, then open **HOME → Cart Art**.
 **GET CART ART** gives every game with no label a scan of its real cartridge label; labels you

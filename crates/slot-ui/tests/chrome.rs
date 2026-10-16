@@ -64,7 +64,7 @@ fn snes() -> Cart {
     }
 }
 
-fn sega(platform: Platform, stem: &str, rom: &str) -> Cart {
+fn plain(platform: Platform, stem: &str, rom: &str) -> Cart {
     Cart {
         platform,
         stem: stem.into(),
@@ -78,7 +78,7 @@ fn sega(platform: Platform, stem: &str, rom: &str) -> Cart {
 }
 
 /// Every cart shape the slot takes.
-fn both() -> [(&'static str, Cart); 7] {
+fn both() -> [(&'static str, Cart); 8] {
     [
         ("the GBA cart", cart()),
         ("the Game Boy pak", pak()),
@@ -86,15 +86,19 @@ fn both() -> [(&'static str, Cart); 7] {
         ("the SNES cart", snes()),
         (
             "the Game Gear cart",
-            sega(Platform::Gg, "Sonic Chaos", "Games/GG/Sonic Chaos.gg"),
+            plain(Platform::Gg, "Sonic Chaos", "Games/GG/Sonic Chaos.gg"),
         ),
         (
             "the Master System cart",
-            sega(Platform::Sms, "Alex Kidd", "Games/SMS/Alex Kidd.sms"),
+            plain(Platform::Sms, "Alex Kidd", "Games/SMS/Alex Kidd.sms"),
         ),
         (
             "the Mega Drive cart",
-            sega(Platform::Md, "Sonic", "Games/MD/Sonic.md"),
+            plain(Platform::Md, "Sonic", "Games/MD/Sonic.md"),
+        ),
+        (
+            "the Neo Geo Pocket cart",
+            plain(Platform::Ngpc, "Metal Slug", "Games/NGPC/Metal Slug.ngc"),
         ),
     ]
 }
@@ -105,7 +109,7 @@ fn label_band(c: &Cart) -> (f32, f32) {
         Platform::Gb | Platform::Gbc => (GB_LABEL_Y as f32, GB_LABEL_H as f32),
         Platform::Nes => (NES_LABEL_Y as f32, NES_LABEL_H as f32),
         Platform::Snes => (SNES_LABEL_Y as f32, SNES_LABEL_H as f32),
-        Platform::Gg | Platform::Sms | Platform::Md => {
+        _ => {
             let (_, y, _, h) = plain_label(plain_cart_for(c.platform).unwrap());
             (y as f32, h as f32)
         }

@@ -301,6 +301,8 @@ fn platforms_for(platform: Platform) -> &'static [Platform] {
         Platform::Gg => &[Platform::Gg],
         Platform::Sms => &[Platform::Sms],
         Platform::Md => &[Platform::Md],
+        Platform::Ngp => &[Platform::Ngp, Platform::Ngpc],
+        Platform::Ngpc => &[Platform::Ngpc, Platform::Ngp],
     }
 }
 
