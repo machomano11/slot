@@ -16,6 +16,7 @@ fn app_with_carts(stems: &[&str], panel: (u32, u32)) -> App {
                 stem: (*stem).to_string(),
                 rom: format!("Games/GBA/{stem}.gba").into(),
                 label: None,
+                famicom_label: None,
                 code: String::new(),
                 shell: None,
                 title: stem.to_uppercase(),

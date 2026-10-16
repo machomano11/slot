@@ -16,6 +16,7 @@ fn shelf_with(n: usize) -> Shelf {
                 code: String::new(),
                 shell: None,
                 title: format!("GAME {i}"),
+                famicom_label: None,
             })
             .collect(),
     )
@@ -813,6 +814,7 @@ fn gb_shelf_with(n: usize) -> Shelf {
                 code: String::new(),
                 shell: None,
                 title: format!("PAK {i}"),
+                famicom_label: None,
             })
             .collect(),
     )
@@ -890,6 +892,7 @@ fn a_colour_pak_and_a_grey_one_are_backed_by_their_own_shells() {
                 code: String::new(),
                 shell: None,
                 title: (*stem).to_uppercase(),
+                famicom_label: None,
             }
         })
         .collect();
@@ -953,6 +956,7 @@ fn a_cart_pushed_onto_the_row_draws_rather_than_stopping_the_device() {
         code: String::new(),
         shell: None,
         title: "PUSHED".into(),
+        famicom_label: None,
     });
     settle(&mut s);
     assert_eq!(
@@ -969,6 +973,7 @@ fn a_clear_cart_is_drawn_over_its_board_and_a_solid_one_is_not() {
         stem: stem.into(),
         rom: format!("Games/GBA/{stem}.gba").into(),
         label: None,
+        famicom_label: None,
         code: code.into(),
         shell: None,
         title: stem.to_uppercase(),
@@ -1000,6 +1005,7 @@ fn a_clear_cart_draws_its_interior_then_the_board_then_the_plastic() {
         stem: "Game".into(),
         rom: "Games/GBA/Game.gba".into(),
         label: None,
+        famicom_label: None,
         code: "BPEE".into(),
         shell: None,
         title: "GAME".into(),
@@ -1044,6 +1050,7 @@ fn a_clear_pak_draws_its_interior_then_the_board_then_the_plastic() {
         stem: "Pak".into(),
         rom: "Games/GB/Pak.gb".into(),
         label: None,
+        famicom_label: None,
         code: String::new(),
         shell: Some(ShellChoice {
             outline: Outline::Notched,
@@ -1078,6 +1085,7 @@ fn only_a_clear_cart_has_anything_behind_its_plastic() {
         stem: stem.into(),
         rom: format!("Games/GBA/{stem}.gba").into(),
         label: None,
+        famicom_label: None,
         code: code.into(),
         shell: None,
         title: stem.to_uppercase(),
@@ -1109,6 +1117,7 @@ fn a_pak_is_classed_when_it_is_drawn_not_when_the_shelf_is_built() {
             stem: (*stem).into(),
             rom: d.path().join(format!("{stem}.gbc")),
             label: None,
+            famicom_label: None,
             code: String::new(),
             shell: None,
             title: stem.to_uppercase(),
@@ -1147,6 +1156,7 @@ fn mixed_shelf(platforms: &[Platform]) -> Shelf {
                 }
                 .into(),
                 label: None,
+                famicom_label: None,
                 code: String::new(),
                 shell: None,
                 title: format!("MIXED {i}"),

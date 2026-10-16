@@ -542,6 +542,7 @@ impl Session {
             None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
         };
         emu.set_volume(self.app.output_volume());
+        emu.set_native_xy(platform == Platform::Snes);
         emu.set_driven(self.driven);
         // Logged in to RetroAchievements: this game earns achievements (softcore).
         self.ra = RaLogin::default();
@@ -550,6 +551,8 @@ impl Session {
                 Platform::Gba => slot_cheevos::Console::Gba,
                 Platform::Gb => slot_cheevos::Console::Gb,
                 Platform::Gbc => slot_cheevos::Console::Gbc,
+                Platform::Nes => slot_cheevos::Console::Nes,
+                Platform::Snes => slot_cheevos::Console::Snes,
             };
             emu.achievements(&account.user, &account.token, console);
             self.ra.console = Some(console);

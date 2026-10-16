@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use slot_gfx::{SRC_H, SRC_W, WHOLE_TEXTURE};
+use slot_gfx::WHOLE_TEXTURE;
+#[cfg(all(test, feature = "brick"))]
+use slot_gfx::{SRC_H, SRC_W};
 use slot_store::{ini, Platform};
 
 pub const VIDEO_MODE_FILE: &str = if cfg!(feature = "brick") {
@@ -54,6 +56,8 @@ pub fn write_video_mode(root: &Path, stem: &str, mode: VideoMode) -> std::io::Re
 
 pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
     let (w, h) = platform.picture();
+    // In canvas units: a NES frame arrives on a 256x240 canvas, the Game Boys' on 240x160.
+    let (src_w, src_h) = platform.canvas();
     #[cfg(feature = "brick")]
     if mode == VideoMode::Actual {
         // Expand the source rectangle to 4:3; the shader paints the region
@@ -65,17 +69,23 @@ pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
             (h as f32 * aspect, h as f32)
         };
         return [
-            (SRC_W as f32 - vw) / (2.0 * SRC_W as f32),
-            (SRC_H as f32 - vh) / (2.0 * SRC_H as f32),
-            vw / SRC_W as f32,
-            vh / SRC_H as f32,
+            (src_w as f32 - vw) / (2.0 * src_w as f32),
+            (src_h as f32 - vh) / (2.0 * src_h as f32),
+            vw / src_w as f32,
+            vh / src_h as f32,
         ];
     }
-    if mode == VideoMode::Actual || (w, h) == (SRC_W, SRC_H) {
+    if mode == VideoMode::Actual || (w, h) == (src_w, src_h) {
         return WHOLE_TEXTURE;
     }
-    let x = SRC_W.saturating_sub(w) / 2;
-    [x as f32 / SRC_W as f32, 0.0, w as f32 / SRC_W as f32, 1.0]
+    let x = src_w.saturating_sub(w) / 2;
+    let y = src_h.saturating_sub(h) / 2;
+    [
+        x as f32 / src_w as f32,
+        y as f32 / src_h as f32,
+        w as f32 / src_w as f32,
+        h as f32 / src_h as f32,
+    ]
 }
 
 #[cfg(all(test, feature = "brick"))]
@@ -124,6 +134,24 @@ mod brick_tests {
             video_mode_for_platform(root.path(), "choice", Platform::Gba),
             VideoMode::Actual
         );
+    }
+
+    #[test]
+    fn a_nes_picture_sits_in_its_own_canvas() {
+        let (cw, ch) = Platform::Nes.canvas();
+        let [x, y, w, h] = source_rect(Platform::Nes, VideoMode::Stretch);
+        assert_eq!(
+            (w * cw as f32, h * ch as f32),
+            (256.0, 224.0),
+            "the overscan-cropped picture"
+        );
+        assert_eq!((x, y * ch as f32), (0.0, 8.0), "centred, 8 lines down");
+        let [_, _, w, h] = source_rect(Platform::Nes, VideoMode::Actual);
+        assert!(
+            (w * cw as f32 / (h * ch as f32) - 4.0 / 3.0).abs() < 0.001,
+            "padded to 4:3"
+        );
+        assert!((h * ch as f32 - 224.0).abs() < 0.001, "no line cropped");
     }
 
     #[test]

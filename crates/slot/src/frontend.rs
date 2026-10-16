@@ -300,6 +300,17 @@ impl Frontend {
         self.session
             .app_mut()
             .set_gb_cart_backings(notched, rounded);
+        let [nes, famicom] = [slot_ui::NesShell::Nes, slot_ui::NesShell::Famicom].map(|shell| {
+            let face = slot_ui::nes_cart_shadow(shell);
+            compositor.create_texture(face.w, face.h, &face.rgba)
+        });
+        self.session.app_mut().set_nes_cart_shadows(nes, famicom);
+        let [us, pal] = [slot_ui::SnesShell::Us, slot_ui::SnesShell::Pal].map(|shell| {
+            let face = slot_ui::snes_cart_shadow(shell);
+            compositor.create_texture(face.w, face.h, &face.rgba)
+        });
+        self.session.app_mut().set_snes_cart_shadows(us, pal);
+        self.upload_cart_menu_faces(compositor);
         let slot = {
             let mut upload =
                 |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
@@ -324,6 +335,56 @@ impl Frontend {
         self.apply_look();
         crate::boot_time::mark("shelf faces");
         self.upload_ground(compositor);
+    }
+
+    /// The cart menu's words, each value dim and lit: built once, as the quick menu's are.
+    fn upload_cart_menu_faces(&mut self, compositor: &mut Compositor) {
+        use slot_ui::{cart_menu_label_face, cart_menu_value_face, CartRow};
+        let mut up = |f: UndoFace| (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h);
+        let labels = CartRow::ALL
+            .iter()
+            .map(|r| up(cart_menu_label_face(*r)))
+            .collect();
+        let mut values = |names: Vec<&str>| -> Vec<[(TexId, u32, u32); 2]> {
+            names
+                .into_iter()
+                .map(|n| [false, true].map(|lit| up(cart_menu_value_face(n, lit))))
+                .collect()
+        };
+        let mut colour_names: Vec<&str> =
+            slot_ui::colour_choices().iter().map(|(n, _)| *n).collect();
+        // A colour picked elsewhere (Cart Studio) shows as Custom, after all the named ones.
+        colour_names.push("Custom");
+        let colours = values(colour_names);
+        let finishes = values(
+            slot_ui::FINISHES
+                .iter()
+                .map(|f| slot_ui::finish_name(*f))
+                .collect(),
+        );
+        let shapes = values(
+            slot_ui::SHAPES
+                .iter()
+                .chain(&slot_ui::SNES_SHAPES)
+                .chain(&slot_ui::NES_SHAPES)
+                .copied()
+                .collect(),
+        );
+        let carets = [false, true].map(|right| up(quick_caret_face(right)));
+        let legend = slot_ui::cart_menu_legend_faces().map(|f| {
+            let (tex, w, _) = up(f);
+            (tex, w)
+        });
+        self.session
+            .app_mut()
+            .set_cart_menu_faces(slot_ui::CartMenuFaces {
+                labels,
+                colours,
+                finishes,
+                shapes,
+                carets,
+                legend,
+            });
     }
 
     fn upload_ground(&mut self, compositor: &mut Compositor) {
@@ -608,6 +669,8 @@ impl Frontend {
         compositor.set_screen_power(self.session.app().screen_power());
         compositor.set_screen_footer(self.session.app().screen_footer());
         compositor.set_overlay_slide(self.session.app().overlay_slide());
+        let (cw, ch) = self.session.app().game_canvas();
+        compositor.set_game_canvas(cw, ch);
         compositor.set_game_source_rect(self.session.app().source_rect());
         self.grab_link_shot(compositor);
         compositor.begin_frame(self.session.app().layout());
@@ -1322,20 +1385,23 @@ fn sync_core_picker(
     tex: &mut CoreTextures,
     built: &mut Option<String>,
 ) {
-    let highlighted = app.selected_stem().map(str::to_string);
-    if highlighted.is_some() && *asked != highlighted {
-        if let Some(cart) = app
-            .carts()
-            .find(|c| highlighted.as_deref() == Some(c.stem.as_str()))
-        {
-            builder.request(cart.clone());
+    // Keyed by the cart and the plastic it wears, so a colour or finish changed in the picker
+    // (or the cart menu) rebuilds the lid it shows.
+    let cart = app
+        .selected_stem()
+        .and_then(|stem| app.carts().find(|c| c.stem == stem))
+        .cloned();
+    let highlighted = cart.as_ref().map(|c| format!("{}\n{:?}", c.stem, c.shell));
+    if let Some(cart) = cart {
+        if *asked != highlighted {
+            builder.request(cart);
+            *asked = highlighted.clone();
         }
-        *asked = highlighted.clone();
     }
     let Some(faces) = builder.take() else {
         return;
     };
-    if highlighted.as_deref() != Some(faces.stem.as_str()) || *built == highlighted {
+    if highlighted.as_deref() != Some(faces.key.as_str()) || *built == highlighted {
         return;
     }
     let interior_id = upload_rgba(
@@ -1361,7 +1427,7 @@ fn sync_core_picker(
         &faces.lid.rgba,
     );
     app.set_core_board_faces(board_id, lid_id);
-    *built = Some(faces.stem);
+    *built = Some(faces.key);
 }
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {

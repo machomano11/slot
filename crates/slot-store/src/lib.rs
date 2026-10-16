@@ -7,10 +7,12 @@ mod gb_palette;
 mod gba;
 pub mod ini;
 mod platform;
+pub mod region;
 mod ring;
 mod scan;
 mod slot_state;
 mod stamp;
+mod thumbs;
 
 pub use atomic::atomic_write;
 pub use cart_shell::{Outline, ShellChoice, ShellFinish, CART_SHELL_FILE, LABELS_SHELL_FILE};
@@ -22,7 +24,9 @@ pub use gb_palette::GbPalette;
 pub use gba::{header_clean, header_code, header_title, header_title_code};
 pub use platform::Platform;
 pub use ring::{StateEntry, StateRing, RING_MAX};
-pub use scan::{initial, is_hidden, listing, scan, sort_key, Cart, StoreError};
+pub use scan::{
+    initial, is_hidden, labels_of, listing, scan, sort_key, Cart, StoreError, FAMICOM_LABELS,
+};
 pub use slot_state::{
     read_slot_state, write_slot_state, Appearance, BezelPick, Recent, Shader, SlotState,
     WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, FF_SPEED_DEFAULT,
@@ -31,3 +35,4 @@ pub use slot_state::{
 pub use stamp::{
     civil_from_days, days_from_civil, days_in_month, format_stamp, parse_stamp, stamp_now,
 };
+pub use thumbs::{best_match, libretro_name, same_title_match, title_key};

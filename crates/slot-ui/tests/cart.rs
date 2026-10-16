@@ -3,8 +3,8 @@ use slot_ui::{
     cart_face, clean_label, foot_y, gb_label_panel, gb_silhouette, label_colour, label_panel,
     label_text, rest_y, seated_box, shell_for, silhouette, Finish, GbShell, CART_H, CART_W,
     GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H,
-    GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_X, LABEL_Y, MOUTH_H, OUT_H,
-    PLATE_H,
+    GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_X, LABEL_Y, MOUTH_H, NES_CART_H,
+    NES_CART_W, OUT_H, PLATE_H,
 };
 use tempfile::TempDir;
 
@@ -447,11 +447,40 @@ fn a_game_boy_cart_face_is_drawn_at_the_game_boy_size() {
 }
 
 #[test]
+fn a_nes_cart_is_drawn_at_its_own_size_in_grey_with_a_famicom_one_coloured() {
+    let d = tmp_root();
+    std::fs::create_dir(d.path().join("Games/NES")).unwrap();
+    let mut rom = b"NES\x1a".to_vec();
+    rom.resize(0x4010, 0);
+    std::fs::write(d.path().join("Games/NES/Zelda (USA).nes"), &rom).unwrap();
+    std::fs::write(d.path().join("Games/NES/Zelda (Japan).nes"), &rom).unwrap();
+    let carts = scan(d.path()).unwrap();
+    let face = |stem: &str| cart_face(carts.iter().find(|c| c.stem == stem).unwrap());
+    let (usa, japan) = (face("Zelda (USA)"), face("Zelda (Japan)"));
+    assert_eq!((usa.w, usa.h), (NES_CART_W, NES_CART_H));
+    // Below the grip, beside the label: bare plastic.
+    let px = |f: &slot_ui::CartFace| {
+        let i = ((f.h * 6 / 10 * f.w + f.w / 25) * 4) as usize;
+        [f.rgba[i], f.rgba[i + 1], f.rgba[i + 2], f.rgba[i + 3]]
+    };
+    let (grey, coloured) = (px(&usa), px(&japan));
+    assert_eq!(grey[3], 255, "the side of the cart is see-through");
+    assert!(
+        grey[0].abs_diff(grey[2]) < 16,
+        "an NES cart is not grey: {grey:?}"
+    );
+    assert_ne!(grey, coloured, "the Famicom release wears NES grey");
+    let corner = (0..4).map(|c| usa.rgba[c]).collect::<Vec<_>>();
+    assert_eq!(corner[3], 0, "the rounded corner is filled");
+}
+
+#[test]
 fn every_cartridge_is_centred_on_the_row_and_clears_both_the_plate_and_the_slot() {
     let lip = OUT_H as f32 - MOUTH_H;
     for (name, h, span) in [
         ("the GBA cart", CART_H, OUT_H as f32),
         ("the Game Boy pak", GB_CART_H, lip),
+        ("the NES cart", NES_CART_H, lip),
     ] {
         let (top, foot) = (rest_y(h as f32), foot_y(h as f32));
         assert_eq!(top, top.round(), "{name} top is off the pixel grid: {top}");
@@ -773,4 +802,239 @@ fn a_gba_cart_is_backed_by_the_whole_picker_board() {
     assert_eq!((pak.w, pak.h), (GB_CART_W, GB_CART_H));
     let mid = pak.rgba[(((pak.h / 2) * pak.w + pak.w / 2) * 4 + 3) as usize];
     assert!(mid > 200, "the pak board is empty in the middle");
+}
+
+#[test]
+fn a_pal_snes_cart_is_narrower_and_the_menu_can_swap_the_shape() {
+    use slot_store::{Outline, ShellChoice, ShellFinish};
+    use slot_ui::{snes_shell_of, SnesShell};
+    let snes = |stem: &str, outline: Option<Outline>| slot_store::Cart {
+        platform: Platform::Snes,
+        stem: stem.into(),
+        rom: format!("Games/SNES/{stem}.sfc").into(),
+        label: None,
+        code: String::new(),
+        shell: outline.map(|outline| ShellChoice {
+            outline,
+            colour: [0x80; 3],
+            finish: ShellFinish::Solid,
+        }),
+        title: String::new(),
+        famicom_label: None,
+    };
+    let side = |c: &slot_store::Cart| {
+        let f = cart_face(c);
+        f.rgba[(((f.h / 2) * f.w + 4) * 4 + 3) as usize]
+    };
+    let us = snes("Mario (USA)", None);
+    let pal = snes("Mario (Europe)", None);
+    assert_eq!(snes_shell_of(&us), Some(SnesShell::Us));
+    assert_eq!(snes_shell_of(&pal), Some(SnesShell::Pal));
+    assert!(side(&us) > 250, "the US cart's wing is missing");
+    assert_eq!(side(&pal), 0, "the PAL cart fills the US cart's width");
+
+    let forced = snes("Mario (USA)", Some(Outline::Rounded));
+    assert_eq!(snes_shell_of(&forced), Some(SnesShell::Pal));
+    let forced = snes("Mario (Europe)", Some(Outline::Notched));
+    assert_eq!(snes_shell_of(&forced), Some(SnesShell::Us));
+    assert_eq!(
+        snes_shell_of(&snes("Mario (Europe)", Some(Outline::Auto))),
+        Some(SnesShell::Pal)
+    );
+}
+
+#[test]
+fn a_ripped_rom_with_no_region_in_its_name_goes_by_its_header() {
+    use slot_ui::{nes_famicom_of, shell_for, snes_shell_of, SnesShell, NES_SHELL, SNES_PAL_SHELL};
+    let d = tmp_root();
+    // Terranigma's header: HiROM, sold in Europe, the checksum checking out.
+    let mut rom = vec![0u8; 0x10000];
+    rom[0xffc0 + 0x15] = 0x21;
+    rom[0xffc0 + 0x19] = 0x02;
+    rom[0xffc0 + 0x1c..0xffc0 + 0x20].copy_from_slice(&[0x34, 0x12, 0xcb, 0xed]);
+    let sfc = d.path().join("Terranigma.sfc");
+    std::fs::write(&sfc, rom).unwrap();
+    let cart = |platform, stem: &str, rom: std::path::PathBuf| slot_store::Cart {
+        platform,
+        stem: stem.into(),
+        rom,
+        label: None,
+        code: String::new(),
+        shell: None,
+        title: String::new(),
+        famicom_label: None,
+    };
+    let terranigma = cart(Platform::Snes, "Terranigma", sfc);
+    assert_eq!(snes_shell_of(&terranigma), Some(SnesShell::Pal));
+    assert_eq!(shell_for(&terranigma), SNES_PAL_SHELL);
+
+    // Akumajou Densetsu: VRC6, a board only Famicom carts had.
+    let mut nes = vec![
+        b'N', b'E', b'S', 0x1a, 16, 16, 0x80, 0x10, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    nes.resize(16 + 0x4000, 0);
+    let path = d.path().join("Akumajou Densetsu.nes");
+    std::fs::write(&path, nes).unwrap();
+    let akumajou = cart(Platform::Nes, "Akumajou Densetsu", path);
+    assert!(nes_famicom_of(&akumajou));
+    assert_ne!(shell_for(&akumajou), NES_SHELL);
+}
+
+#[test]
+fn a_colour_saved_for_a_nes_or_snes_cart_is_ignored() {
+    use slot_store::{Outline, ShellChoice, ShellFinish};
+    use slot_ui::{shell_for, NES_SHELL, SNES_SHELL};
+    let pink = Some(ShellChoice {
+        outline: Outline::Auto,
+        colour: [0xe2, 0x8c, 0xa9],
+        finish: ShellFinish::Glitter,
+    });
+    for (platform, grey) in [(Platform::Nes, NES_SHELL), (Platform::Snes, SNES_SHELL)] {
+        let cart = slot_store::Cart {
+            platform,
+            stem: "Mario (USA)".into(),
+            rom: "missing".into(),
+            label: None,
+            code: String::new(),
+            shell: pink,
+            title: String::new(),
+            famicom_label: None,
+        };
+        assert_eq!(
+            shell_for(&cart),
+            grey,
+            "{platform:?} took the chosen colour"
+        );
+    }
+}
+
+#[test]
+fn a_famicom_cart_is_small_and_landscape_and_wears_its_chosen_colour() {
+    use slot_store::{Outline, ShellChoice, ShellFinish};
+    use slot_ui::{nes_famicom_of, shell_for, NES_SHELL};
+    let nes = |stem: &str, shell: Option<ShellChoice>| slot_store::Cart {
+        platform: Platform::Nes,
+        stem: stem.into(),
+        rom: "missing.nes".into(),
+        label: None,
+        code: String::new(),
+        shell,
+        title: String::new(),
+        famicom_label: None,
+    };
+    let opaque = |c: &slot_store::Cart, fx: f32, fy: f32| {
+        let f = cart_face(c);
+        let (x, y) = ((f.w as f32 * fx) as u32, (f.h as f32 * fy) as u32);
+        f.rgba[((y * f.w + x) * 4 + 3) as usize] > 250
+    };
+    let us = nes("Mario (USA)", None);
+    let jp = nes("Mario (Japan)", None);
+    assert!(!nes_famicom_of(&us) && nes_famicom_of(&jp));
+    assert!(
+        opaque(&us, 0.5, 0.2) && opaque(&us, 0.01, 0.5),
+        "the NES cart lost its body"
+    );
+    assert!(
+        !opaque(&jp, 0.5, 0.2),
+        "the Famicom cart is as tall as a NES cart"
+    );
+    assert!(
+        !opaque(&jp, 0.01, 0.7),
+        "the Famicom cart is as wide as a NES cart"
+    );
+    assert!(opaque(&jp, 0.5, 0.7), "the Famicom cart is missing");
+
+    let pink = |outline| {
+        Some(ShellChoice {
+            outline,
+            colour: [0xe2, 0x8c, 0xa9],
+            finish: ShellFinish::Glitter,
+        })
+    };
+    let fc = shell_for(&nes("Mario (USA)", pink(Outline::Rounded)));
+    assert_eq!(fc.colour, [0xe2, 0x8c, 0xa9]);
+    assert_eq!(fc.finish, Finish::Solid, "a Famicom cart took a finish");
+    assert_eq!(
+        shell_for(&nes("Mario (Japan)", pink(Outline::Notched))),
+        NES_SHELL
+    );
+}
+
+#[test]
+fn a_tall_label_on_a_wide_cart_is_shown_whole_and_a_wide_one_still_fills() {
+    let d = tmp_root();
+    // A NES label: tall, its title in blue across the top.
+    write_label(&d, "tall.png", 100, 200, |_, y| {
+        if y < 20 {
+            [0, 0, 255]
+        } else {
+            [255, 0, 0]
+        }
+    });
+    let tall = d.path().join("Labels/GBA/tall.png");
+    let blue = |rgba: &[u8]| {
+        rgba.chunks_exact(4)
+            .filter(|p| p[2] > 200 && p[0] < 50)
+            .count()
+    };
+    assert_eq!(
+        blue(&slot_ui::cover(&tall, 300, 150).unwrap()),
+        0,
+        "cover kept the top: the test proves nothing"
+    );
+    let fitted = slot_ui::label_fit(&tall, 300, 150).unwrap();
+    assert!(
+        blue(&fitted) > 300,
+        "the title was cut off a tall label on a wide cart"
+    );
+    write_label(&d, "wide.png", 200, 100, |x, _| [x as u8, 0, 0]);
+    let wide = d.path().join("Labels/GBA/wide.png");
+    assert_eq!(
+        slot_ui::label_fit(&wide, 300, 140),
+        slot_ui::cover(&wide, 300, 140),
+        "a wide label was not filled"
+    );
+}
+
+#[test]
+fn a_nes_game_wears_the_label_of_the_cart_it_is_on() {
+    use slot_store::{Outline, ShellChoice, ShellFinish};
+    use slot_ui::shown_label;
+    let on =
+        |outline: Option<Outline>, label: Option<&str>, famicom: Option<&str>| slot_store::Cart {
+            platform: Platform::Nes,
+            stem: "Mega Man (USA)".into(),
+            rom: "missing.nes".into(),
+            label: label.map(Into::into),
+            famicom_label: famicom.map(Into::into),
+            code: String::new(),
+            shell: outline.map(|outline| ShellChoice {
+                outline,
+                colour: [0x80; 3],
+                finish: ShellFinish::Solid,
+            }),
+            title: String::new(),
+        };
+    let both = (Some("nes.png"), Some("fc.png"));
+    assert_eq!(
+        shown_label(&on(None, both.0, both.1)),
+        Some(std::path::Path::new("nes.png"))
+    );
+    assert_eq!(
+        shown_label(&on(Some(Outline::Rounded), both.0, both.1)),
+        Some(std::path::Path::new("fc.png"))
+    );
+    assert_eq!(
+        shown_label(&on(Some(Outline::Notched), both.0, both.1)),
+        Some(std::path::Path::new("nes.png"))
+    );
+    // With one label, both carts wear it.
+    assert_eq!(
+        shown_label(&on(Some(Outline::Rounded), Some("nes.png"), None)),
+        Some(std::path::Path::new("nes.png"))
+    );
+    assert_eq!(
+        shown_label(&on(None, None, Some("fc.png"))),
+        Some(std::path::Path::new("fc.png"))
+    );
 }

@@ -103,6 +103,14 @@ fn open_named(
         }
         match LibretroCore::open_with(path, &bios, &saves) {
             Ok(mut opened) => {
+                let console = match core {
+                    Core::Fceumm => Some(Platform::Nes),
+                    Core::Snes9x => Some(Platform::Snes),
+                    Core::Mgba | Core::Gpsp => None,
+                };
+                if let Some((w, h)) = console.map(Platform::canvas) {
+                    opened.set_canvas(w, h);
+                }
                 apply_core_options(
                     &mut opened,
                     core,
@@ -130,7 +138,8 @@ pub fn palette_for(
     rom: &Path,
     link: Option<u8>,
 ) -> Option<GbPalette> {
-    chosen.filter(|_| link.is_none() && platform != Platform::Gba && dmg_only(rom))
+    let game_boy = matches!(platform, Platform::Gb | Platform::Gbc);
+    chosen.filter(|_| link.is_none() && game_boy && dmg_only(rom))
 }
 
 pub fn dmg_only(rom: &Path) -> bool {
@@ -173,6 +182,8 @@ pub fn colour_option(
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
         )),
+        // A NES or SNES drew on a TV, with no LCD to correct for.
+        Core::Fceumm | Core::Snes9x => None,
     }
 }
 
@@ -194,7 +205,31 @@ pub fn apply_core_options(
     colour: bool,
     palette: Option<GbPalette>,
 ) {
-    core.set_option(&format!("{}_frameskip", which.as_str()), "auto");
+    // FCEUmm and snes9x have no frameskip option; slot's own skipping covers them.
+    if matches!(which, Core::Mgba | Core::Gpsp) {
+        core.set_option(&format!("{}_frameskip", which.as_str()), "auto");
+    }
+    if which == Core::Snes9x {
+        // A 256x224 picture like the NES's, and no HD Mode 7: it would cost the A53 dearly
+        // and send frames twice as wide for nothing on this screen.
+        for (key, value) in [
+            ("snes9x_overscan", "enabled"),
+            ("snes9x_mode7_hires", "disabled"),
+        ] {
+            core.set_option(key, value);
+        }
+    }
+    if which == Core::Fceumm {
+        // 8 lines off the top and bottom, as a TV hid them: the 256x224 Platform::Nes draws.
+        for (key, value) in [
+            ("fceumm_overscan_v_top", "8"),
+            ("fceumm_overscan_v_bottom", "8"),
+            ("fceumm_overscan_h_left", "0"),
+            ("fceumm_overscan_h_right", "0"),
+        ] {
+            core.set_option(key, value);
+        }
+    }
     if which == Core::Mgba {
         core.set_option("mgba_sgb_borders", "OFF");
         core.set_option("mgba_force_gbp", "ON");

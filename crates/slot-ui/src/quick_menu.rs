@@ -687,8 +687,27 @@ pub fn core_button_legends() -> Vec<UndoFace> {
             None,
             true,
         ),
+        caret_row(true, "Colour"),
+        caret_row(false, "Finish"),
         with_hint(button_face(ButtonLegend::A), "Choose", None, false),
     ]
+}
+
+/// An Up or Down hint, centred in a button legend's height so the row lines up.
+fn caret_row(up: bool, label: &str) -> UndoFace {
+    let hint = crate::plate::caret_hint_face(up, label);
+    let h = button_face(ButtonLegend::B).h.max(hint.h);
+    let mut rgba = vec![0u8; (hint.w * h * 4) as usize];
+    blit(
+        &mut rgba,
+        hint.w,
+        &hint.rgba,
+        hint.w,
+        hint.h,
+        0,
+        (h - hint.h) / 2,
+    );
+    UndoFace { rgba, w: hint.w, h }
 }
 
 /// Cancel, Mode, Swap, Link, OK, Back, End Link.

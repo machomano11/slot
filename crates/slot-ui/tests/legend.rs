@@ -67,8 +67,9 @@ fn footer_legends_keep_the_hint_on_the_inner_side() {
         hint_is_beside(&core[1], true),
         "Swap sits to the right of the d-pad"
     );
+    assert_eq!(core.len(), 5, "Cancel, Swap, Colour, Finish, Choose");
     assert!(
-        hint_is_beside(&core[2], false),
+        hint_is_beside(&core[4], false),
         "Choose sits to the left of A"
     );
 }
