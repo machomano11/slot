@@ -16,10 +16,11 @@ pub enum Platform {
     Ws,
     Wsc,
     Scd,
+    S32x,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 13] = [
+    pub const ALL: [Platform; 14] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -33,6 +34,7 @@ impl Platform {
         Platform::Ws,
         Platform::Wsc,
         Platform::Scd,
+        Platform::S32x,
     ];
 
     pub fn name(self) -> &'static str {
@@ -50,6 +52,7 @@ impl Platform {
             Platform::Ws => "WonderSwan",
             Platform::Wsc => "WonderSwan Color",
             Platform::Scd => "Sega CD",
+            Platform::S32x => "Sega 32X",
         }
     }
 
@@ -68,6 +71,7 @@ impl Platform {
             Platform::Ws => "WS",
             Platform::Wsc => "WSC",
             Platform::Scd => "SEGACD",
+            Platform::S32x => "32X",
         }
     }
 
@@ -83,6 +87,7 @@ impl Platform {
             Platform::Ngp | Platform::Ngpc => &["ngp", "ngc", "ngpc"],
             Platform::Ws | Platform::Wsc => &["ws", "wsc"],
             Platform::Scd => &["cue", "chd", "iso", "m3u"],
+            Platform::S32x => &["32x"],
         }
     }
 
@@ -92,7 +97,7 @@ impl Platform {
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Sms => (256, 192),
             // H40 mode; the H32 games' 256 columns sit in its middle.
-            Platform::Md | Platform::Scd => (320, 224),
+            Platform::Md | Platform::Scd | Platform::S32x => (320, 224),
             Platform::Ngp | Platform::Ngpc => (160, 152),
             // Held flat; a game played upright draws 144x224 (App::picture follows it).
             Platform::Ws | Platform::Wsc => (224, 144),
@@ -115,7 +120,7 @@ impl Platform {
             | Platform::Ngp
             | Platform::Ngpc => (240, 160),
             Platform::Nes | Platform::Snes | Platform::Sms => (256, 240),
-            Platform::Md | Platform::Scd => (320, 240),
+            Platform::Md | Platform::Scd | Platform::S32x => (320, 240),
             // 4:3 and room for the screen held either way (224x144 or 144x224), so it keeps
             // its shape on a 4:3 screen whichever way the game is played.
             Platform::Ws | Platform::Wsc => (300, 225),
@@ -134,9 +139,8 @@ impl Platform {
             | Platform::Ngpc
             | Platform::Ws
             | Platform::Wsc => &crate::Shader::GB,
-            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md | Platform::Scd => {
-                &crate::Shader::NES
-            }
+            // The TV consoles.
+            _ => &crate::Shader::NES,
         }
     }
 
@@ -149,9 +153,7 @@ impl Platform {
             | Platform::Ws
             | Platform::Wsc => crate::Shader::Grid,
             Platform::Gb | Platform::Gbc => crate::Shader::Simpletex,
-            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md | Platform::Scd => {
-                crate::Shader::Off
-            }
+            _ => crate::Shader::Off,
         }
     }
 

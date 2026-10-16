@@ -7,7 +7,7 @@ fn every_platform_has_a_directory() {
         names,
         vec![
             "GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC",
-            "SEGACD"
+            "SEGACD", "32X"
         ]
     );
 }
@@ -29,7 +29,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Ngpc,
             Platform::Ws,
             Platform::Wsc,
-            Platform::Scd
+            Platform::Scd,
+            Platform::S32x
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -133,4 +134,12 @@ fn a_sega_cd_game_is_a_disc_image_and_needs_a_bios() {
     std::fs::write(d.path().join("bios_CD_E.bin"), b"").unwrap();
     assert_eq!(Platform::Scd.missing_bios(d.path()), None);
     assert_eq!(Platform::Md.missing_bios(&d.path().join("nowhere")), None);
+}
+
+#[test]
+fn a_32x_game_is_its_own_shelf_and_shown_like_a_mega_drive_one() {
+    assert!(Platform::S32x.accepts(std::path::Path::new("Knuckles' Chaotix.32x")));
+    assert!(!Platform::S32x.accepts(std::path::Path::new("Sonic.md")));
+    assert_eq!(Platform::S32x.picture(), Platform::Md.picture());
+    assert_eq!(Platform::S32x.canvas(), Platform::Md.canvas());
 }

@@ -122,6 +122,9 @@ game's region in `Slot/BIOS`: `bios_CD_U.bin` (US), `bios_CD_E.bin` (Europe) or 
 (Japan); without one Slot says which file is missing. Controls are the Mega Drive's.
 RetroAchievements work for `.cue` and `.iso` images, not yet `.chd`.
 
+**Sega 32X:** put `.32x` ROMs in `Slot/Games/32X`. No BIOS is needed and the controls are the
+Mega Drive's. Most games run at full speed; a few of the heaviest (Virtua Racing Deluxe) may not.
+
 **WonderSwan and Color:** put `.ws` ROMs in `Slot/Games/WS` and `.wsc` ROMs in `Slot/Games/WSC`;
 they run on Beetle Cygne. No BIOS is needed. Held flat, the D-pad is the X pad, `A` / `B` are A
 and B and `L1` / `R1` the Y pad's left and right. A game made to be played upright (Gunpey,
