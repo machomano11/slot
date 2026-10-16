@@ -115,6 +115,13 @@ switches between the original and full-screen picture. RetroAchievements work; l
 English. No BIOS is needed. `B` and `A` are the console's A and B, `START` is Option, and
 `L1` / `R1` switch between the original and stretched picture. RetroAchievements work.
 
+**Sega CD:** put `.cue` (with its `.bin` tracks), `.chd`, `.iso` or `.m3u` images in
+`Slot/Games/SEGACD`, loose or each game in a folder of its own. A game of several discs plays
+from an `.m3u` listing them, and `SELECT + L2` / `R2` changes disc. It needs the BIOS of the
+game's region in `Slot/BIOS`: `bios_CD_U.bin` (US), `bios_CD_E.bin` (Europe) or `bios_CD_J.bin`
+(Japan); without one Slot says which file is missing. Controls are the Mega Drive's.
+RetroAchievements work for `.cue` and `.iso` images, not yet `.chd`.
+
 **WonderSwan and Color:** put `.ws` ROMs in `Slot/Games/WS` and `.wsc` ROMs in `Slot/Games/WSC`;
 they run on Beetle Cygne. No BIOS is needed. Held flat, the D-pad is the X pad, `A` / `B` are A
 and B and `L1` / `R1` the Y pad's left and right. A game made to be played upright (Gunpey,

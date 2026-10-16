@@ -15,10 +15,11 @@ pub enum Platform {
     Ngpc,
     Ws,
     Wsc,
+    Scd,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 12] = [
+    pub const ALL: [Platform; 13] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -31,6 +32,7 @@ impl Platform {
         Platform::Ngpc,
         Platform::Ws,
         Platform::Wsc,
+        Platform::Scd,
     ];
 
     pub fn name(self) -> &'static str {
@@ -47,6 +49,7 @@ impl Platform {
             Platform::Ngpc => "Neo Geo Pocket Color",
             Platform::Ws => "WonderSwan",
             Platform::Wsc => "WonderSwan Color",
+            Platform::Scd => "Sega CD",
         }
     }
 
@@ -64,6 +67,7 @@ impl Platform {
             Platform::Ngpc => "NGPC",
             Platform::Ws => "WS",
             Platform::Wsc => "WSC",
+            Platform::Scd => "SEGACD",
         }
     }
 
@@ -78,6 +82,7 @@ impl Platform {
             Platform::Md => &["md", "gen", "smd", "bin"],
             Platform::Ngp | Platform::Ngpc => &["ngp", "ngc", "ngpc"],
             Platform::Ws | Platform::Wsc => &["ws", "wsc"],
+            Platform::Scd => &["cue", "chd", "iso", "m3u"],
         }
     }
 
@@ -87,7 +92,7 @@ impl Platform {
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Sms => (256, 192),
             // H40 mode; the H32 games' 256 columns sit in its middle.
-            Platform::Md => (320, 224),
+            Platform::Md | Platform::Scd => (320, 224),
             Platform::Ngp | Platform::Ngpc => (160, 152),
             // Held flat; a game played upright draws 144x224 (App::picture follows it).
             Platform::Ws | Platform::Wsc => (224, 144),
@@ -110,7 +115,7 @@ impl Platform {
             | Platform::Ngp
             | Platform::Ngpc => (240, 160),
             Platform::Nes | Platform::Snes | Platform::Sms => (256, 240),
-            Platform::Md => (320, 240),
+            Platform::Md | Platform::Scd => (320, 240),
             // 4:3 and room for the screen held either way (224x144 or 144x224), so it keeps
             // its shape on a 4:3 screen whichever way the game is played.
             Platform::Ws | Platform::Wsc => (300, 225),
@@ -129,7 +134,9 @@ impl Platform {
             | Platform::Ngpc
             | Platform::Ws
             | Platform::Wsc => &crate::Shader::GB,
-            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => &crate::Shader::NES,
+            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md | Platform::Scd => {
+                &crate::Shader::NES
+            }
         }
     }
 
@@ -142,7 +149,9 @@ impl Platform {
             | Platform::Ws
             | Platform::Wsc => crate::Shader::Grid,
             Platform::Gb | Platform::Gbc => crate::Shader::Simpletex,
-            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => crate::Shader::Off,
+            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md | Platform::Scd => {
+                crate::Shader::Off
+            }
         }
     }
 
@@ -164,21 +173,39 @@ impl Platform {
     /// A console whose games are disc images: they may sit in a folder of their own, and the
     /// discs an .m3u playlist names are one game, not one each.
     pub fn discs(self) -> bool {
-        false
+        matches!(self, Platform::Scd)
     }
 
     /// The BIOS files a console cannot start without, any one of which will do (by region),
     /// looked for in Slot/BIOS. Empty for a console whose core needs none.
     pub fn bios(self) -> &'static [&'static str] {
-        &[]
+        match self {
+            // PicoDrive's names, each region's: US, Europe, Japan.
+            Platform::Scd => &[
+                "bios_CD_U.bin",
+                "bios_CD_E.bin",
+                "bios_CD_J.bin",
+                "us_scd2_9306.bin",
+                "SegaCDBIOS9303.bin",
+                "us_scd1_9210.bin",
+                "eu_mcd2_9306.bin",
+                "eu_mcd2_9303.bin",
+                "eu_mcd1_9210.bin",
+                "jp_mcd2_921222.bin",
+                "jp_mcd1_9112.bin",
+                "jp_mcd1_9111.bin",
+            ],
+            _ => &[],
+        }
     }
 
-    /// The BIOS this console needs that is missing from `bios_dir`, named for the player.
+    /// The BIOS this console needs that is missing from `bios_dir`, named for the player:
+    /// the first few names, one per region.
     pub fn missing_bios(self, bios_dir: &Path) -> Option<String> {
         let names = self.bios();
         match names.is_empty() || names.iter().any(|n| bios_dir.join(n).is_file()) {
             true => None,
-            false => Some(names.join(" or ")),
+            false => Some(names[..names.len().min(3)].join(", ")),
         }
     }
 

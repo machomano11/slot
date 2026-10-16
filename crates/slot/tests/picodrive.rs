@@ -120,3 +120,33 @@ fn a_mega_drive_game_draws_its_224_lines_centred() {
     // 320x224 in the middle of the 320x240 canvas: y 8..232.
     runs_white(Platform::Md, "white.md", 0, (160, 120), (160, 2));
 }
+
+#[test]
+fn a_sega_cd_game_without_its_bios_is_refused_not_run_black() {
+    let path = dylib();
+    if !path.exists() {
+        eprintln!("no picodrive dylib on this host, skipping");
+        return;
+    }
+    let _g = common::core_lock();
+    let d = tempfile::tempdir().unwrap();
+    let mut iso = vec![0u8; 2048 * 32];
+    iso[..16].copy_from_slice(b"SEGADISCSYSTEM  ");
+    iso[0x100..0x110].copy_from_slice(b"SEGA MEGA DRIVE ");
+    iso[0x1f0] = b'U';
+    let rom = d.path().join("game.iso");
+    std::fs::write(&rom, iso).unwrap();
+    let mut core = slot::core::open_core_for_palette(
+        d.path(),
+        Core::Picodrive,
+        Platform::Scd,
+        "auto",
+        false,
+        None,
+        &[path],
+    );
+    assert!(
+        core.load(&rom).is_err(),
+        "PicoDrive started a CD with no BIOS"
+    );
+}

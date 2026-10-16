@@ -153,6 +153,8 @@ const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
         PlainCart::NeoGeoPocket => (240, NGP_SEATED_H, [92, 193, 908, 904]),
         // ws_cart.svg: the label above the grip, x 18..222, y 14..160 of 240x200.
         PlainCart::WonderSwan => (270, WS_SEATED_H, [75, 70, 925, 800]),
+        // disc_case.svg: the cover behind the front, x 26..232, y 8..232 of 240x240.
+        PlainCart::DiscCase => (290, DISC_SEATED_H, [108, 33, 967, 967]),
     }
 }
 
@@ -305,6 +307,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Md => Some(PlainCart::MegaDrive),
         Platform::Ngp | Platform::Ngpc => Some(PlainCart::NeoGeoPocket),
         Platform::Ws | Platform::Wsc => Some(PlainCart::WonderSwan),
+        Platform::Scd => Some(PlainCart::DiscCase),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }
 }
@@ -456,6 +459,8 @@ const MD_SEATED_H: u32 = 288;
 const NGP_SEATED_H: u32 = 228;
 /// A WonderSwan cart is wider than tall.
 const WS_SEATED_H: u32 = 200;
+/// A CD jewel case is square.
+const DISC_SEATED_H: u32 = 240;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     if let Some(plain) = plain_cart_for(platform) {

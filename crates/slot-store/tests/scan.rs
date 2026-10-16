@@ -179,3 +179,29 @@ fn nes_roms_fill_their_own_shelf_and_read_no_game_boy_title() {
     zelda.read_header();
     assert_eq!((zelda.title.as_str(), zelda.code.as_str()), ("", ""));
 }
+
+#[test]
+fn a_disc_game_in_its_own_folder_is_one_cart_through_its_playlist() {
+    let d = tempfile::tempdir().unwrap();
+    let games = d.path().join("Games/SEGACD");
+    let lunar = games.join("Lunar");
+    std::fs::create_dir_all(&lunar).unwrap();
+    for name in [
+        "Lunar (Disc 1).cue",
+        "Lunar (Disc 1) (Track 01).bin",
+        "Lunar (Disc 2).cue",
+    ] {
+        std::fs::write(lunar.join(name), b"").unwrap();
+    }
+    std::fs::write(
+        lunar.join("Lunar.m3u"),
+        "Lunar (Disc 1).cue\nLunar (Disc 2).cue\n",
+    )
+    .unwrap();
+    std::fs::write(games.join("Sonic CD.cue"), b"").unwrap();
+    std::fs::write(games.join("Sonic CD (Track 01).bin"), b"").unwrap();
+    let carts = slot_store::scan(d.path()).unwrap();
+    let stems: Vec<&str> = carts.iter().map(|c| c.stem.as_str()).collect();
+    assert_eq!(stems, vec!["Lunar", "Sonic CD"]);
+    assert_eq!(carts[0].rom, lunar.join("Lunar.m3u"));
+}

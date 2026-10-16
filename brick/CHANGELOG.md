@@ -1,6 +1,11 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Sega CD (Mega-CD): `.cue`, `.chd`, `.iso` and `.m3u` images in `Slot/Games/SEGACD` (a game may
+  sit in a folder of its own) get a shelf of black jewel cases and run on PicoDrive, with the
+  Mega Drive's six-button pad, save states, rewind, fast-forward and RetroAchievements (for
+  `.cue`/`.iso`). It needs a BIOS in `Slot/BIOS`: `bios_CD_U.bin`, `bios_CD_E.bin` or
+  `bios_CD_J.bin` for US, European and Japanese games.
 - Groundwork for disc systems: a core that reads its own files is handed only the image's path
   (no more loading a whole CD into memory), games of several discs swap with `SELECT + L2` / `R2`
   through their `.m3u`, a disc game can sit in a folder of its own, a console that needs a BIOS

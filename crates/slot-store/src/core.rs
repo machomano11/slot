@@ -77,7 +77,10 @@ impl Core {
             Core::Gpsp => platform == Platform::Gba,
             Core::Fceumm => platform == Platform::Nes,
             Core::Snes9x => platform == Platform::Snes,
-            Core::Picodrive => matches!(platform, Platform::Gg | Platform::Sms | Platform::Md),
+            Core::Picodrive => matches!(
+                platform,
+                Platform::Gg | Platform::Sms | Platform::Md | Platform::Scd
+            ),
             Core::MednafenNgp => matches!(platform, Platform::Ngp | Platform::Ngpc),
             Core::MednafenWswan => matches!(platform, Platform::Ws | Platform::Wsc),
         }
@@ -88,7 +91,7 @@ impl Core {
             Platform::Gba | Platform::Gb | Platform::Gbc => Core::Mgba,
             Platform::Nes => Core::Fceumm,
             Platform::Snes => Core::Snes9x,
-            Platform::Gg | Platform::Sms | Platform::Md => Core::Picodrive,
+            Platform::Gg | Platform::Sms | Platform::Md | Platform::Scd => Core::Picodrive,
             Platform::Ngp | Platform::Ngpc => Core::MednafenNgp,
             Platform::Ws | Platform::Wsc => Core::MednafenWswan,
         }
