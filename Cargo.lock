@@ -2076,6 +2076,7 @@ dependencies = [
  "libloading",
  "lz4_flex",
  "png 0.17.16",
+ "rustls",
  "slot-cheevos",
  "slot-cloud",
  "slot-gfx",
@@ -2085,6 +2086,7 @@ dependencies = [
  "slot-store",
  "slot-ui",
  "tempfile",
+ "webpki-roots 1.0.9",
  "winit",
 ]
 
@@ -2093,7 +2095,7 @@ name = "slot-cheevos"
 version = "0.1.0"
 dependencies = [
  "cc",
- "slot-net",
+ "tempfile",
 ]
 
 [[package]]

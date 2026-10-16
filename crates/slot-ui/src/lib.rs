@@ -1,11 +1,13 @@
 mod art;
 pub use art::cover;
+pub use banner::{banner_face, BADGE_PX, BANNER_H, BANNER_W, BANNER_X, BANNER_Y};
 mod bitmaps;
 pub use bitmaps::{
     link_port, link_port_light, slot_back, slot_back_light, slot_front, slot_front_light, Mould,
     SLOT_H, SLOT_W,
 };
 mod backdrop;
+mod banner;
 mod barcode;
 mod battery;
 mod board;

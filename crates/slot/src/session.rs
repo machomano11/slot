@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use slot_input::{Action, Gestures, Millis, RawEvent};
 use slot_retro::Rumble;
@@ -9,7 +9,6 @@ use slot_ui::FfState;
 pub const RUMBLE_MIN_MS: Millis = 100;
 pub const RUMBLE_MAX_MS: Millis = 150;
 
-use crate::achievements::{console_for, Achievements};
 use crate::app::{App, Phase};
 use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
 use crate::cloud::CloudSync;
@@ -34,7 +33,7 @@ pub struct Session {
     prefetch: Prefetch,
     reloading: bool,
     driven: bool,
-    achievements: Option<Achievements>,
+    ra: RaLogin,
     cloud: Option<CloudSync>,
 }
 
@@ -62,20 +61,15 @@ impl Session {
             pulse: None,
             reloading: false,
             driven: false,
-            achievements: None,
+            ra: RaLogin::default(),
             cloud: None,
         };
-        session.achievements = Achievements::boot(&session.root);
         session.cloud = CloudSync::boot(&session.root);
-        if let Some(name) = crate::achievements::misnamed_account(&session.root) {
-            eprintln!(
-                "slot: cheevos: found Config/{name} but no {}",
-                crate::achievements::ACCOUNT_FILE
-            );
-            session.app.show_message(
-                "RetroAchievements",
-                crate::achievements::misnamed_hint(&name),
-            );
+        if crate::ra::load(&session.root).is_none() && old_ra_config(&session.root) {
+            eprintln!("slot: cheevos: an old RetroAchievements config file is no longer read");
+            session
+                .app
+                .show_message("RetroAchievements", "Log in from HOME > RetroAchievements");
         }
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -546,29 +540,77 @@ impl Session {
         let sav = persist::read_sav(&self.root, platform, stem);
         launch("save read");
         let ring = self.sink.ring();
-        let cheevos_rom = self.achievements.as_ref().map(|_| rom.clone());
         let emu = match player.filter(|_| platform == Platform::Gba) {
             Some(p) => EmuHandle::spawn_linked(opened.core, rom, ring, sav, resume, p),
             None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
         };
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
-        if let (Some(a), Some(rom)) = (self.achievements.as_mut(), cheevos_rom) {
-            emu.watch_achievements(console_for(platform));
-            a.game_started(&rom, platform);
+        // Logged in to RetroAchievements: this game earns achievements (softcore).
+        self.ra = RaLogin::default();
+        if let Some(account) = crate::ra::load(&self.root) {
+            let console = match platform {
+                Platform::Gba => slot_cheevos::Console::Gba,
+                Platform::Gb => slot_cheevos::Console::Gb,
+                Platform::Gbc => slot_cheevos::Console::Gbc,
+            };
+            emu.achievements(&account.user, &account.token, console);
+            self.ra.console = Some(console);
         }
         self.app.set_snapshot(Box::new(emu.snapshot()));
         self.emu = Some(emu);
     }
 
     fn sync_achievements(&mut self) {
-        let Some(a) = self.achievements.as_mut() else {
+        let Some(emu) = &self.emu else {
+            self.ra = RaLogin::default();
             return;
         };
-        if self.emu.is_none() && a.playing() {
-            a.game_ended();
+        crate::badge::prefetch(&self.root, emu.take_badge_urls());
+        for notice in emu.take_achievement_notices() {
+            match &notice {
+                // Signing in at game start often beats Wi-Fi: try again once it is up,
+                // rather than going without achievements for the whole game.
+                slot_cheevos::Notice::LoggedIn(Err(e)) if self.ra.tries < RA_RETRIES => {
+                    eprintln!("slot: cheevos: sign-in failed ({e}); trying again when online");
+                    if self.ra.tries == 0 {
+                        self.app
+                            .announce("Not logged in", "Trying again once online");
+                    }
+                    self.ra.tries += 1;
+                    self.ra.retry_at = Some(Instant::now() + RA_RETRY_AFTER);
+                    continue;
+                }
+                // Follows a failed sign-in; the retry loads the game again.
+                slot_cheevos::Notice::GameLoaded(Err(_)) if self.ra.retry_at.is_some() => continue,
+                _ => {}
+            }
+            let badge = match &notice {
+                slot_cheevos::Notice::Unlocked { badge, .. }
+                | slot_cheevos::Notice::GameCompleted { badge, .. }
+                | slot_cheevos::Notice::GameLoaded(Ok((_, badge))) => Some(badge.clone()),
+                _ => None,
+            };
+            let badge = badge.and_then(|url| {
+                crate::badge::prefetch(&self.root, vec![url.clone()]);
+                crate::badge::path(&self.root, &url)
+            });
+            self.app.achievement_notice(notice, badge);
         }
-        a.poll(&mut self.app);
+        let (Some(at), Some(console)) = (self.ra.retry_at, self.ra.console) else {
+            return;
+        };
+        if Instant::now() < at || !net_online() {
+            return;
+        }
+        self.ra.retry_at = None;
+        if let Some(account) = crate::ra::load(&self.root) {
+            eprintln!(
+                "slot: cheevos: signing in again (try {})",
+                self.ra.tries + 1
+            );
+            emu.achievements(&account.user, &account.token, console);
+        }
     }
 
     fn reload_for_link(&mut self, stem: &str, serial: &'static str) {
@@ -601,6 +643,39 @@ impl Session {
             }
         }
     }
+}
+
+/// Signing in to RetroAchievements again after it failed: how many times, and how soon.
+const RA_RETRIES: u32 = 5;
+const RA_RETRY_AFTER: Duration = Duration::from_secs(10);
+
+/// The game's RetroAchievements sign-in: its console, and the retries after a failure.
+#[derive(Default)]
+struct RaLogin {
+    console: Option<slot_cheevos::Console>,
+    tries: u32,
+    retry_at: Option<Instant>,
+}
+
+/// Wi-Fi has an address, so a sign-in can reach the server.
+fn net_online() -> bool {
+    #[cfg(feature = "brick")]
+    return crate::brick_wifi::online();
+    #[cfg(not(feature = "brick"))]
+    true
+}
+
+/// A login file from the earlier RetroAchievements build (plain or saved by TextEdit),
+/// which the sign-in screen has replaced. Only its name is looked at.
+fn old_ra_config(root: &std::path::Path) -> bool {
+    std::fs::read_dir(root.join("Config")).is_ok_and(|d| {
+        d.flatten().any(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .starts_with("retroachievements.ini")
+        })
+    })
 }
 
 pub(crate) fn trace() -> bool {

@@ -77,6 +77,7 @@ pub struct Frontend {
     link_shot_shown: bool,
     #[cfg(feature = "brick")]
     wifi_tex: Option<TexId>,
+    banner_tex: Option<TexId>,
     #[cfg(feature = "brick")]
     auto_sleep: bool,
     #[cfg(feature = "brick")]
@@ -213,6 +214,7 @@ impl Frontend {
             link_shot_shown: false,
             #[cfg(feature = "brick")]
             wifi_tex: None,
+            banner_tex: None,
             #[cfg(feature = "brick")]
             auto_sleep: !platform_root_has(&session_root, "DISABLE_AUTO_SLEEP"),
             #[cfg(feature = "brick")]
@@ -517,7 +519,10 @@ impl Frontend {
         if self.app().wifi.as_ref().map(|w| w.dirty).unwrap_or(false) {
             return true;
         }
-        if self.render_effects() != self.rendered_effects || self.app().message_pending() {
+        if self.render_effects() != self.rendered_effects
+            || self.app().message_pending()
+            || self.app().banner_active()
+        {
             return true;
         }
         if self.rebuild.is_some()
@@ -625,6 +630,20 @@ impl Frontend {
             }
         }
         sync_message(self.session.app_mut(), compositor);
+        if let Some((id, title, detail, badge)) = self.session.app().banner_to_render() {
+            let px = slot_ui::BADGE_PX;
+            let badge = badge.and_then(|p| slot_ui::cover(&p, px, px));
+            let f = slot_ui::banner_face(&title, &detail, badge.as_deref());
+            let tex = match self.banner_tex {
+                Some(t) => {
+                    compositor.update_texture(t, f.w, f.h, &f.rgba);
+                    t
+                }
+                None => compositor.create_texture(f.w, f.h, &f.rgba),
+            };
+            self.banner_tex = Some(tex);
+            self.session.app_mut().set_banner_face(id, tex);
+        }
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);

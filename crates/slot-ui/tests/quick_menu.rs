@@ -100,7 +100,15 @@ fn the_rows_run_in_the_order_the_user_chose() {
     #[cfg(feature = "brick")]
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["Screen", "Gameplay", "General", "LEDs", "Wi-Fi", "About"]
+        [
+            "Screen",
+            "Gameplay",
+            "General",
+            "LEDs",
+            "Wi-Fi",
+            "RetroAchievements",
+            "About"
+        ]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -160,7 +168,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::PlayGameplay,
             QuickRow::ScreenGba,
             QuickRow::ScreenGbc,
-            QuickRow::ScreenGb
+            QuickRow::ScreenGb,
+            QuickRow::Achievements
         ]
     );
     for page in [

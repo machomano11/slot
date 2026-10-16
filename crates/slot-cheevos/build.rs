@@ -1,50 +1,37 @@
-//! Builds the vendored rcheevos (MIT, see rcheevos/LICENSE) and slot's shim over it.
+//! Builds the vendored rcheevos (see rcheevos/VERSION) and slot's shim over it.
+use std::path::Path;
+
+fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+    for entry in std::fs::read_dir(dir).expect("rcheevos sources").flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            sources(&path, out);
+        } else if path.extension().is_some_and(|e| e == "c") {
+            out.push(path);
+        }
+    }
+}
 
 fn main() {
-    let sources = [
-        "rcheevos/src/rc_client.c",
-        "rcheevos/src/rc_compat.c",
-        "rcheevos/src/rc_libretro.c",
-        "rcheevos/src/rc_util.c",
-        "rcheevos/src/rc_version.c",
-        "rcheevos/src/rapi/rc_api_common.c",
-        "rcheevos/src/rapi/rc_api_info.c",
-        "rcheevos/src/rapi/rc_api_runtime.c",
-        "rcheevos/src/rapi/rc_api_user.c",
-        "rcheevos/src/rcheevos/alloc.c",
-        "rcheevos/src/rcheevos/condition.c",
-        "rcheevos/src/rcheevos/condset.c",
-        "rcheevos/src/rcheevos/consoleinfo.c",
-        "rcheevos/src/rcheevos/format.c",
-        "rcheevos/src/rcheevos/lboard.c",
-        "rcheevos/src/rcheevos/memref.c",
-        "rcheevos/src/rcheevos/operand.c",
-        "rcheevos/src/rcheevos/richpresence.c",
-        "rcheevos/src/rcheevos/runtime.c",
-        "rcheevos/src/rcheevos/runtime_progress.c",
-        "rcheevos/src/rcheevos/trigger.c",
-        "rcheevos/src/rcheevos/value.c",
-        "rcheevos/src/rhash/hash.c",
-        "rcheevos/src/rhash/hash_rom.c",
-        "rcheevos/src/rhash/md5.c",
-        "csrc/slot_cheevos.c",
-    ];
+    let mut files = vec![Path::new("shim/slot_cheevos.c").to_path_buf()];
+    sources(Path::new("rcheevos/src"), &mut files);
+    files.sort();
     let mut build = cc::Build::new();
     build
+        .files(&files)
         .include("rcheevos/include")
         .include("rcheevos/src")
         .include("libretro")
         .define("RC_STATIC", None)
         .define("RC_CLIENT_SUPPORTS_HASH", None)
+        // GB, GBC, GBA, NES and SNES hash the ROM file itself: no discs, archives or encryption.
         .define("RC_HASH_NO_DISC", None)
         .define("RC_HASH_NO_ENCRYPTED", None)
         .define("RC_HASH_NO_ZIP", None)
         .flag_if_supported("-std=gnu99")
         .warnings(false);
-    for s in sources {
-        build.file(s);
-        println!("cargo:rerun-if-changed={s}");
-    }
-    println!("cargo:rerun-if-changed=rcheevos/include");
-    build.compile("rcheevos");
+    build.compile("slot_cheevos");
+    println!("cargo:rerun-if-changed=shim");
+    println!("cargo:rerun-if-changed=rcheevos");
+    println!("cargo:rerun-if-changed=libretro");
 }
