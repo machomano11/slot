@@ -1,6 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- New HOME > Cart Art: GET CART ART gives games with no label a real cartridge label scan (by
+  ROM checksum, from the slot art set behind Cart Studio; NES and SNES labels from LaunchBox cart
+  pictures), over HTTPS. Existing labels are never replaced, and labels can be deleted there one
+  by one. From Slot-Brick.
 - RetroAchievements now uses Slot-Brick's version: log in from HOME > RetroAchievements
   instead of editing a file, and unlocks show as corner pop-ups with their badges.
 - A game started before Wi-Fi had an address signs in to RetroAchievements again once it does.

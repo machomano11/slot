@@ -1013,6 +1013,7 @@ impl App {
             | QuickRow::General
             | QuickRow::Wallpaper
             | QuickRow::Wifi
+            | QuickRow::CartArt
             | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
@@ -2274,6 +2275,12 @@ impl App {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::achievements());
                 }
             }
+            QuickRow::CartArt => {
+                #[cfg(feature = "brick")]
+                {
+                    self.wifi = Some(crate::brick_wifi::WifiMenu::cart_art());
+                }
+            }
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
@@ -2460,6 +2467,7 @@ impl App {
             | QuickRow::Game
             | QuickRow::General
             | QuickRow::Wifi
+            | QuickRow::CartArt
             | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
@@ -3015,6 +3023,14 @@ impl App {
         {
             if let Some(wifi) = &mut self.wifi {
                 wifi.poll();
+            }
+            let fetched = self
+                .wifi
+                .as_mut()
+                .map(|w| w.take_fetched())
+                .unwrap_or_default();
+            for f in fetched {
+                self.adopt_label(f.platform, &f.stem, f.label);
             }
             if let Some(t) = self.wifi.as_mut().and_then(|w| w.take_test_unlock()) {
                 self.achievement_notice(

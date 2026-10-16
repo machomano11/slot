@@ -8,6 +8,7 @@ pub mod bootlogo;
 pub mod build_info;
 pub mod cable;
 pub mod card_log;
+pub mod cart_art;
 pub mod cart_faces;
 pub mod cloud;
 pub mod core;

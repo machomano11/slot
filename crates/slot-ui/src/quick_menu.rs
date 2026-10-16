@@ -58,10 +58,11 @@ pub enum QuickRow {
     ScreenGbc,
     ScreenGb,
     Achievements,
+    CartArt,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 49] = [
+    pub const ALL: [QuickRow; 50] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -111,6 +112,7 @@ impl QuickRow {
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
         QuickRow::Achievements,
+        QuickRow::CartArt,
     ];
 
     #[cfg(not(feature = "brick"))]
@@ -130,12 +132,13 @@ impl QuickRow {
         QuickRow::DateTime,
     ];
     #[cfg(feature = "brick")]
-    pub const MAIN: [QuickRow; 7] = [
+    pub const MAIN: [QuickRow; 8] = [
         QuickRow::Screen,
         QuickRow::Game,
         QuickRow::General,
         QuickRow::Lights,
         QuickRow::Wifi,
+        QuickRow::CartArt,
         QuickRow::Achievements,
         QuickRow::About,
     ];
@@ -313,6 +316,7 @@ impl QuickRow {
         match self {
             QuickRow::Wifi => "Wi-Fi",
             QuickRow::Achievements => "RetroAchievements",
+            QuickRow::CartArt => "Cart Art",
             QuickRow::Lights => "LEDs",
             QuickRow::LedMode => "Lights",
             QuickRow::LedTop => "Top Bar",
@@ -373,6 +377,7 @@ impl QuickRow {
                 | QuickRow::General
                 | QuickRow::Lights
                 | QuickRow::Wifi
+                | QuickRow::CartArt
                 | QuickRow::Achievements
                 | QuickRow::Resume
                 | QuickRow::States

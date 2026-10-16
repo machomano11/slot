@@ -1,5 +1,7 @@
 //! Brick Wi-Fi settings. Uses the firmware supplicant; no shell interpolation of credentials.
+use crate::cart_art::{ArtJob, Fetched, Progress};
 use slot_input::{Action, Btn};
+use slot_store::Platform;
 use slot_ui::{TexId, UndoFace};
 use std::{
     fs,
@@ -600,6 +602,34 @@ fn routed(table: &str) -> bool {
         f.len() > 1 && f[0] == "wlan0" && f[1] == "00000000"
     })
 }
+/// The Cart Art screen: row 0 fetches art, the rest are games with a label, to delete.
+/// `games`: platform, stem, label, and whether it is the Famicom label.
+struct ArtList {
+    games: Vec<(Platform, String, PathBuf, bool)>,
+    armed: Option<usize>,
+}
+impl ArtList {
+    fn load() -> Self {
+        // A NES game's Famicom label is a row of its own, to delete apart from its NES one.
+        let mut games: Vec<_> = slot_store::scan(&card_root())
+            .unwrap_or_default()
+            .into_iter()
+            .flat_map(|c| {
+                [
+                    c.label.map(|l| (c.platform, c.stem.clone(), l, false)),
+                    c.famicom_label.map(|l| (c.platform, c.stem, l, true)),
+                ]
+            })
+            .flatten()
+            .collect();
+        games.sort_by(|a, b| {
+            slot_store::sort_key(&a.1)
+                .cmp(&slot_store::sort_key(&b.1))
+                .then((a.0 as u8).cmp(&(b.0 as u8)))
+        });
+        Self { games, armed: None }
+    }
+}
 /// The RetroAchievements screen: log in, test the connection, show a test unlock, log out.
 /// `test`: a pretend unlock waiting for the app to toast it.
 struct RaScreen {
@@ -652,6 +682,10 @@ pub struct WifiMenu {
     keyboard: Option<Keyboard>,
     refreshed: Instant,
     awaiting_ip: bool,
+    art: Option<ArtJob>,
+    fetched: Vec<Fetched>,
+    /// Set when this overlay is the Cart Art screen rather than Wi-Fi.
+    list: Option<ArtList>,
     /// Set when this overlay is the RetroAchievements screen rather than Wi-Fi.
     ra: Option<RaScreen>,
 }
@@ -669,10 +703,37 @@ impl WifiMenu {
             keyboard: None,
             refreshed: Instant::now(),
             awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: None,
             ra: None,
         };
         s.start(Job::Status);
         s
+    }
+    /// The overlay behind HOME > Cart Art.
+    pub fn cart_art() -> Self {
+        let list = ArtList::load();
+        let status = format!(
+            "{} games have a label. A on one twice deletes it",
+            list.games.len()
+        );
+        Self {
+            worker: None,
+            face: None,
+            dirty: true,
+            on: true,
+            status,
+            networks: Vec::new(),
+            row: 0,
+            keyboard: None,
+            refreshed: Instant::now(),
+            awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: Some(list),
+            ra: None,
+        }
     }
     /// The overlay behind HOME > RetroAchievements.
     pub fn achievements() -> Self {
@@ -692,6 +753,9 @@ impl WifiMenu {
             keyboard: None,
             refreshed: Instant::now(),
             awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: None,
             ra: Some(RaScreen {
                 account,
                 user: String::new(),
@@ -702,13 +766,24 @@ impl WifiMenu {
         }
     }
     pub fn busy(&self) -> bool {
-        self.worker.is_some() || self.ra.as_ref().is_some_and(|r| r.job.is_some())
+        self.worker.is_some()
+            || self.art.is_some()
+            || self.ra.as_ref().is_some_and(|r| r.job.is_some())
+    }
+    /// Labels saved or deleted since the last call, for the shelf to show straight away.
+    pub fn take_fetched(&mut self) -> Vec<Fetched> {
+        std::mem::take(&mut self.fetched)
     }
     /// The test unlock asked for since the last call, for the app to toast.
     pub fn take_test_unlock(&mut self) -> Option<TestUnlock> {
         self.ra.as_mut()?.test.take()
     }
     pub fn cancel(&mut self) {
+        if let Some(a) = &self.art {
+            a.cancel();
+            self.status = "Cancelling...".into();
+            self.dirty = true;
+        }
         // A reply that comes back after this is dropped unread, so nothing gets saved.
         if let Some(r) = &mut self.ra {
             if r.job.take().is_some() {
@@ -747,7 +822,55 @@ impl WifiMenu {
         self.worker = Some(Worker { rx, cancel });
         self.dirty = true;
     }
+    fn poll_art(&mut self) {
+        let Some(job) = &self.art else {
+            return;
+        };
+        loop {
+            match job.try_recv() {
+                Ok(Progress::Step { done, total, name }) => {
+                    self.status = format!("Cart art {}/{total}: {name}", done + 1);
+                    self.dirty = true;
+                }
+                Ok(Progress::Got(f)) => self.fetched.push(f),
+                Ok(Progress::Done(r)) => {
+                    self.status = match r {
+                        Ok(s) if s.found + s.missing + s.failed == 0 => {
+                            "Every game already has a label".into()
+                        }
+                        Ok(s) => format!(
+                            "Cart art: {} added, {} not found{}",
+                            s.found,
+                            s.missing,
+                            if s.failed > 0 {
+                                format!(", {} failed", s.failed)
+                            } else {
+                                String::new()
+                            }
+                        ),
+                        Err(e) => e,
+                    };
+                    if let Some(l) = &mut self.list {
+                        *l = ArtList::load();
+                        self.row = self.row.min(l.games.len());
+                    }
+                    self.art = None;
+                    self.dirty = true;
+                    self.refreshed = Instant::now();
+                    return;
+                }
+                Err(mpsc::TryRecvError::Empty) => return,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    self.art = None;
+                    self.status = "Cart art stopped".into();
+                    self.dirty = true;
+                    return;
+                }
+            }
+        }
+    }
     pub fn poll(&mut self) {
+        self.poll_art();
         self.poll_ra();
         if let Some(w) = &self.worker {
             match w.rx.try_recv() {
@@ -781,6 +904,7 @@ impl WifiMenu {
         // While an address is on its way, check every 2 s instead of every 15.
         let every = Duration::from_secs(if self.awaiting_ip { 2 } else { 15 });
         if self.ra.is_none()
+            && self.list.is_none()
             && !self.busy()
             && self.keyboard.is_none()
             && self.refreshed.elapsed() > every
@@ -802,6 +926,9 @@ impl WifiMenu {
             return false;
         }
         self.dirty = true;
+        if self.list.is_some() {
+            return self.art_input(a);
+        }
         if let Some(k) = &mut self.keyboard {
             match a {
                 Action::GbaDown(Btn::B) => self.keyboard = None,
@@ -1004,6 +1131,114 @@ impl WifiMenu {
         }
         false
     }
+    fn art_input(&mut self, a: Action) -> bool {
+        let Some(list) = &mut self.list else {
+            return true;
+        };
+        let rows = list.games.len() + 1;
+        match a {
+            Action::GbaDown(Btn::B) => {
+                if list.armed.take().is_none() {
+                    return true;
+                }
+                self.status = "Kept it".into();
+            }
+            Action::GbaDown(Btn::Up) => {
+                self.row = (self.row + rows - 1) % rows;
+                list.armed = None;
+            }
+            Action::GbaDown(Btn::Down) => {
+                self.row = (self.row + 1) % rows;
+                list.armed = None;
+            }
+            Action::GbaDown(Btn::A) | Action::Insert if self.row == 0 => {
+                if !online() {
+                    self.status = "Connect to Wi-Fi first".into();
+                    return false;
+                }
+                self.status = "Cart art: fetching game list...".into();
+                self.art = Some(ArtJob::start(card_root()));
+            }
+            Action::GbaDown(Btn::A) | Action::Insert => {
+                let at = self.row - 1;
+                let Some((platform, stem, path, _)) = list.games.get(at).cloned() else {
+                    return false;
+                };
+                if list.armed != Some(at) {
+                    list.armed = Some(at);
+                    self.status = format!("Press A again to delete the label of {stem}");
+                    return false;
+                }
+                list.armed = None;
+                match fs::remove_file(&path) {
+                    Ok(()) => {
+                        eprintln!("slot: cart art: deleted {}", path.display());
+                        list.games.remove(at);
+                        self.row = self.row.min(list.games.len());
+                        self.fetched.push(Fetched {
+                            platform,
+                            stem: stem.clone(),
+                            label: None,
+                        });
+                        self.status = format!("Deleted the label of {stem}");
+                    }
+                    Err(e) => self.status = format!("Cannot delete label: {e}"),
+                }
+            }
+            _ => {}
+        }
+        false
+    }
+    fn render_art(&self, list: &ArtList) -> UndoFace {
+        let mut p = Painter::new();
+        p.text("CART ART", 32, 24, 576, 30.0);
+        p.text(&self.status, 32, 66, 576, 18.0);
+        let rows = list.games.len() + 1;
+        let first = self.row.saturating_sub(6);
+        for (line, row) in (first..rows.min(first + 7)).enumerate() {
+            let y = 110 + line * 41;
+            if row == self.row {
+                p.rect(0, y, 640, 38, slot_ui::edge());
+            }
+            let label = match row {
+                0 => "GET CART ART".into(),
+                _ => {
+                    let (platform, stem, _, famicom) = &list.games[row - 1];
+                    format!(
+                        "{}{}  {}",
+                        if list.armed == Some(row - 1) {
+                            "DELETE?  "
+                        } else {
+                            ""
+                        },
+                        if *famicom { "FC" } else { platform.dir_name() },
+                        stem
+                    )
+                }
+            };
+            p.text(&label, 32, y + 1, 576, 23.0);
+        }
+        p.text(
+            if self.busy() {
+                "B CANCEL"
+            } else if self.row == 0 {
+                "B BACK    A GET ART"
+            } else if list.armed.is_some() {
+                "B KEEP    A DELETE LABEL"
+            } else {
+                "B BACK    A DELETE LABEL"
+            },
+            24,
+            430,
+            592,
+            20.0,
+        );
+        UndoFace {
+            rgba: p.rgba,
+            w: 640,
+            h: 480,
+        }
+    }
     fn render_ra(&self, ra: &RaScreen) -> UndoFace {
         let mut p = Painter::new();
         p.text("RETROACHIEVEMENTS", 32, 24, 576, 30.0);
@@ -1056,6 +1291,9 @@ impl WifiMenu {
         }
     }
     pub fn render(&self) -> UndoFace {
+        if let Some(list) = &self.list {
+            return self.render_art(list);
+        }
         if let (None, Some(ra)) = (&self.keyboard, &self.ra) {
             return self.render_ra(ra);
         }
@@ -1459,6 +1697,9 @@ mod tests {
             keyboard: None,
             refreshed: Instant::now(),
             awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: None,
             ra: Some(RaScreen {
                 account,
                 user: String::new(),
@@ -1511,6 +1752,9 @@ mod tests {
             networks: Vec::new(),
             row: 0,
             awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: None,
             keyboard: Some(Keyboard {
                 target: KeyTarget::Wifi(network()),
                 secret: true,

@@ -965,7 +965,7 @@ fn wifi_keeps_navigation_inside_overlay_and_b_returns_to_its_row() {
         a.tick_ms(5000 + i * 10);
         press(&mut a, Btn::B);
         press(&mut a, Btn::Down);
-        if a.quick_menu() == Some(QuickRow::Achievements) {
+        if a.quick_menu() == Some(QuickRow::CartArt) {
             return;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));

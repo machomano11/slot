@@ -84,7 +84,9 @@ const FAMICOM_PHOTO: CartPhoto = CartPhoto {
 /// whole, as it is tall).
 fn photo_specs(cart: &Cart) -> &'static [&'static CartPhoto] {
     match cart.platform {
-        Platform::Nes if slot_ui::nes_famicom_of(cart) && cart.label.is_none() => &[&FAMICOM_PHOTO, &NES_PHOTO],
+        Platform::Nes if slot_ui::nes_famicom_of(cart) && cart.label.is_none() => {
+            &[&FAMICOM_PHOTO, &NES_PHOTO]
+        }
         Platform::Nes if slot_ui::nes_famicom_of(cart) => &[&FAMICOM_PHOTO],
         Platform::Nes => &[&NES_PHOTO],
         Platform::Snes => &[&SNES_PHOTO],
@@ -115,7 +117,11 @@ pub struct Fetched {
 
 #[derive(Debug)]
 pub enum Progress {
-    Step { done: usize, total: usize, name: String },
+    Step {
+        done: usize,
+        total: usize,
+        name: String,
+    },
     Got(Fetched),
     Done(Result<Summary, String>),
 }
@@ -134,7 +140,13 @@ pub struct ArtJob {
 
 impl ArtJob {
     pub fn start(root: PathBuf) -> Self {
-        Self::start_at(root, Servers { labels: SLOT_ART.into(), photos: PHOTOS.into() })
+        Self::start_at(
+            root,
+            Servers {
+                labels: SLOT_ART.into(),
+                photos: PHOTOS.into(),
+            },
+        )
     }
 
     /// Tests point the servers at a local one.
@@ -317,7 +329,13 @@ fn fetch_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> {
         Ok(None) => return Ok(Outcome::NoMatch),
         Err(e) => return Ok(Outcome::Failed(e)),
     };
-    Ok(save_label(src.root, &cart, "", &png, format!("label scan {path} ({how})")))
+    Ok(save_label(
+        src.root,
+        &cart,
+        "",
+        &png,
+        format!("label scan {path} ({how})"),
+    ))
 }
 
 /// No label for the cart it is on now: a NES game on the Famicom cart wants a Famicom label
@@ -340,11 +358,19 @@ impl PhotoIndex {
     fn load(root: &Path, spec: &CartPhoto) -> Self {
         let text = std::fs::read_to_string(root.join(spec.index)).unwrap_or_default();
         let mut index = PhotoIndex::default();
-        for (name, file) in text.lines().filter(|l| !l.starts_with('#')).filter_map(|l| l.split_once('\t')) {
+        for (name, file) in text
+            .lines()
+            .filter(|l| !l.starts_with('#'))
+            .filter_map(|l| l.split_once('\t'))
+        {
             if !index.files.contains_key(name) {
                 index.names.push(name.to_string());
             }
-            index.files.entry(name.to_string()).or_default().push(file.to_string());
+            index
+                .files
+                .entry(name.to_string())
+                .or_default()
+                .push(file.to_string());
         }
         index
     }
@@ -355,7 +381,9 @@ fn photo_file_ok(file: &str) -> bool {
     file.len() <= 64
         && file.ends_with(".png")
         && !file.starts_with('.')
-        && file.bytes().all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+        && file
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
 }
 
 /// A label cut from a picture of the cart, found by the ROM's name: the same title only, as
@@ -364,12 +392,19 @@ fn photo_file_ok(file: &str) -> bool {
 /// picture host cannot be reached, so every other cart would wait on it too.
 fn fetch_photo_label(cart: &Cart, spec: &CartPhoto, src: &mut Sources) -> Result<Outcome, String> {
     let root = src.root;
-    let index = src.photos.entry(spec.index).or_insert_with(|| PhotoIndex::load(root, spec));
+    let index = src
+        .photos
+        .entry(spec.index)
+        .or_insert_with(|| PhotoIndex::load(root, spec));
     let Some(name) = same_title_match(&cart.stem, &index.names) else {
         return Ok(Outcome::NoMatch);
     };
     let mut why = Vec::new();
-    for file in index.files[name].iter().filter(|f| photo_file_ok(f)).take(PHOTO_TRIES) {
+    for file in index.files[name]
+        .iter()
+        .filter(|f| photo_file_ok(f))
+        .take(PHOTO_TRIES)
+    {
         // One picture failing (too large, refused, gone) leaves the game's others to try.
         let png = match get(src.photo_server, &format!("/{file}"), IMAGE_MAX) {
             Ok(Some(png)) => png,
@@ -377,14 +412,24 @@ fn fetch_photo_label(cart: &Cart, spec: &CartPhoto, src: &mut Sources) -> Result
                 why.push(format!("{file}: gone"));
                 continue;
             }
-            Err(e) if crate::net::unreachable(&e) => return Err(format!("Can't reach the cart picture server: {e}")),
+            Err(e) if crate::net::unreachable(&e) => {
+                return Err(format!("Can't reach the cart picture server: {e}"))
+            }
             Err(e) => {
                 why.push(format!("{file}: {e}"));
                 continue;
             }
         };
         match label_from_photo(&png, spec) {
-            Ok(label) => return Ok(save_label(root, cart, spec.sub, &label, format!("{name} cart {file}"))),
+            Ok(label) => {
+                return Ok(save_label(
+                    root,
+                    cart,
+                    spec.sub,
+                    &label,
+                    format!("{name} cart {file}"),
+                ))
+            }
             Err(e) => why.push(format!("{file}: {e}")),
         }
     }
@@ -421,7 +466,10 @@ fn label_from_photo(png: &[u8], spec: &CartPhoto) -> Result<Vec<u8>, &'static st
     };
     let grid = |[fx0, fy0, fx1, fy1]: [f32; 4], n: usize| {
         (0..n * n).map(move |i| {
-            (fx0 + (fx1 - fx0) * (i % n) as f32 / (n - 1) as f32, fy0 + (fy1 - fy0) * (i / n) as f32 / (n - 1) as f32)
+            (
+                fx0 + (fx1 - fx0) * (i % n) as f32 / (n - 1) as f32,
+                fy0 + (fy1 - fy0) * (i / n) as f32 / (n - 1) as f32,
+            )
         })
     };
     // The plastic beside the label.
@@ -501,9 +549,15 @@ fn decode_rgba(bytes: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
     let src = &buf[..info.buffer_size()];
     let rgba = match info.color_type {
         png::ColorType::Rgba => src.to_vec(),
-        png::ColorType::Rgb => src.chunks_exact(3).flat_map(|p| [p[0], p[1], p[2], 255]).collect(),
+        png::ColorType::Rgb => src
+            .chunks_exact(3)
+            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .collect(),
         png::ColorType::Grayscale => src.iter().flat_map(|&g| [g, g, g, 255]).collect(),
-        png::ColorType::GrayscaleAlpha => src.chunks_exact(2).flat_map(|p| [p[0], p[0], p[0], p[1]]).collect(),
+        png::ColorType::GrayscaleAlpha => src
+            .chunks_exact(2)
+            .flat_map(|p| [p[0], p[0], p[0], p[1]])
+            .collect(),
         png::ColorType::Indexed => return None,
     };
     (rgba.len() == n * 4).then_some((rgba, info.width, info.height))
@@ -539,12 +593,20 @@ impl Games {
                 };
                 let crc = u32::from_str_radix(f.next()?, 16).ok()?;
                 let serial = f.next()?.to_string();
-                Some(Game { platform, crc, serial, name: f.next()?.to_string() })
+                Some(Game {
+                    platform,
+                    crc,
+                    serial,
+                    name: f.next()?.to_string(),
+                })
             })
             .collect();
         let mut names: HashMap<Platform, Vec<String>> = HashMap::new();
         for g in &list {
-            names.entry(g.platform).or_default().push(slot_store::libretro_name(&g.name));
+            names
+                .entry(g.platform)
+                .or_default()
+                .push(slot_store::libretro_name(&g.name));
         }
         Games { list, names }
     }
@@ -572,7 +634,11 @@ impl Games {
             // The exact release first, then the same game from other regions (BZ4E -> BZ4P).
             for same_region in [true, false] {
                 for g in self.list.iter().filter(|g| g.platform == Platform::Gba) {
-                    let hit = if same_region { g.serial == code } else { g.serial.get(..3) == code.get(..3) };
+                    let hit = if same_region {
+                        g.serial == code
+                    } else {
+                        g.serial.get(..3) == code.get(..3)
+                    };
                     if hit {
                         out.push((g.crc, format!("game code {code}")));
                     }
@@ -580,8 +646,12 @@ impl Games {
             }
         }
         for &platform in platforms {
-            let Some(names) = self.names.get(&platform) else { continue };
-            let Some(name) = best_match(&cart.stem, names) else { continue };
+            let Some(names) = self.names.get(&platform) else {
+                continue;
+            };
+            let Some(name) = best_match(&cart.stem, names) else {
+                continue;
+            };
             let key = slot_store::title_key(name);
             let mut same: Vec<&Game> = self
                 .list
@@ -626,7 +696,10 @@ fn label_index(root: &Path, server: &str) -> Result<HashMap<u32, String>, String
                 .map_err(|e| format!("Can't reach the label server: {e}"))?
                 .ok_or("The label server has no index")?;
             let pairs = parse_label_index(&String::from_utf8_lossy(&json));
-            let text: Vec<String> = pairs.iter().map(|(crc, path)| format!("{crc:08X} {path}")).collect();
+            let text: Vec<String> = pairs
+                .iter()
+                .map(|(crc, path)| format!("{crc:08X} {path}"))
+                .collect();
             if let Some(dir) = cache.parent() {
                 let _ = std::fs::create_dir_all(dir);
             }
@@ -638,7 +711,10 @@ fn label_index(root: &Path, server: &str) -> Result<HashMap<u32, String>, String
         .lines()
         .filter_map(|l| {
             let (crc, path) = l.split_once(' ')?;
-            Some((u32::from_str_radix(crc, 16).ok()?, label_path(path)?.to_string()))
+            Some((
+                u32::from_str_radix(crc, 16).ok()?,
+                label_path(path)?.to_string(),
+            ))
         })
         .collect())
 }
@@ -707,7 +783,11 @@ impl Crcs {
             .ok()
             .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
             .map_or(0, |d| d.as_secs());
-        let key = rom.strip_prefix(root).unwrap_or(rom).to_string_lossy().into_owned();
+        let key = rom
+            .strip_prefix(root)
+            .unwrap_or(rom)
+            .to_string_lossy()
+            .into_owned();
         if let Some(&(size, when, crc)) = self.known.get(&key) {
             if (size, when) == (meta.len(), mtime) {
                 return Ok(crc);
@@ -747,7 +827,11 @@ const CRC_TABLE: [u32; 256] = {
         let mut c = i as u32;
         let mut k = 0;
         while k < 8 {
-            c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+            c = if c & 1 != 0 {
+                0xEDB8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
             k += 1;
         }
         table[i] = c;
@@ -795,7 +879,11 @@ fn read_fresh(path: &Path) -> Option<Vec<String>> {
         return None;
     }
     let text = std::fs::read_to_string(path).ok()?;
-    let names: Vec<String> = text.lines().filter(|l| !l.is_empty()).map(String::from).collect();
+    let names: Vec<String> = text
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(String::from)
+        .collect();
     (!names.is_empty()).then_some(names)
 }
 
@@ -819,7 +907,8 @@ enum Reply {
 }
 
 fn request(origin: &str, path: &str, limit: usize) -> Result<Reply, String> {
-    let (tls, server, _) = crate::net::split_url(origin).ok_or_else(|| format!("bad server {origin}"))?;
+    let (tls, server, _) =
+        crate::net::split_url(origin).ok_or_else(|| format!("bad server {origin}"))?;
     let reply = crate::net::send(&crate::net::Request {
         tls,
         server: &server,
@@ -837,7 +926,9 @@ fn reply_of(reply: &crate::net::Response, origin: &str) -> Result<Reply, String>
         200 => Ok(Reply::Body(reply.body.clone())),
         404 => Ok(Reply::NotFound),
         301 | 302 | 303 | 307 | 308 => {
-            let to = reply.header("location").ok_or("redirect without a location")?;
+            let to = reply
+                .header("location")
+                .ok_or("redirect without a location")?;
             match to.strip_prefix(origin) {
                 Some(rest) if rest.starts_with('/') => Ok(Reply::Moved(rest.to_string())),
                 _ if to.starts_with('/') => Ok(Reply::Moved(to)),
@@ -876,7 +967,11 @@ mod tests {
                     .find(|(p, _, _)| *p == path)
                     .map(|(_, s, b)| (*s, b.clone()))
                     .unwrap_or((404, Vec::new()));
-                let _ = write!(conn, "HTTP/1.1 {status} X\r\nContent-Length: {}\r\n\r\n", body.len());
+                let _ = write!(
+                    conn,
+                    "HTTP/1.1 {status} X\r\nContent-Length: {}\r\n\r\n",
+                    body.len()
+                );
                 let _ = conn.write_all(&body);
             }
         });
@@ -888,7 +983,10 @@ mod tests {
         let mut e = png::Encoder::new(&mut out, 2, 2);
         e.set_color(png::ColorType::Rgba);
         e.set_depth(png::BitDepth::Eight);
-        e.write_header().unwrap().write_image_data(&[200; 16]).unwrap();
+        e.write_header()
+            .unwrap()
+            .write_image_data(&[200; 16])
+            .unwrap();
         out
     }
 
@@ -901,7 +999,11 @@ mod tests {
     fn drain(job: &ArtJob) -> (Vec<Fetched>, Result<Summary, String>) {
         let mut got = Vec::new();
         loop {
-            match job.rx.recv_timeout(Duration::from_secs(20)).expect("job finished") {
+            match job
+                .rx
+                .recv_timeout(Duration::from_secs(20))
+                .expect("job finished")
+            {
                 Progress::Got(f) => got.push(f),
                 Progress::Done(r) => return (got, r),
                 Progress::Step { .. } => {}
@@ -940,25 +1042,42 @@ mod tests {
         let index = label_index(root, SLOT_ART).unwrap();
         assert!(index.len() > 5000, "{} label scans", index.len());
         for system in ["GBA", "GB"] {
-            let (crc, path) = index.iter().filter(|(_, p)| p.starts_with(&format!("{system}/"))).min().unwrap();
-            let png = get(SLOT_ART, &format!("/{path}"), IMAGE_MAX).unwrap().unwrap();
+            let (crc, path) = index
+                .iter()
+                .filter(|(_, p)| p.starts_with(&format!("{system}/")))
+                .min()
+                .unwrap();
+            let png = get(SLOT_ART, &format!("/{path}"), IMAGE_MAX)
+                .unwrap()
+                .unwrap();
             assert!(is_png(&png), "{path}");
             if std::env::var_os("SLOT_ART_PREVIEW").is_none() {
                 continue;
             }
-            rom(root, &format!("{system}/{crc:08X}.{}", system.to_lowercase()));
+            rom(
+                root,
+                &format!("{system}/{crc:08X}.{}", system.to_lowercase()),
+            );
             std::fs::create_dir_all(root.join("Labels").join(system)).unwrap();
             std::fs::write(root.join(format!("Labels/{system}/{crc:08X}.png")), &png).unwrap();
         }
         if let Some(out) = std::env::var_os("SLOT_ART_PREVIEW") {
-            for mut cart in scan(root).unwrap().into_iter().filter(|c| c.label.is_some()) {
+            for mut cart in scan(root)
+                .unwrap()
+                .into_iter()
+                .filter(|c| c.label.is_some())
+            {
                 cart.read_header();
-                let face = slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
+                let face =
+                    slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
                 let path = Path::new(&out).join(format!("label-{}.png", cart.platform.dir_name()));
                 let mut e = png::Encoder::new(std::fs::File::create(path).unwrap(), face.w, face.h);
                 e.set_color(png::ColorType::Rgba);
                 e.set_depth(png::BitDepth::Eight);
-                e.write_header().unwrap().write_image_data(&face.rgba).unwrap();
+                e.write_header()
+                    .unwrap()
+                    .write_image_data(&face.rgba)
+                    .unwrap();
             }
         }
     }
@@ -976,7 +1095,11 @@ mod tests {
         let path = root.join("Games/GBA").join(name);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, rom).unwrap();
-        let mut cart = scan(root).unwrap().into_iter().find(|c| c.rom == path).unwrap();
+        let mut cart = scan(root)
+            .unwrap()
+            .into_iter()
+            .find(|c| c.rom == path)
+            .unwrap();
         cart.read_header();
         cart
     }
@@ -984,52 +1107,100 @@ mod tests {
     #[test]
     fn a_trimmed_gba_rom_is_found_by_its_game_code_but_a_hack_is_not() {
         let d = tempfile::tempdir().unwrap();
-        let g = games(d.path(), &[
-            "GBA\t27F2BC67\tBZ4P\tFinal Fantasy IV Advance (Europe) (En,Fr,De,Es,It)",
-            "GBA\tFEEEBDE4\tBZ4E\tFinal Fantasy IV Advance (USA)",
-            "GBA\tDD88761C\tBPRE\tPokemon - FireRed Version (USA, Europe)",
-        ]);
+        let g = games(
+            d.path(),
+            &[
+                "GBA\t27F2BC67\tBZ4P\tFinal Fantasy IV Advance (Europe) (En,Fr,De,Es,It)",
+                "GBA\tFEEEBDE4\tBZ4E\tFinal Fantasy IV Advance (USA)",
+                "GBA\tDD88761C\tBPRE\tPokemon - FireRed Version (USA, Europe)",
+            ],
+        );
         let ff = gba_rom(d.path(), "Final Fantasy IV Advance (trimmed).gba", "BZ4E");
-        let crcs: Vec<u32> = g.candidates(&ff, 0x1234).into_iter().map(|(c, _)| c).collect();
-        assert_eq!(crcs, vec![0x1234, 0xFEEE_BDE4, 0x27F2_BC67], "own, same region, other regions");
+        let crcs: Vec<u32> = g
+            .candidates(&ff, 0x1234)
+            .into_iter()
+            .map(|(c, _)| c)
+            .collect();
+        assert_eq!(
+            crcs,
+            vec![0x1234, 0xFEEE_BDE4, 0x27F2_BC67],
+            "own, same region, other regions"
+        );
         let hack = gba_rom(d.path(), "Pokemon Radical Red.gba", "BPRE");
-        assert_eq!(g.candidates(&hack, 0x5678), vec![(0x5678, "checksum".to_string())], "a hack keeps its own label");
+        assert_eq!(
+            g.candidates(&hack, 0x5678),
+            vec![(0x5678, "checksum".to_string())],
+            "a hack keeps its own label"
+        );
         let vague = gba_rom(d.path(), "ff4.gba", "BZ4E");
-        assert_eq!(g.candidates(&vague, 9).len(), 1, "a code alone is not enough");
+        assert_eq!(
+            g.candidates(&vague, 9).len(),
+            1,
+            "a code alone is not enough"
+        );
     }
 
     #[test]
     fn a_game_boy_rom_falls_back_to_its_name_and_other_releases() {
         let d = tempfile::tempdir().unwrap();
-        let g = games(d.path(), &[
-            "GB\t9F7FDD53\t-\tPokemon - Red Version (USA, Europe) (SGB Enhanced)",
-            "GB\tAAAAAAAA\t-\tPokemon - Red Version (Germany) (SGB Enhanced)",
-            "GBC\t46DF91AD\t-\tTetris DX (World) (SGB Enhanced) (GB Compatible)",
-        ]);
+        let g = games(
+            d.path(),
+            &[
+                "GB\t9F7FDD53\t-\tPokemon - Red Version (USA, Europe) (SGB Enhanced)",
+                "GB\tAAAAAAAA\t-\tPokemon - Red Version (Germany) (SGB Enhanced)",
+                "GBC\t46DF91AD\t-\tTetris DX (World) (SGB Enhanced) (GB Compatible)",
+            ],
+        );
         rom(d.path(), "GB/Pokemon Red (G).gb");
         rom(d.path(), "GB/Tetris DX.gb");
         let carts = scan(d.path()).unwrap();
-        let red = carts.iter().find(|c| c.stem.starts_with("Pokemon")).unwrap();
+        let red = carts
+            .iter()
+            .find(|c| c.stem.starts_with("Pokemon"))
+            .unwrap();
         let crcs: Vec<u32> = g.candidates(red, 1).into_iter().map(|(c, _)| c).collect();
-        assert_eq!(crcs, vec![1, 0xAAAA_AAAA, 0x9F7F_DD53], "the matched release, then its siblings");
+        assert_eq!(
+            crcs,
+            vec![1, 0xAAAA_AAAA, 0x9F7F_DD53],
+            "the matched release, then its siblings"
+        );
         let tetris = carts.iter().find(|c| c.stem == "Tetris DX").unwrap();
-        assert!(g.candidates(tetris, 1).iter().any(|(c, _)| *c == 0x46DF_91AD), "GBC list searched for a GB shelf");
+        assert!(
+            g.candidates(tetris, 1)
+                .iter()
+                .any(|(c, _)| *c == 0x46DF_91AD),
+            "GBC list searched for a GB shelf"
+        );
     }
 
     #[test]
     fn a_label_is_found_for_a_rom_whose_checksum_is_unknown() {
         let d = tempfile::tempdir().unwrap();
         let root = d.path();
-        games(root, &["GBA\tFEEEBDE4\tBZ4E\tFinal Fantasy IV Advance (USA)"]);
+        games(
+            root,
+            &["GBA\tFEEEBDE4\tBZ4E\tFinal Fantasy IV Advance (USA)"],
+        );
         gba_rom(root, "Final Fantasy IV Advance (trimmed).gba", "BZ4E");
         std::fs::create_dir_all(root.join("Logs")).unwrap();
         let path = "GBA/support-texture/FEEEBDE4.png";
         let server = serve(vec![
-            ("/index.json".into(), 200, format!(r#"{{"FEEEBDE4": {{"support-texture": "{path}"}}}}"#).into_bytes()),
+            (
+                "/index.json".into(),
+                200,
+                format!(r#"{{"FEEEBDE4": {{"support-texture": "{path}"}}}}"#).into_bytes(),
+            ),
             (format!("/{path}"), 200, png_bytes()),
         ]);
         let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers(&server)));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 0, failed: 0 }));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 0,
+                failed: 0
+            })
+        );
         let report = std::fs::read_to_string(root.join(REPORT)).unwrap();
         assert!(report.contains("(game code BZ4E)"), "{report}");
     }
@@ -1039,7 +1210,10 @@ mod tests {
         let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../brick/card/Slot");
         let g = Games::load(&shipped);
         assert!(g.list.len() > 7000, "{} games", g.list.len());
-        assert!(g.list.iter().any(|x| x.serial == "BPRE" && x.name.starts_with("Pokemon - FireRed")));
+        assert!(g
+            .list
+            .iter()
+            .any(|x| x.serial == "BPRE" && x.name.starts_with("Pokemon - FireRed")));
     }
 
     /// ROMs whose checksums the server cannot know, against the real server and the shipped
@@ -1053,7 +1227,9 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let root = d.path();
         std::fs::create_dir_all(root.join("System")).unwrap();
-        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../brick/card/Slot").join(GAMES);
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../brick/card/Slot")
+            .join(GAMES);
         std::fs::copy(shipped, root.join(GAMES)).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
         gba_rom(root, "Final Fantasy IV Advance (trimmed).gba", "BZ4E");
@@ -1064,15 +1240,32 @@ mod tests {
         let (_, done) = drain(&ArtJob::start(root.to_path_buf()));
         let report = std::fs::read_to_string(root.join(REPORT)).unwrap_or_default();
         eprintln!("{report}");
-        assert_eq!(done, Ok(Summary { found: 2, missing: 3, failed: 0 }));
-        assert!(report.contains("no match  GBA/Pokemon Radical Red"), "a hack keeps its own label");
-        assert!(report.contains("no match  GBA/Pokemon Glazed"), "a hack keeps its own label");
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 2,
+                missing: 3,
+                failed: 0
+            })
+        );
+        assert!(
+            report.contains("no match  GBA/Pokemon Radical Red"),
+            "a hack keeps its own label"
+        );
+        assert!(
+            report.contains("no match  GBA/Pokemon Glazed"),
+            "a hack keeps its own label"
+        );
     }
 
     #[test]
     fn crc32_matches_the_standard_check_value() {
         assert_eq!(crc32(0, b"123456789"), 0xCBF4_3926);
-        assert_eq!(crc32(crc32(0, b"1234"), b"56789"), 0xCBF4_3926, "streams in pieces");
+        assert_eq!(
+            crc32(crc32(0, b"1234"), b"56789"),
+            0xCBF4_3926,
+            "streams in pieces"
+        );
     }
 
     #[test]
@@ -1091,7 +1284,10 @@ mod tests {
     }
 
     fn servers(labels: &str) -> Servers {
-        Servers { labels: labels.into(), photos: "http://127.0.0.1:1".into() }
+        Servers {
+            labels: labels.into(),
+            photos: "http://127.0.0.1:1".into(),
+        }
     }
 
     /// A cut-out picture of a cart: `shell` plastic, transparent around it, with a label of
@@ -1107,7 +1303,11 @@ mod tests {
                 let (fx, fy) = (cx / w as f32, cy / h as f32);
                 let on_label = fx >= at[0] && fx < at[2] && fy >= at[1] && fy < at[3];
                 let c = if on_label { label } else { shell };
-                px.extend_from_slice(&if inside { [c[0], c[1], c[2], 255] } else { [0, 0, 0, 0] });
+                px.extend_from_slice(&if inside {
+                    [c[0], c[1], c[2], 255]
+                } else {
+                    [0, 0, 0, 0]
+                });
             }
         }
         let mut out = Vec::new();
@@ -1123,30 +1323,64 @@ mod tests {
 
     #[test]
     fn a_nes_label_is_cut_from_the_standard_cart_and_odd_ones_are_refused() {
-        let label = label_from_photo(&cart_png(280, 312, GREY, RED, NES_PHOTO.label), &NES_PHOTO).expect("the standard cart");
+        let label = label_from_photo(&cart_png(280, 312, GREY, RED, NES_PHOTO.label), &NES_PHOTO)
+            .expect("the standard cart");
         let (rgba, w, h) = decode_rgba(&label).unwrap();
-        assert!((w as f32 / 280.0 - 0.46).abs() < 0.01 && (h as f32 / 312.0 - 0.674).abs() < 0.01, "{w}x{h}");
-        assert!(rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]), "shell inside the label");
+        assert!(
+            (w as f32 / 280.0 - 0.46).abs() < 0.01 && (h as f32 / 312.0 - 0.674).abs() < 0.01,
+            "{w}x{h}"
+        );
+        assert!(
+            rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]),
+            "shell inside the label"
+        );
         // Tengen's black cart: the label lower down, over where Nintendo's has plain plastic.
         let tengen = cart_png(280, 318, [20, 20, 20], RED, [0.15, 0.3, 0.85, 0.9]);
-        assert_eq!(label_from_photo(&tengen, &NES_PHOTO), Err("not the standard cart"));
+        assert_eq!(
+            label_from_photo(&tengen, &NES_PHOTO),
+            Err("not the standard cart")
+        );
         let famicom = cart_png(400, 250, GREY, RED, [0.1, 0.1, 0.9, 0.7]);
-        assert_eq!(label_from_photo(&famicom, &NES_PHOTO), Err("not the cart's shape"));
-        assert_eq!(label_from_photo(&cart_png(280, 312, GREY, GREY, NES_PHOTO.label), &NES_PHOTO), Err("no label on the cart"));
-        assert_eq!(label_from_photo(b"<html>", &NES_PHOTO), Err("not a readable PNG"));
+        assert_eq!(
+            label_from_photo(&famicom, &NES_PHOTO),
+            Err("not the cart's shape")
+        );
+        assert_eq!(
+            label_from_photo(&cart_png(280, 312, GREY, GREY, NES_PHOTO.label), &NES_PHOTO),
+            Err("no label on the cart")
+        );
+        assert_eq!(
+            label_from_photo(b"<html>", &NES_PHOTO),
+            Err("not a readable PNG")
+        );
     }
 
     #[test]
     fn a_famicom_picture_gives_a_wide_label_and_a_nes_one_is_refused() {
         const YELLOW: [u8; 3] = [0xe8, 0xb0, 0x10];
-        let label = label_from_photo(&cart_png(400, 262, YELLOW, RED, [0.06, 0.1, 0.94, 0.76]), &FAMICOM_PHOTO)
-            .expect("the Famicom cart");
+        let label = label_from_photo(
+            &cart_png(400, 262, YELLOW, RED, [0.06, 0.1, 0.94, 0.76]),
+            &FAMICOM_PHOTO,
+        )
+        .expect("the Famicom cart");
         let (rgba, w, h) = decode_rgba(&label).unwrap();
         assert!(w > h * 2 - 20, "{w}x{h} is not a Famicom label");
-        assert!(rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]), "plastic inside the label");
-        assert_eq!(label_from_photo(&cart_png(280, 312, GREY, RED, NES_PHOTO.label), &FAMICOM_PHOTO), Err("not the cart's shape"));
+        assert!(
+            rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]),
+            "plastic inside the label"
+        );
         assert_eq!(
-            label_from_photo(&cart_png(400, 262, YELLOW, YELLOW, [0.06, 0.1, 0.94, 0.76]), &FAMICOM_PHOTO),
+            label_from_photo(
+                &cart_png(280, 312, GREY, RED, NES_PHOTO.label),
+                &FAMICOM_PHOTO
+            ),
+            Err("not the cart's shape")
+        );
+        assert_eq!(
+            label_from_photo(
+                &cart_png(400, 262, YELLOW, YELLOW, [0.06, 0.1, 0.94, 0.76]),
+                &FAMICOM_PHOTO
+            ),
             Err("no label on the cart")
         );
     }
@@ -1155,17 +1389,26 @@ mod tests {
     fn a_big_label_is_scaled_down_by_averaging_and_a_small_one_kept() {
         let px = |c: u8| [c, c, c, 255];
         // 4x4: left half black, right half white.
-        let rgba: Vec<u8> = (0..16).flat_map(|i| px(if i % 4 < 2 { 0 } else { 255 })).collect();
+        let rgba: Vec<u8> = (0..16)
+            .flat_map(|i| px(if i % 4 < 2 { 0 } else { 255 }))
+            .collect();
         let (out, w, h) = shrink(rgba.clone(), 4, 4, 2);
         assert_eq!((w, h), (2, 2));
         assert_eq!(out, [px(0), px(255), px(0), px(255)].concat());
         let (odd, w, h) = shrink(rgba.clone(), 4, 4, 3);
-        assert_eq!((w, h, odd.len()), (3, 3, 36), "a size that does not divide evenly");
+        assert_eq!(
+            (w, h, odd.len()),
+            (3, 3, 36),
+            "a size that does not divide evenly"
+        );
         assert_eq!(shrink(rgba.clone(), 4, 4, 4), (rgba, 4, 4));
         let tall = cart_png(1400, 1560, GREY, RED, NES_PHOTO.label);
         let (_, w, h) = decode_rgba(&label_from_photo(&tall, &NES_PHOTO).unwrap()).unwrap();
         assert_eq!(h, LABEL_MAX);
-        assert!((w as f32 / h as f32 - 644.0 / 1051.0).abs() < 0.01, "{w}x{h} lost the label's shape");
+        assert!(
+            (w as f32 / h as f32 - 644.0 / 1051.0).abs() < 0.01,
+            "{w}x{h} lost the label's shape"
+        );
     }
 
     #[test]
@@ -1177,16 +1420,43 @@ mod tests {
         std::fs::write(&path, b"NES\x1a").unwrap();
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        std::fs::write(root.join(NES_PHOTO.index), "Mega Man (USA)\trefused.png\nMega Man (USA)\tgood.png\n").unwrap();
-        let down = Servers { labels: "http://127.0.0.1:1".into(), photos: "http://127.0.0.1:1".into() };
+        std::fs::write(
+            root.join(NES_PHOTO.index),
+            "Mega Man (USA)\trefused.png\nMega Man (USA)\tgood.png\n",
+        )
+        .unwrap();
+        let down = Servers {
+            labels: "http://127.0.0.1:1".into(),
+            photos: "http://127.0.0.1:1".into(),
+        };
         let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), down));
-        assert!(done.unwrap_err().starts_with("Can't reach the cart picture server"));
+        assert!(done
+            .unwrap_err()
+            .starts_with("Can't reach the cart picture server"));
         let nes = serve(vec![
             ("/refused.png".into(), 403, b"no".to_vec()),
-            ("/good.png".into(), 200, cart_png(280, 312, GREY, RED, NES_PHOTO.label)),
+            (
+                "/good.png".into(),
+                200,
+                cart_png(280, 312, GREY, RED, NES_PHOTO.label),
+            ),
         ]);
-        let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), Servers { labels: "http://127.0.0.1:1".into(), photos: nes }));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 0, failed: 0 }), "the refused picture ended the game");
+        let (_, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos: nes,
+            },
+        ));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 0,
+                failed: 0
+            }),
+            "the refused picture ended the game"
+        );
     }
 
     #[test]
@@ -1198,10 +1468,31 @@ mod tests {
         std::fs::write(&path, b"NES\x1a").unwrap();
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        std::fs::write(root.join(NES_PHOTO.index), "Hard Drivin' (USA)\ttengen.png\n").unwrap();
-        let nes = serve(vec![("/tengen.png".into(), 200, cart_png(280, 318, [20, 20, 20], RED, [0.15, 0.3, 0.85, 0.9]))]);
-        let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), Servers { labels: "http://127.0.0.1:1".into(), photos: nes }));
-        assert_eq!(done, Ok(Summary { found: 0, missing: 1, failed: 0 }));
+        std::fs::write(
+            root.join(NES_PHOTO.index),
+            "Hard Drivin' (USA)\ttengen.png\n",
+        )
+        .unwrap();
+        let nes = serve(vec![(
+            "/tengen.png".into(),
+            200,
+            cart_png(280, 318, [20, 20, 20], RED, [0.15, 0.3, 0.85, 0.9]),
+        )]);
+        let (_, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos: nes,
+            },
+        ));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 0,
+                missing: 1,
+                failed: 0
+            })
+        );
         let report = std::fs::read_to_string(root.join(REPORT)).unwrap();
         assert!(report.contains("no label  NES/Hard Drivin' (USA): Hard Drivin' (USA): tengen.png: not the standard cart"), "{report}");
     }
@@ -1210,33 +1501,77 @@ mod tests {
 
     #[test]
     fn a_snes_label_is_cut_from_the_us_cart_and_a_pal_one_is_refused() {
-        let label = label_from_photo(&cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label), &SNES_PHOTO).expect("the US cart");
+        let label = label_from_photo(
+            &cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label),
+            &SNES_PHOTO,
+        )
+        .expect("the US cart");
         let (rgba, w, h) = decode_rgba(&label).unwrap();
-        assert!((w as f32 / 640.0 - 0.607).abs() < 0.01 && (h as f32 / 410.0 - 0.424).abs() < 0.01, "{w}x{h}");
-        assert!(rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]), "plastic inside the label");
+        assert!(
+            (w as f32 / 640.0 - 0.607).abs() < 0.01 && (h as f32 / 410.0 - 0.424).abs() < 0.01,
+            "{w}x{h}"
+        );
+        assert!(
+            rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]),
+            "plastic inside the label"
+        );
         // PAL and Super Famicom carts are taller for their width, their label elsewhere.
         let pal = cart_png(640, 560, SNES_GREY, RED, [0.15, 0.1, 0.85, 0.6]);
-        assert_eq!(label_from_photo(&pal, &SNES_PHOTO), Err("not the cart's shape"));
+        assert_eq!(
+            label_from_photo(&pal, &SNES_PHOTO),
+            Err("not the cart's shape")
+        );
         // A NES picture is no SNES cart, nor the other way round.
-        assert!(label_from_photo(&cart_png(280, 312, GREY, RED, NES_PHOTO.label), &SNES_PHOTO).is_err());
-        assert!(label_from_photo(&cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label), &NES_PHOTO).is_err());
+        assert!(
+            label_from_photo(&cart_png(280, 312, GREY, RED, NES_PHOTO.label), &SNES_PHOTO).is_err()
+        );
+        assert!(label_from_photo(
+            &cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label),
+            &NES_PHOTO
+        )
+        .is_err());
     }
 
     #[test]
     fn a_snes_cart_gets_its_label_from_the_snes_list_only() {
         let d = tempfile::tempdir().unwrap();
         let root = d.path();
-        for rom in ["Games/SNES/Super Mario Kart (USA).sfc", "Games/NES/Super Mario Kart (USA).nes"] {
+        for rom in [
+            "Games/SNES/Super Mario Kart (USA).sfc",
+            "Games/NES/Super Mario Kart (USA).nes",
+        ] {
             let path = root.join(rom);
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(&path, b"x").unwrap();
         }
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        std::fs::write(root.join(SNES_PHOTO.index), "Super Mario Kart (USA)\tkart.png\n").unwrap();
-        let photos = serve(vec![("/kart.png".into(), 200, cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label))]);
-        let (got, done) = drain(&ArtJob::start_at(root.to_path_buf(), Servers { labels: "http://127.0.0.1:1".into(), photos }));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 1, failed: 0 }), "the NES cart has no list, the SNES one is found");
+        std::fs::write(
+            root.join(SNES_PHOTO.index),
+            "Super Mario Kart (USA)\tkart.png\n",
+        )
+        .unwrap();
+        let photos = serve(vec![(
+            "/kart.png".into(),
+            200,
+            cart_png(640, 410, SNES_GREY, RED, SNES_PHOTO.label),
+        )]);
+        let (got, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos,
+            },
+        ));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 1,
+                failed: 0
+            }),
+            "the NES cart has no list, the SNES one is found"
+        );
         assert_eq!(got[0].platform, Platform::Snes);
         assert!(root.join("Labels/SNES/Super Mario Kart (USA).png").exists());
     }
@@ -1244,7 +1579,15 @@ mod tests {
     #[test]
     fn only_plain_file_names_are_asked_of_the_picture_host() {
         assert!(photo_file_ok("r2_9a3090ee-82d1-4664-8e2c-6bfda50d44f4.png"));
-        for bad in ["../x.png", "a/b.png", "a b.png", "x.jpg", ".png", "x.png?y=1", &"a".repeat(70)] {
+        for bad in [
+            "../x.png",
+            "a/b.png",
+            "a b.png",
+            "x.jpg",
+            ".png",
+            "x.png?y=1",
+            &"a".repeat(70),
+        ] {
             assert!(!photo_file_ok(bad), "{bad}");
         }
     }
@@ -1253,7 +1596,11 @@ mod tests {
     fn a_nes_cart_gets_the_label_off_the_first_standard_picture_of_its_game() {
         let d = tempfile::tempdir().unwrap();
         let root = d.path();
-        for rom in ["Games/NES/Mega Man (USA).nes", "Games/NES/My Homebrew.nes", "Games/NES/Mega Man (Hack).nes"] {
+        for rom in [
+            "Games/NES/Mega Man (USA).nes",
+            "Games/NES/My Homebrew.nes",
+            "Games/NES/Mega Man (Hack).nes",
+        ] {
             let path = root.join(rom);
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(&path, b"NES\x1a").unwrap();
@@ -1268,17 +1615,43 @@ mod tests {
         let tengen = cart_png(280, 318, [20, 20, 20], RED, [0.15, 0.3, 0.85, 0.9]);
         let nes = serve(vec![
             ("/tengen.png".into(), 200, tengen),
-            ("/nintendo.png".into(), 200, cart_png(280, 312, GREY, RED, NES_PHOTO.label)),
+            (
+                "/nintendo.png".into(),
+                200,
+                cart_png(280, 312, GREY, RED, NES_PHOTO.label),
+            ),
         ]);
-        let servers = Servers { labels: "http://127.0.0.1:1".into(), photos: nes };
+        let servers = Servers {
+            labels: "http://127.0.0.1:1".into(),
+            photos: nes,
+        };
         let (got, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 2, failed: 0 }), "the label server was never needed");
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 2,
+                failed: 0
+            }),
+            "the label server was never needed"
+        );
         assert_eq!(got[0].stem, "Mega Man (USA)");
-        let (rgba, _, _) = decode_rgba(&std::fs::read(root.join("Labels/NES/Mega Man (USA).png")).unwrap()).unwrap();
-        assert!(rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]), "not the label");
+        let (rgba, _, _) =
+            decode_rgba(&std::fs::read(root.join("Labels/NES/Mega Man (USA).png")).unwrap())
+                .unwrap();
+        assert!(
+            rgba.chunks_exact(4).all(|p| p == [0xc0, 0x20, 0x20, 255]),
+            "not the label"
+        );
         let report = std::fs::read_to_string(root.join(REPORT)).unwrap();
-        assert!(report.contains("no match  NES/Mega Man (Hack)"), "a hack wore the game's label: {report}");
-        assert!(!root.join(CRC_CACHE).exists(), "a NES ROM was checksummed for nothing");
+        assert!(
+            report.contains("no match  NES/Mega Man (Hack)"),
+            "a hack wore the game's label: {report}"
+        );
+        assert!(
+            !root.join(CRC_CACHE).exists(),
+            "a NES ROM was checksummed for nothing"
+        );
     }
 
     #[test]
@@ -1290,19 +1663,55 @@ mod tests {
         std::fs::create_dir_all(rom.parent().unwrap()).unwrap();
         std::fs::write(&rom, b"NES\x1a").unwrap();
         std::fs::create_dir_all(root.join("Labels/NES")).unwrap();
-        std::fs::write(root.join("Labels/NES/Rockman (Japan).png"), b"its NES label").unwrap();
+        std::fs::write(
+            root.join("Labels/NES/Rockman (Japan).png"),
+            b"its NES label",
+        )
+        .unwrap();
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        std::fs::write(root.join(FAMICOM_PHOTO.index), "# test\nRockman (Japan)\tfc.png\n").unwrap();
-        std::fs::write(root.join(NES_PHOTO.index), "# test\nRockman (Japan)\tnes.png\n").unwrap();
-        let photos = serve(vec![("/fc.png".into(), 200, cart_png(400, 262, YELLOW, RED, [0.06, 0.1, 0.94, 0.76]))]);
-        let servers = Servers { labels: "http://127.0.0.1:1".into(), photos };
+        std::fs::write(
+            root.join(FAMICOM_PHOTO.index),
+            "# test\nRockman (Japan)\tfc.png\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join(NES_PHOTO.index),
+            "# test\nRockman (Japan)\tnes.png\n",
+        )
+        .unwrap();
+        let photos = serve(vec![(
+            "/fc.png".into(),
+            200,
+            cart_png(400, 262, YELLOW, RED, [0.06, 0.1, 0.94, 0.76]),
+        )]);
+        let servers = Servers {
+            labels: "http://127.0.0.1:1".into(),
+            photos,
+        };
         let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 0, failed: 0 }));
-        assert!(root.join("Labels/NES/Famicom/Rockman (Japan).png").exists(), "no Famicom label");
-        assert_eq!(std::fs::read(root.join("Labels/NES/Rockman (Japan).png")).unwrap(), b"its NES label", "the NES label was touched");
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 0,
+                failed: 0
+            })
+        );
+        assert!(
+            root.join("Labels/NES/Famicom/Rockman (Japan).png").exists(),
+            "no Famicom label"
+        );
+        assert_eq!(
+            std::fs::read(root.join("Labels/NES/Rockman (Japan).png")).unwrap(),
+            b"its NES label",
+            "the NES label was touched"
+        );
         let cart = scan(root).unwrap().into_iter().next().unwrap();
-        assert!(cart.label.is_some() && cart.famicom_label.is_some(), "{cart:?}");
+        assert!(
+            cart.label.is_some() && cart.famicom_label.is_some(),
+            "{cart:?}"
+        );
         assert!(!needs_label(&cart), "a second run would fetch it again");
     }
 
@@ -1317,7 +1726,9 @@ mod tests {
         let root = d.path();
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../brick/card/Slot").join(SNES_PHOTO.index);
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../brick/card/Slot")
+            .join(SNES_PHOTO.index);
         std::fs::copy(shipped, root.join(SNES_PHOTO.index)).unwrap();
         for g in [
             "Super Mario Kart (USA)",
@@ -1334,18 +1745,29 @@ mod tests {
             std::fs::write(path, b"x").unwrap();
         }
         let (_, done) = drain(&ArtJob::start(root.to_path_buf()));
-        eprintln!("{}", std::fs::read_to_string(root.join(REPORT)).unwrap_or_default());
+        eprintln!(
+            "{}",
+            std::fs::read_to_string(root.join(REPORT)).unwrap_or_default()
+        );
         let done = done.unwrap();
         assert!(done.found >= 2 && done.failed == 0, "{done:?}");
         if let Some(out) = std::env::var_os("SLOT_ART_PREVIEW") {
-            for mut cart in scan(root).unwrap().into_iter().filter(|c| c.label.is_some()) {
+            for mut cart in scan(root)
+                .unwrap()
+                .into_iter()
+                .filter(|c| c.label.is_some())
+            {
                 cart.read_header();
-                let face = slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
+                let face =
+                    slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
                 let path = Path::new(&out).join(format!("snes-{}.png", cart.stem));
                 let mut e = png::Encoder::new(std::fs::File::create(path).unwrap(), face.w, face.h);
                 e.set_color(png::ColorType::Rgba);
                 e.set_depth(png::BitDepth::Eight);
-                e.write_header().unwrap().write_image_data(&face.rgba).unwrap();
+                e.write_header()
+                    .unwrap()
+                    .write_image_data(&face.rgba)
+                    .unwrap();
             }
         }
     }
@@ -1362,7 +1784,9 @@ mod tests {
         let root = d.path();
         std::fs::create_dir_all(root.join("System")).unwrap();
         std::fs::create_dir_all(root.join("Logs")).unwrap();
-        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../brick/card/Slot").join(NES_PHOTO.index);
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../brick/card/Slot")
+            .join(NES_PHOTO.index);
         std::fs::copy(shipped, root.join(NES_PHOTO.index)).unwrap();
         let games = [
             "Super Mario Bros. (World)",
@@ -1381,19 +1805,30 @@ mod tests {
             std::fs::write(path, b"NES\x1a").unwrap();
         }
         let (got, done) = drain(&ArtJob::start(root.to_path_buf()));
-        eprintln!("{}", std::fs::read_to_string(root.join(REPORT)).unwrap_or_default());
+        eprintln!(
+            "{}",
+            std::fs::read_to_string(root.join(REPORT)).unwrap_or_default()
+        );
         let done = done.unwrap();
         assert!(done.found >= 6 && done.failed == 0, "{done:?}");
         assert!(!got.iter().any(|f| f.stem == "Not A Real Game"));
         if let Some(out) = std::env::var_os("SLOT_ART_PREVIEW") {
-            for mut cart in scan(root).unwrap().into_iter().filter(|c| c.label.is_some()) {
+            for mut cart in scan(root)
+                .unwrap()
+                .into_iter()
+                .filter(|c| c.label.is_some())
+            {
                 cart.read_header();
-                let face = slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
+                let face =
+                    slot_ui::cart_face_with(&cart, crate::label_cache::label_art(root, &cart));
                 let path = Path::new(&out).join(format!("nes-{}.png", cart.stem));
                 let mut e = png::Encoder::new(std::fs::File::create(path).unwrap(), face.w, face.h);
                 e.set_color(png::ColorType::Rgba);
                 e.set_depth(png::BitDepth::Eight);
-                e.write_header().unwrap().write_image_data(&face.rgba).unwrap();
+                e.write_header()
+                    .unwrap()
+                    .write_image_data(&face.rgba)
+                    .unwrap();
             }
         }
     }
@@ -1414,15 +1849,31 @@ mod tests {
             (format!("/{path}"), 200, png_bytes()),
         ]);
         let (got, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers(&server)));
-        assert_eq!(done, Ok(Summary { found: 1, missing: 1, failed: 0 }));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 1,
+                failed: 0
+            })
+        );
         assert_eq!(got[0].stem, "my weird name");
-        assert!(is_png(&std::fs::read(root.join("Labels/GBA/my weird name.png")).unwrap()));
+        assert!(is_png(
+            &std::fs::read(root.join("Labels/GBA/my weird name.png")).unwrap()
+        ));
         let cached = std::fs::read_to_string(root.join(CRC_CACHE)).unwrap();
         assert!(cached.contains(&format!("{crc:08X}	512	")), "{cached}");
         assert!(cached.contains("Games/GBA/my weird name.gba"), "{cached}");
         // Second run: the index comes from the card and nothing is left to fetch.
         let (_, again) = drain(&ArtJob::start_at(root.to_path_buf(), servers(&server)));
-        assert_eq!(again, Ok(Summary { found: 0, missing: 1, failed: 0 }));
+        assert_eq!(
+            again,
+            Ok(Summary {
+                found: 0,
+                missing: 1,
+                failed: 0
+            })
+        );
     }
 
     #[test]
@@ -1437,9 +1888,16 @@ mod tests {
         let mut text = std::fs::read_to_string(root.join(CRC_CACHE)).unwrap();
         text = text.replacen(&format!("{real:08X}"), "12345678", 1);
         std::fs::write(root.join(CRC_CACHE), text).unwrap();
-        assert_eq!(Crcs::load(root).of(root, &rom_path).unwrap(), 0x1234_5678, "trusted while size and mtime match");
+        assert_eq!(
+            Crcs::load(root).of(root, &rom_path).unwrap(),
+            0x1234_5678,
+            "trusted while size and mtime match"
+        );
         std::fs::write(&rom_path, b"patched").unwrap();
-        assert_eq!(Crcs::load(root).of(root, &rom_path).unwrap(), crc32(0, b"patched"));
+        assert_eq!(
+            Crcs::load(root).of(root, &rom_path).unwrap(),
+            crc32(0, b"patched")
+        );
     }
 
     #[test]
