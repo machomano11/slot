@@ -1083,7 +1083,7 @@ impl App {
             Platform::Gba => Some(&mut self.state.bezel_gba),
             Platform::Gb => Some(&mut self.state.bezel_gb),
             Platform::Gbc => Some(&mut self.state.bezel_gbc),
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => None,
         }
     }
 
@@ -1092,7 +1092,7 @@ impl App {
             Platform::Gba => &self.state.bezel_gba,
             Platform::Gb => &self.state.bezel_gb,
             Platform::Gbc => &self.state.bezel_gbc,
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => {
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => {
                 return BezelPick::None
             }
         };
@@ -1553,7 +1553,7 @@ impl App {
     }
 
     /// L1/R1 switch the picture on consoles without shoulder buttons; on a GBA or SNES
-    /// they are the game's own L and R.
+    /// they are the game's own L and R, and on a Mega Drive the six-button pad's X and Z.
     fn slot_owns_the_shoulders(&self) -> bool {
         matches!(self.phase, Phase::Playing { .. })
             && matches!(
@@ -1599,7 +1599,7 @@ impl App {
             return;
         }
         // Consoles whose L and R are the game's take this shortcut instead.
-        if !matches!(self.platform, Platform::Gba | Platform::Snes) {
+        if !matches!(self.platform, Platform::Gba | Platform::Snes | Platform::Md) {
             self.refuse();
             return;
         }
@@ -1818,15 +1818,7 @@ impl App {
     }
 
     pub fn screen_shader(&self) -> Shader {
-        match self.playing_platform() {
-            Platform::Gba => self.state.shader_gba,
-            Platform::Gb => self.state.shader_gb,
-            Platform::Gbc => self.state.shader_gbc,
-            Platform::Nes => self.state.shader_nes,
-            Platform::Snes => self.state.shader_snes,
-            Platform::Gg => self.state.shader_gg,
-            Platform::Sms => self.state.shader_sms,
-        }
+        self.state.shader(self.playing_platform())
     }
 
     pub fn colour_correction(&self) -> bool {
@@ -1842,7 +1834,7 @@ impl App {
             Platform::Gba => self.state.colour_correction_gba,
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => false,
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => false,
         }
     }
 
@@ -2348,18 +2340,11 @@ impl App {
     fn change_setting(&mut self, row: QuickRow, right: bool) {
         if row == QuickRow::Shader {
             let platform = self.playing_platform();
-            let s = &mut self.state;
-            let shader = match platform {
-                Platform::Nes => Some((&mut s.shader_nes, &Shader::NES[..])),
-                Platform::Snes => Some((&mut s.shader_snes, &Shader::NES[..])),
-                Platform::Sms => Some((&mut s.shader_sms, &Shader::NES[..])),
-                Platform::Gg => Some((&mut s.shader_gg, &Shader::GB[..])),
-                _ => None,
-            };
-            if let Some((shader, choices)) = shader {
-                let to = shader.step(choices, right);
-                if to != *shader {
-                    *shader = to;
+            if !platform.game_boy_family() {
+                let shader = self.state.shader(platform);
+                let to = shader.step(platform.shaders(), right);
+                if to != shader {
+                    self.state.set_shader(platform, to);
                     self.persist();
                 }
                 return;
@@ -2514,17 +2499,10 @@ impl App {
         if !matches!(self.phase, Phase::Inserting { .. } | Phase::Playing { .. }) {
             return;
         }
-        let (shader, choices) = match self.playing_platform() {
-            Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb => (&mut self.state.shader_gb, &Shader::GB[..]),
-            Platform::Gbc => (&mut self.state.shader_gbc, &Shader::GB[..]),
-            Platform::Nes => (&mut self.state.shader_nes, &Shader::NES[..]),
-            Platform::Snes => (&mut self.state.shader_snes, &Shader::NES[..]),
-            Platform::Gg => (&mut self.state.shader_gg, &Shader::GB[..]),
-            Platform::Sms => (&mut self.state.shader_sms, &Shader::NES[..]),
-        };
-        *shader = shader.step(choices, right);
-        let said = match *shader {
+        let platform = self.playing_platform();
+        let shader = self.state.shader(platform).step(platform.shaders(), right);
+        self.state.set_shader(platform, shader);
+        let said = match shader {
             Shader::Off => Toast::ShaderOff,
             Shader::Lcd3x => Toast::ShaderLcd3x,
             Shader::Grid => Toast::ShaderGrid,
@@ -2592,7 +2570,7 @@ impl App {
                 Platform::Gbc => QuickRow::GbcColourCorrection,
                 // A NES, SNES or Master System drew on a TV: there is no LCD colour to
                 // correct. PicoDrive has none for the Game Gear's.
-                Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => {
+                Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => {
                     self.refuse();
                     return true;
                 }
@@ -5454,7 +5432,7 @@ fn bezel_slot(platform: Platform) -> Option<usize> {
         Platform::Gba => Some(0),
         Platform::Gb => Some(1),
         Platform::Gbc => Some(2),
-        Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
+        Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => None,
     }
 }
 
@@ -5554,7 +5532,7 @@ impl CartMenu {
         let rows = match cart.platform {
             Platform::Nes | Platform::Snes => vec![CartRow::Shape, CartRow::Reset],
             // A Sega cart has one shape and colour: its menu never opens.
-            Platform::Gg | Platform::Sms => vec![CartRow::Reset],
+            Platform::Gg | Platform::Sms | Platform::Md => vec![CartRow::Reset],
             Platform::Gb | Platform::Gbc => vec![
                 CartRow::Colour,
                 CartRow::Finish,

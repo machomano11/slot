@@ -223,8 +223,10 @@ pub fn apply_core_options(
     }
     if which == Core::Picodrive {
         // Slot scales the picture itself, so the core sends it square-pixelled; the Game
-        // Gear's screen is shown as it was, without the LCD's smearing.
+        // Gear's screen is shown as it was, without the LCD's smearing. A Mega Drive gets
+        // the six-button pad: its X, Y and Z are the shoulders and the top face button.
         for (key, value) in [
+            ("picodrive_input1", "6 button pad"),
             ("picodrive_aspect", "PAR"),
             ("picodrive_ggghost", "off"),
             ("picodrive_region", "Auto"),

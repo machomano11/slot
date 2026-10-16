@@ -140,13 +140,15 @@ const FAMICOM_LABEL: (u32, u32, u32, u32) = {
 
 /// A plain cart's size on the shelf and its label recess (as fractions of its outline, x0 y0
 /// x1 y1). The Game Gear's small landscape cart is drawn a little narrower than a GBA one,
-/// the Master System's tall one about as wide as a NES cart.
+/// the Master System's tall one about as wide as a NES cart, the Mega Drive's a little wider.
 const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
     match cart {
         // gg_cart.svg: the label below the grip, x 20..220, y 36..166 of 240x192.
         PlainCart::GameGear => (300, GG_SEATED_H, [83, 188, 917, 865]),
         // sms_cart.svg: the label over the top, x 18..222, y 12..198 of 240x300.
         PlainCart::MasterSystem => (264, SMS_SEATED_H, [75, 40, 925, 660]),
+        // md_cart.svg: the label below the grip, x 20..220, y 52..250 of 240x288.
+        PlainCart::MegaDrive => (280, MD_SEATED_H, [83, 181, 917, 868]),
     }
 }
 
@@ -216,7 +218,12 @@ enum Shape {
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
+        Platform::Gba
+        | Platform::Nes
+        | Platform::Snes
+        | Platform::Gg
+        | Platform::Sms
+        | Platform::Md => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -296,6 +303,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
     match platform {
         Platform::Gg => Some(PlainCart::GameGear),
         Platform::Sms => Some(PlainCart::MasterSystem),
+        Platform::Md => Some(PlainCart::MegaDrive),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }
 }
@@ -441,6 +449,8 @@ const SNES_SEATED_H: u32 = 157;
 const GG_SEATED_H: u32 = 192;
 /// A Master System cart is about 4:5, connector foot included.
 const SMS_SEATED_H: u32 = 300;
+/// A Mega Drive cart is about 5:6, its connector inside the shell.
+const MD_SEATED_H: u32 = 288;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
@@ -450,6 +460,7 @@ pub fn seated_box(platform: Platform) -> (u32, u32) {
         Platform::Snes => (SEATED_W, SNES_SEATED_H),
         Platform::Gg => (SEATED_W, GG_SEATED_H),
         Platform::Sms => (SEATED_W, SMS_SEATED_H),
+        Platform::Md => (SEATED_W, MD_SEATED_H),
     }
 }
 
@@ -461,6 +472,7 @@ pub fn cart_box(platform: Platform) -> (u32, u32) {
         Platform::Snes => Shape::Snes(SnesShell::Us),
         Platform::Gg => Shape::Plain(PlainCart::GameGear),
         Platform::Sms => Shape::Plain(PlainCart::MasterSystem),
+        Platform::Md => Shape::Plain(PlainCart::MegaDrive),
     });
     (s.w, s.h)
 }

@@ -112,7 +112,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
             None => famicom_shell(&cart.stem),
         },
         Platform::Nes => NES_SHELL,
-        Platform::Gg | Platform::Sms => SEGA_SHELL,
+        Platform::Gg | Platform::Sms | Platform::Md => SEGA_SHELL,
         Platform::Snes => match crate::cart::snes_shell_of(cart) {
             Some(crate::SnesShell::Pal) => SNES_PAL_SHELL,
             _ => SNES_SHELL,
