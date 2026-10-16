@@ -1,11 +1,14 @@
 pub mod app;
 pub mod audio;
+pub mod badge;
 pub mod bezel;
 pub mod boot_time;
 pub mod bootlogo;
 pub mod build_info;
 pub mod cable;
+pub mod card_log;
 pub mod cart_faces;
+pub mod cloud;
 pub mod core;
 pub mod core_picker;
 #[cfg(unix)]
@@ -29,8 +32,11 @@ pub mod link_radio;
 pub mod link_screen;
 pub mod link_start;
 pub mod link_state;
+pub mod net;
+pub mod panel_turn;
 pub mod persist;
 pub mod prefetch;
+pub mod ra;
 pub mod resample;
 pub mod rewind;
 pub mod root;

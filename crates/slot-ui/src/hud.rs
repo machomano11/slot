@@ -1,13 +1,16 @@
-use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
+use slot_gfx::{Canvas, Draw, TexId, OUT_H};
 use slot_store::{BLUE_LIGHT_MAX, BRIGHTNESS_MAX, VOLUME_MAX};
 
 use crate::icon::icon_box;
-use crate::toast::toast_rect;
+use crate::toast::{message_rect, toast_rect};
 use crate::{Badge, Icon, Toast};
 
 pub type Millis = u64;
 
 pub const HUD_MS: Millis = 1500;
+
+/// How long a run-time message, such as an unlocked achievement, stays up.
+pub const MESSAGE_MS: Millis = 4000;
 const FADE_MS: Millis = 250;
 const PULSE_MS: Millis = 500;
 
@@ -34,8 +37,8 @@ const ICON_GAP: f32 = 10.0;
 
 const BADGE_MARGIN: f32 = 12.0;
 
-pub fn badge_at(w: f32, h: f32) -> (f32, f32) {
-    (OUT_W as f32 - BADGE_MARGIN - w, (PLATE_H - h) / 2.0)
+pub fn badge_at(canvas: Canvas, w: f32, h: f32) -> (f32, f32) {
+    (canvas.w - BADGE_MARGIN - w, (PLATE_H - h) / 2.0)
 }
 
 const BAR_W: f32 = 320.0;
@@ -153,6 +156,8 @@ pub struct Hud {
     alarm: Option<Millis>,
     icons: Vec<TexId>,
     toasts: Vec<TexId>,
+    message: Option<TexId>,
+    message_at: Option<Millis>,
     link: LinkBadge,
     link_faces: Vec<TexId>,
 }
@@ -172,6 +177,26 @@ impl Hud {
 
     pub fn toast(&mut self, toast: Toast, now: Millis) {
         self.said = Some((toast, now));
+        self.message_at = None;
+    }
+
+    /// The texture [`crate::message_face`] faces are written into.
+    pub fn set_message_texture(&mut self, tex: TexId) {
+        self.message = Some(tex);
+    }
+
+    pub fn message_texture(&self) -> Option<TexId> {
+        self.message
+    }
+
+    /// Shows whatever the message texture holds now, for [`MESSAGE_MS`].
+    pub fn message(&mut self, now: Millis) {
+        self.message_at = Some(now);
+        self.said = None;
+    }
+
+    pub fn message_visible(&self, now: Millis) -> bool {
+        self.message_alpha(now) > 0.0
     }
 
     pub fn set_alarm(&mut self, on: bool, now: Millis) {
@@ -243,21 +268,23 @@ impl Hud {
         self.alpha(now) > 0.0
     }
 
-    pub fn draw(&self, now: Millis, out: &mut Vec<Draw>) {
+    pub fn draw(&self, canvas: Canvas, now: Millis, out: &mut Vec<Draw>) {
         let alpha = self.alpha(now);
-        let toast = self.toast_alpha(now);
+        let toast = self.toast_alpha(now).max(self.message_alpha(now));
         if alpha > 0.0 || toast > 0.0 {
             out.push(Draw::Rect {
                 x: 0.0,
                 y: 0.0,
-                w: OUT_W as f32,
+                w: canvas.w,
                 h: PLATE_H,
                 colour: faded(PLATE, alpha.max(toast)),
             });
-            if toast > 0.0 {
-                self.draw_toast(now, out);
+            if self.message_alpha(now) > 0.0 {
+                self.draw_message(now, out);
+            } else if toast > 0.0 {
+                self.draw_toast(canvas, now, out);
             } else {
-                self.draw_bar(alpha, out);
+                self.draw_bar(canvas, alpha, out);
             }
         }
         let link = self
@@ -266,15 +293,15 @@ impl Hud {
             .and_then(|i| self.link_faces.get(i).copied());
         let ff = ff_badge(self.ff).and_then(|i| self.icons.get(i.index()).copied());
         if let Some(tex) = link.or(ff) {
-            self.place_badge(tex, out);
+            self.place_badge(canvas, tex, out);
         }
         if let Some(since) = self.alarm {
-            self.draw_alarm(now.saturating_sub(since), out);
+            self.draw_alarm(canvas, now.saturating_sub(since), out);
         }
     }
 
-    fn draw_bar(&self, alpha: f32, out: &mut Vec<Draw>) {
-        let x = (OUT_W as f32 - BAR_W) / 2.0;
+    fn draw_bar(&self, canvas: Canvas, alpha: f32, out: &mut Vec<Draw>) {
+        let x = canvas.centred(BAR_W);
         if let Some(tex) = self.icon() {
             let (w, h) = icon_box(HUD_ICON_PX);
             out.push(Draw::Tex {
@@ -302,10 +329,10 @@ impl Hud {
         });
     }
 
-    fn place_badge(&self, tex: TexId, out: &mut Vec<Draw>) {
+    fn place_badge(&self, canvas: Canvas, tex: TexId, out: &mut Vec<Draw>) {
         let (w, h) = icon_box(HUD_ICON_PX);
         let (w, h) = (w as f32, h as f32);
-        let (x, y) = badge_at(w, h);
+        let (x, y) = badge_at(canvas, w, h);
         out.push(Draw::Tex {
             x,
             y,
@@ -316,11 +343,11 @@ impl Hud {
         });
     }
 
-    fn draw_alarm(&self, age: Millis, out: &mut Vec<Draw>) {
+    fn draw_alarm(&self, canvas: Canvas, age: Millis, out: &mut Vec<Draw>) {
         out.push(Draw::Rect {
             x: 0.0,
             y: (OUT_H as f32 - ALARM_BAND_H) / 2.0,
-            w: OUT_W as f32,
+            w: canvas.w,
             h: ALARM_BAND_H,
             colour: pulse(age),
         });
@@ -328,7 +355,7 @@ impl Hud {
         let Some(tex) = self.toasts.get(alarm.index()).copied() else {
             return;
         };
-        let (x, y, w, h) = toast_rect(alarm);
+        let (x, y, w, h) = toast_rect(canvas, alarm);
         out.push(Draw::Tex {
             x,
             y,
@@ -339,7 +366,29 @@ impl Hud {
         });
     }
 
-    fn draw_toast(&self, now: Millis, out: &mut Vec<Draw>) {
+    fn draw_message(&self, now: Millis, out: &mut Vec<Draw>) {
+        let Some(tex) = self.message else {
+            return;
+        };
+        let (x, y, w, h) = message_rect();
+        out.push(Draw::Tex {
+            x,
+            y,
+            w,
+            h,
+            tex,
+            alpha: self.message_alpha(now),
+        });
+    }
+
+    fn message_alpha(&self, now: Millis) -> f32 {
+        match (self.message_at, self.message) {
+            (Some(shown), Some(_)) => fade_after(shown, now, MESSAGE_MS),
+            _ => 0.0,
+        }
+    }
+
+    fn draw_toast(&self, canvas: Canvas, now: Millis, out: &mut Vec<Draw>) {
         let alpha = self.toast_alpha(now);
         if alpha <= 0.0 {
             return;
@@ -354,7 +403,7 @@ impl Hud {
         let Some((said, _)) = self.said else {
             return;
         };
-        let (x, y, w, h) = toast_rect(said);
+        let (x, y, w, h) = toast_rect(canvas, said);
         out.push(Draw::Tex {
             x,
             y,
@@ -396,11 +445,15 @@ impl Hud {
 }
 
 fn fade(shown: Millis, now: Millis) -> f32 {
+    fade_after(shown, now, HUD_MS)
+}
+
+fn fade_after(shown: Millis, now: Millis, lasts: Millis) -> f32 {
     let age = now.saturating_sub(shown);
-    if age >= HUD_MS {
+    if age >= lasts {
         return 0.0;
     }
-    ((HUD_MS - age) as f32 / FADE_MS as f32).min(1.0)
+    ((lasts - age) as f32 / FADE_MS as f32).min(1.0)
 }
 
 fn pulse(age: Millis) -> [f32; 4] {

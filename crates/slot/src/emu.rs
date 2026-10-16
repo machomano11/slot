@@ -81,9 +81,16 @@ enum Cmd {
     EndLink,
     BeginCable(u8, Box<dyn LinkChannel>),
     SetOption(String, String),
+    Refresh,
 }
 
 struct Shared {
+    /// RetroAchievements login for the worker to start with (user, token, console).
+    cheevos_login: Mutex<Option<(String, String, slot_cheevos::Console)>>,
+    /// What RetroAchievements said, for the app to show.
+    cheevos_notices: Mutex<Vec<slot_cheevos::Notice>>,
+    /// The loaded game's badge URLs, to fetch before any unlock needs one.
+    cheevos_badges: Mutex<Vec<String>>,
     input: AtomicU16,
     speed: AtomicU8,
     observed: AtomicU8,
@@ -161,6 +168,9 @@ impl EmuHandle {
             turbo: AtomicBool::new(true),
             recording: AtomicBool::new(true),
             stop: AtomicBool::new(false),
+            cheevos_login: Mutex::new(None),
+            cheevos_notices: Mutex::new(Vec::new()),
+            cheevos_badges: Mutex::new(Vec::new()),
             volume: AtomicU8::new(100),
             fast_steps: AtomicU32::new(FAST_STEPS),
             ff_sound: AtomicBool::new(false),
@@ -244,6 +254,37 @@ impl EmuHandle {
 
     pub fn end_link(&self) {
         request(&self.cmds, &self.shared, Cmd::EndLink);
+    }
+
+    /// Turns RetroAchievements on for this game (softcore), logged in with a saved token.
+    pub fn achievements(&self, user: &str, token: &str, console: slot_cheevos::Console) {
+        *self
+            .shared
+            .cheevos_login
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some((user.into(), token.into(), console));
+    }
+
+    /// The loaded game's badge URLs, to fetch before any unlock needs one.
+    pub fn take_badge_urls(&self) -> Vec<String> {
+        std::mem::take(
+            &mut *self
+                .shared
+                .cheevos_badges
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()),
+        )
+    }
+
+    /// What RetroAchievements said since the last call, for the app to show.
+    pub fn take_achievement_notices(&self) -> Vec<slot_cheevos::Notice> {
+        std::mem::take(
+            &mut *self
+                .shared
+                .cheevos_notices
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()),
+        )
     }
 
     pub fn set_option(&self, key: &str, value: &str) {
@@ -391,6 +432,10 @@ impl EmuHandle {
         rx
     }
 
+    pub fn refresh(&self) {
+        request(&self.cmds, &self.shared, Cmd::Refresh);
+    }
+
     pub fn request_load(&self, state: Vec<u8>) {
         request(&self.cmds, &self.shared, Cmd::Load(state));
     }
@@ -439,6 +484,26 @@ impl Snapshot for EmuSnapshot {
     fn save_ram_trusted(&self) -> bool {
         !self.shared.sav_refused.load(Ordering::Acquire)
     }
+}
+
+/// A RetroAchievements session for the running game: logs in, maps the core's memory,
+/// identifies the ROM. None if rcheevos could not start.
+fn start_cheevos(
+    core: &mut dyn RetroCore,
+    rom: &std::path::Path,
+    user: &str,
+    token: &str,
+    console: slot_cheevos::Console,
+) -> Option<slot_cheevos::Cheevos> {
+    let mut c = slot_cheevos::Cheevos::new(Arc::new(crate::ra::Http))?;
+    let (map, count) = core.memory_map();
+    // The map and regions are the core's own and live as long as its game, which this
+    // session does not outlive (it ends with the worker).
+    let mapped = unsafe { c.set_memory(map, count, console, &mut |id| core.memory_region(id)) };
+    eprintln!("slot: cheevos: {count} memory descriptors, {mapped} bytes mapped for {console:?}");
+    c.login(user, token);
+    c.load_game(rom, console);
+    Some(c)
 }
 
 fn request(cmds: &Sender<Cmd>, shared: &Shared, cmd: Cmd) -> bool {
@@ -572,9 +637,47 @@ impl Worker {
         let mut cable_wait = Duration::ZERO;
         let mut ff = (0u32, 0u32, Duration::ZERO, Instant::now());
         let mut runahead = RunAhead::default();
+        let mut cheevos: Option<slot_cheevos::Cheevos> = None;
+        let mut was_rewinding = false;
         while !self.shared.stop.load(Ordering::Relaxed) {
             for cmd in self.cmds.try_iter() {
-                self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+                self.apply(
+                    cmd,
+                    core.as_mut(),
+                    &mut transport,
+                    &mut cable,
+                    &link,
+                    &mut cheevos,
+                );
+            }
+            let login = self
+                .shared
+                .cheevos_login
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .take();
+            if let Some((user, token, console)) = login {
+                cheevos = start_cheevos(core.as_mut(), &rom, &user, &token, console);
+            }
+            if let Some(c) = &cheevos {
+                let said = c.take();
+                if said
+                    .iter()
+                    .any(|n| matches!(n, slot_cheevos::Notice::GameLoaded(Ok(_))))
+                {
+                    *self
+                        .shared
+                        .cheevos_badges
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner()) = c.badge_urls();
+                }
+                if !said.is_empty() {
+                    self.shared
+                        .cheevos_notices
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .extend(said);
+                }
             }
 
             if let Some(t) = transport.as_mut() {
@@ -591,6 +694,9 @@ impl Worker {
                             } else {
                                 match core.unserialize(&state) {
                                     Ok(()) => {
+                                        if let Some(c) = &cheevos {
+                                            c.reset();
+                                        }
                                         eprintln!(
                                         "slot: cable: restored {} bytes, running the host's game",
                                         state.len()
@@ -654,6 +760,12 @@ impl Worker {
                 Speed::Normal => 1,
                 Speed::Fast => self.shared.fast_steps.load(Ordering::Relaxed),
             };
+            if rewinding != was_rewinding {
+                was_rewinding = rewinding;
+                if let (true, Some(c)) = (rewinding, &cheevos) {
+                    c.reset();
+                }
+            }
             if rewinding {
                 if let Some(state) = rewind.pop() {
                     if let Err(e) = core.unserialize(&state) {
@@ -734,6 +846,9 @@ impl Worker {
                             }
                         },
                         None => core.run_frame(input),
+                    }
+                    if let Some(c) = &cheevos {
+                        c.frame();
                     }
                     let took = frame_began.elapsed();
                     if last {
@@ -849,6 +964,11 @@ impl Worker {
                 }
             }
 
+            if ceiling == 0 && !rewinding {
+                if let Some(c) = &cheevos {
+                    c.idle();
+                }
+            }
             if let Some((began, core_time)) = fast_span.take() {
                 post_cost = blend(post_cost, began.elapsed().saturating_sub(core_time));
             }
@@ -867,7 +987,14 @@ impl Worker {
                         }
                         Wait::Request => {
                             for cmd in self.cmds.try_iter() {
-                                self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+                                self.apply(
+                                    cmd,
+                                    core.as_mut(),
+                                    &mut transport,
+                                    &mut cable,
+                                    &link,
+                                    &mut cheevos,
+                                );
                             }
                             continue;
                         }
@@ -890,7 +1017,17 @@ impl Worker {
             }
         }
         for cmd in self.cmds.try_iter() {
-            self.apply(cmd, core.as_mut(), &mut transport, &mut cable, &link);
+            self.apply(
+                cmd,
+                core.as_mut(),
+                &mut transport,
+                &mut cable,
+                &link,
+                &mut cheevos,
+            );
+        }
+        if let Some(c) = cheevos.take() {
+            c.unload();
         }
         ring.set_muted(false);
         ring.set_idle(false);
@@ -907,6 +1044,7 @@ impl Worker {
         transport: &mut Option<Box<dyn LinkChannel>>,
         cable: &mut Option<Cable>,
         link: &Link,
+        cheevos: &mut Option<slot_cheevos::Cheevos>,
     ) {
         match cmd {
             Cmd::Save(reply) => match core.serialize() {
@@ -919,7 +1057,24 @@ impl Worker {
                 if let Err(e) = core.unserialize(&self.for_core(state)) {
                     eprintln!("slot: {e}");
                 }
+                if let Some(c) = cheevos.as_ref() {
+                    c.reset();
+                }
             }
+            Cmd::Refresh => match core.serialize() {
+                Ok(state) => {
+                    core.set_frame_skip(true);
+                    core.run_frame(ButtonMask(0));
+                    core.set_frame_skip(false);
+                    core.run_frame(ButtonMask(0));
+                    self.publish(core.video_xrgb8888());
+                    let _ = core.take_audio();
+                    if let Err(e) = core.unserialize(&state) {
+                        eprintln!("slot: refresh: {e}");
+                    }
+                }
+                Err(e) => eprintln!("slot: refresh: {e}"),
+            },
             Cmd::Sav(reply) => {
                 let _ = reply.send(core.save_ram());
             }

@@ -8,7 +8,7 @@ use std::{
     process::{Command, Stdio},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
-        mpsc, Arc,
+        mpsc, Arc, Mutex,
     },
     thread,
     time::{Duration, Instant},
@@ -273,6 +273,45 @@ fn helper(firmware: &Path, root: &Path) -> Option<PathBuf> {
     firmware.is_file().then(|| firmware.into())
 }
 fn service(on: bool) -> Result<()> {
+    run_helper(if on { "start" } else { "stop" }, Duration::from_secs(15))
+}
+/// Joined but no address: have the helper start a DHCP client, or make the
+/// running one ask again. A client that kept an old lease or backed off while the
+/// supplicant was joining otherwise leaves the menu on "Waiting for IP".
+/// At most once every 10 s, so the menu's 2 s checks don't keep restarting it.
+fn request_address() {
+    static LAST: Mutex<Option<Instant>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    if last.is_some_and(|t| t.elapsed() < Duration::from_secs(10)) {
+        return;
+    }
+    *last = Some(Instant::now());
+    drop(last);
+    if let Err(e) = run_helper("dhcp", Duration::from_secs(5)) {
+        eprintln!("slot: wifi: {e}");
+    }
+}
+/// The firmware starts its own supplicant at boot, which joins a saved network
+/// but runs no DHCP client, so Wi-Fi sat on "Waiting for IP" until it was
+/// switched off and on. Watch it for a minute after boot and ask for an address
+/// once it has joined. Never blocks startup.
+pub fn ensure_address_at_boot() {
+    thread::spawn(|| {
+        let deadline = Instant::now() + Duration::from_secs(60);
+        while Instant::now() < deadline {
+            if let Ok(s) = Control::open().and_then(|c| c.command("STATUS")) {
+                if field(&s, "wpa_state") == Some("COMPLETED") {
+                    if field(&s, "ip_address").is_some() {
+                        return;
+                    }
+                    request_address();
+                }
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+}
+fn run_helper(verb: &str, limit: Duration) -> Result<()> {
     let root =
         PathBuf::from(std::env::var_os("SLOT_ROOT").unwrap_or_else(|| "/mnt/SDCARD/Slot".into()));
     let Some(script) = helper(Path::new("/etc/wifi/wifi_init.sh"), &root) else {
@@ -280,7 +319,7 @@ fn service(on: bool) -> Result<()> {
     };
     let mut child = Command::new("/bin/sh")
         .arg(&script)
-        .arg(if on { "start" } else { "stop" })
+        .arg(verb)
         .env("SLOT_ROOT", &root)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -296,7 +335,7 @@ fn service(on: bool) -> Result<()> {
                 Err("Could not switch Wi-Fi; see Logs/wifi.log".into())
             };
         }
-        if start.elapsed() > Duration::from_secs(15) {
+        if start.elapsed() > limit {
             let _ = child.kill();
             let _ = child.wait();
             return Err("Wi-Fi helper timed out; see Logs/wifi.log".into());
@@ -415,6 +454,8 @@ struct Reply {
     on: bool,
     status: String,
     networks: Option<Vec<Network>>,
+    /// Joined a network with no address yet: check again soon.
+    awaiting_ip: bool,
 }
 fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
     if let Job::Power(on) = job {
@@ -424,6 +465,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                 on: false,
                 status: "Wi-Fi off".into(),
                 networks: Some(Vec::new()),
+                awaiting_ip: false,
             });
         }
         for _ in 0..20 {
@@ -438,6 +480,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                 on: true,
                 status: e,
                 networks: Some(Vec::new()),
+                awaiting_ip: false,
             }),
             r => r,
         };
@@ -450,6 +493,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
                     on: false,
                     status: "Wi-Fi off / service unavailable".into(),
                     networks: None,
+                    awaiting_ip: false,
                 })
             } else {
                 Err(e)
@@ -458,6 +502,10 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
     };
     let s = c.command("STATUS")?;
     let connected = field(&s, "wpa_state") == Some("COMPLETED");
+    let awaiting_ip = connected && field(&s, "ip_address").is_none();
+    if awaiting_ip {
+        request_address();
+    }
     let mut r = Reply {
         on: true,
         status: if connected {
@@ -470,6 +518,7 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
             "Not connected".into()
         },
         networks: None,
+        awaiting_ip,
     };
     match job {
         Job::Status => {}
@@ -483,6 +532,22 @@ fn run(job: Job, cancel: &AtomicBool) -> Result<Reply> {
         }
         Job::Connect(n, p) => {
             r.status = connect(&c, &n, p, cancel)?;
+            r.awaiting_ip = false;
+            if r.status.ends_with("waiting for IP address") {
+                // Ask for an address and give it a moment, so the menu reads
+                // Connected rather than waiting whenever the network is quick.
+                request_address();
+                r.awaiting_ip = true;
+                for _ in 0..20 {
+                    pause(cancel, 500)?;
+                    let s = c.command("STATUS")?;
+                    if let Some(ip) = field(&s, "ip_address") {
+                        r.status = format!("Connected  {ip}");
+                        r.awaiting_ip = false;
+                        break;
+                    }
+                }
+            }
             r.networks = Some(scan_rows(
                 &c.command("SCAN_RESULTS")?,
                 &c.command("LIST_NETWORKS")?,
@@ -499,11 +564,77 @@ struct Worker {
     rx: mpsc::Receiver<Result<Reply>>,
     cancel: Arc<AtomicBool>,
 }
+/// What the on-screen keyboard is typing: a network's password or the RetroAchievements login.
+enum KeyTarget {
+    Wifi(Network),
+    RaUser,
+    RaPassword,
+}
 struct Keyboard {
-    network: Network,
+    target: KeyTarget,
+    secret: bool,
     password: String,
     key: usize,
     page: usize,
+}
+/// The text typed so far: dots for a password, as typed otherwise.
+fn masked(k: &Keyboard) -> String {
+    let n = k.password.chars().count();
+    if k.secret {
+        "*".repeat(n.min(30))
+    } else {
+        k.password.chars().skip(n.saturating_sub(30)).collect()
+    }
+}
+fn card_root() -> PathBuf {
+    PathBuf::from(std::env::var_os("SLOT_ROOT").unwrap_or_else(|| "/mnt/SDCARD/Slot".into()))
+}
+/// Online: wlan0 has a way out (a default route, set when DHCP hands out an address). Joined
+/// to a network alone is not enough: with no address nothing can be reached.
+pub fn online() -> bool {
+    fs::read_to_string("/proc/net/route").is_ok_and(|s| routed(&s))
+}
+fn routed(table: &str) -> bool {
+    table.lines().skip(1).any(|l| {
+        let f: Vec<&str> = l.split_whitespace().collect();
+        f.len() > 1 && f[0] == "wlan0" && f[1] == "00000000"
+    })
+}
+/// The RetroAchievements screen: log in, test the connection, show a test unlock, log out.
+/// `test`: a pretend unlock waiting for the app to toast it.
+struct RaScreen {
+    account: Option<crate::ra::Account>,
+    user: String,
+    password: String,
+    job: Option<mpsc::Receiver<RaDone>>,
+    test: Option<TestUnlock>,
+}
+/// A pretend unlock: title, description, points, and a badge already cached on the card.
+pub struct TestUnlock {
+    pub title: String,
+    pub description: String,
+    pub points: u32,
+    pub badge: Option<PathBuf>,
+}
+/// Any badge cached on the card, so the test toast looks like the real thing.
+fn cached_badge(root: &Path) -> Option<PathBuf> {
+    let mut v: Vec<PathBuf> = fs::read_dir(root.join("System/Cache/Badges"))
+        .ok()?
+        .filter_map(|e| Some(e.ok()?.path()))
+        .filter(|p| p.extension().is_some_and(|x| x == "png"))
+        .collect();
+    v.sort();
+    v.into_iter().next()
+}
+enum RaDone {
+    LoggedIn(Result<(crate::ra::Account, crate::ra::Profile)>),
+    Checked(Result<crate::ra::Profile>),
+}
+fn profile_line(p: &crate::ra::Profile) -> String {
+    format!(
+        "Connected in {} ms: {}, {} points ({} softcore)",
+        p.ms, p.user, p.score, p.softcore
+    )
 }
 const KEYS: [&str; 3] = [
     "abcdefghijklmnopqrstuvwxyz0123456789    ",
@@ -520,6 +651,9 @@ pub struct WifiMenu {
     row: usize,
     keyboard: Option<Keyboard>,
     refreshed: Instant,
+    awaiting_ip: bool,
+    /// Set when this overlay is the RetroAchievements screen rather than Wi-Fi.
+    ra: Option<RaScreen>,
 }
 impl WifiMenu {
     #[allow(clippy::new_without_default)] // new() starts a status query on a worker thread
@@ -534,14 +668,55 @@ impl WifiMenu {
             row: 0,
             keyboard: None,
             refreshed: Instant::now(),
+            awaiting_ip: false,
+            ra: None,
         };
         s.start(Job::Status);
         s
     }
+    /// The overlay behind HOME > RetroAchievements.
+    pub fn achievements() -> Self {
+        let account = crate::ra::load(&card_root());
+        let status = match &account {
+            Some(a) => format!("Logged in as {}", a.user),
+            None => "Log in with your RetroAchievements account".into(),
+        };
+        Self {
+            worker: None,
+            face: None,
+            dirty: true,
+            on: true,
+            status,
+            networks: Vec::new(),
+            row: 0,
+            keyboard: None,
+            refreshed: Instant::now(),
+            awaiting_ip: false,
+            ra: Some(RaScreen {
+                account,
+                user: String::new(),
+                password: String::new(),
+                job: None,
+                test: None,
+            }),
+        }
+    }
     pub fn busy(&self) -> bool {
-        self.worker.is_some()
+        self.worker.is_some() || self.ra.as_ref().is_some_and(|r| r.job.is_some())
+    }
+    /// The test unlock asked for since the last call, for the app to toast.
+    pub fn take_test_unlock(&mut self) -> Option<TestUnlock> {
+        self.ra.as_mut()?.test.take()
     }
     pub fn cancel(&mut self) {
+        // A reply that comes back after this is dropped unread, so nothing gets saved.
+        if let Some(r) = &mut self.ra {
+            if r.job.take().is_some() {
+                self.status = "Cancelled".into();
+                self.dirty = true;
+                return;
+            }
+        }
         if let Some(w) = &self.worker {
             w.cancel.store(true, Ordering::Relaxed);
             self.status = "Cancelling...".into();
@@ -573,6 +748,7 @@ impl WifiMenu {
         self.dirty = true;
     }
     pub fn poll(&mut self) {
+        self.poll_ra();
         if let Some(w) = &self.worker {
             match w.rx.try_recv() {
                 Ok(r) => {
@@ -581,6 +757,7 @@ impl WifiMenu {
                         Ok(r) => {
                             self.on = r.on;
                             self.status = r.status;
+                            self.awaiting_ip = r.awaiting_ip;
                             if let Some(n) = r.networks {
                                 self.networks = n;
                             }
@@ -601,9 +778,12 @@ impl WifiMenu {
             }
         }
         // Poll only while this menu is open; scanning is always explicit.
-        if !self.busy()
+        // While an address is on its way, check every 2 s instead of every 15.
+        let every = Duration::from_secs(if self.awaiting_ip { 2 } else { 15 });
+        if self.ra.is_none()
+            && !self.busy()
             && self.keyboard.is_none()
-            && self.refreshed.elapsed() > Duration::from_secs(15)
+            && self.refreshed.elapsed() > every
         {
             self.start(Job::Status);
         }
@@ -643,16 +823,33 @@ impl WifiMenu {
                     }
                 }
                 Action::GbaDown(Btn::Start) => {
-                    if let Err(e) = psk(&k.password) {
-                        self.status = e;
-                    } else {
-                        let k = self.keyboard.take().unwrap();
-                        self.start(Job::Connect(k.network, Some(k.password)));
+                    if let KeyTarget::Wifi(_) = k.target {
+                        if let Err(e) = psk(&k.password) {
+                            self.status = e;
+                            return false;
+                        }
+                    }
+                    let k = self.keyboard.take().unwrap();
+                    match k.target {
+                        KeyTarget::Wifi(n) => self.start(Job::Connect(n, Some(k.password))),
+                        KeyTarget::RaUser => {
+                            if let Some(ra) = &mut self.ra {
+                                ra.user = k.password.trim().to_string();
+                            }
+                        }
+                        KeyTarget::RaPassword => {
+                            if let Some(ra) = &mut self.ra {
+                                ra.password = k.password;
+                            }
+                        }
                     }
                 }
                 _ => {}
             }
             return false;
+        }
+        if self.ra.is_some() {
+            return self.ra_input(a);
         }
         match a {
             Action::GbaDown(Btn::B) => return true,
@@ -687,7 +884,8 @@ impl WifiMenu {
         if n.security == Security::Personal && (edit || n.saved.is_none()) {
             self.status = "Password is case sensitive".into();
             self.keyboard = Some(Keyboard {
-                network: n,
+                target: KeyTarget::Wifi(n),
+                secret: true,
                 password: String::new(),
                 key: 0,
                 page: 0,
@@ -696,18 +894,193 @@ impl WifiMenu {
             self.start(Job::Connect(n, None));
         }
     }
-    pub fn render(&self) -> UndoFace {
+    fn poll_ra(&mut self) {
+        let Some(ra) = &mut self.ra else { return };
+        let Some(job) = &ra.job else { return };
+        let done = match job.try_recv() {
+            Ok(d) => d,
+            Err(mpsc::TryRecvError::Empty) => return,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                ra.job = None;
+                self.status = "RetroAchievements check stopped".into();
+                self.dirty = true;
+                return;
+            }
+        };
+        ra.job = None;
+        self.dirty = true;
+        self.status = match done {
+            RaDone::LoggedIn(Ok((account, profile))) => {
+                match crate::ra::save(&card_root(), &account) {
+                    Ok(()) => {
+                        ra.password.clear();
+                        ra.account = Some(account);
+                        self.row = 1;
+                        format!("Logged in. {}", profile_line(&profile))
+                    }
+                    Err(e) => format!("Logged in, but cannot save the login: {e}"),
+                }
+            }
+            RaDone::Checked(Ok(profile)) => profile_line(&profile),
+            RaDone::LoggedIn(Err(e)) | RaDone::Checked(Err(e)) => e,
+        };
+    }
+    fn ra_input(&mut self, a: Action) -> bool {
+        let Some(ra) = &mut self.ra else { return true };
+        let rows = if ra.account.is_some() { 4 } else { 3 };
+        match a {
+            Action::GbaDown(Btn::B) => return true,
+            Action::GbaDown(Btn::Up) => self.row = (self.row + rows - 1) % rows,
+            Action::GbaDown(Btn::Down) => self.row = (self.row + 1) % rows,
+            Action::GbaDown(Btn::A) | Action::Insert => match (&ra.account, self.row) {
+                (None, 0) => {
+                    self.keyboard = Some(Keyboard {
+                        target: KeyTarget::RaUser,
+                        secret: false,
+                        password: ra.user.clone(),
+                        key: 0,
+                        page: 0,
+                    })
+                }
+                (None, 1) => {
+                    self.keyboard = Some(Keyboard {
+                        target: KeyTarget::RaPassword,
+                        secret: true,
+                        password: String::new(),
+                        key: 0,
+                        page: 0,
+                    })
+                }
+                (None, _) => {
+                    if ra.user.is_empty() || ra.password.is_empty() {
+                        self.status = "Enter your username and password first".into();
+                        return false;
+                    }
+                    if !online() {
+                        self.status = "Connect to Wi-Fi first".into();
+                        return false;
+                    }
+                    let (user, password) = (ra.user.clone(), ra.password.clone());
+                    let (tx, rx) = mpsc::channel();
+                    thread::spawn(move || {
+                        let _ = tx.send(RaDone::LoggedIn(crate::ra::login(&user, &password)));
+                    });
+                    ra.job = Some(rx);
+                    self.status = "Logging in...".into();
+                }
+                (Some(_), 0) => {}
+                (Some(account), 1) => {
+                    if !online() {
+                        self.status = "Connect to Wi-Fi first".into();
+                        return false;
+                    }
+                    let account = account.clone();
+                    let (tx, rx) = mpsc::channel();
+                    thread::spawn(move || {
+                        let _ = tx.send(RaDone::Checked(crate::ra::check(&account)));
+                    });
+                    ra.job = Some(rx);
+                    self.status = "Testing the connection...".into();
+                }
+                (Some(_), 2) => {
+                    ra.test = Some(TestUnlock {
+                        title: "Test Achievement".into(),
+                        description: "Toasts are working".into(),
+                        points: 5,
+                        badge: cached_badge(&card_root()),
+                    });
+                    self.status = "Test achievement sent".into();
+                }
+                (Some(_), _) => match crate::ra::forget(&card_root()) {
+                    Ok(()) => {
+                        ra.account = None;
+                        self.row = 0;
+                        self.status = "Logged out".into();
+                    }
+                    Err(e) => self.status = format!("Cannot log out: {e}"),
+                },
+            },
+            _ => {}
+        }
+        false
+    }
+    fn render_ra(&self, ra: &RaScreen) -> UndoFace {
         let mut p = Painter::new();
-        p.text("WI-FI", 32, 24, 576, 30.0);
+        p.text("RETROACHIEVEMENTS", 32, 24, 576, 30.0);
+        p.text(&self.status, 32, 66, 576, 18.0);
+        let rows: Vec<String> = match &ra.account {
+            None => vec![
+                format!(
+                    "USERNAME     {}",
+                    if ra.user.is_empty() { "-" } else { &ra.user }
+                ),
+                format!(
+                    "PASSWORD     {}",
+                    if ra.password.is_empty() {
+                        "-".to_string()
+                    } else {
+                        "*".repeat(ra.password.chars().count().min(20))
+                    }
+                ),
+                "LOG IN".into(),
+            ],
+            Some(a) => vec![
+                format!("LOGGED IN AS  {}", a.user),
+                "TEST CONNECTION".into(),
+                "TEST ACHIEVEMENT".into(),
+                "LOG OUT".into(),
+            ],
+        };
+        for (i, label) in rows.iter().enumerate() {
+            let y = 110 + i * 41;
+            if i == self.row {
+                p.rect(0, y, 640, 38, slot_ui::edge());
+            }
+            p.text(label, 32, y + 1, 576, 23.0);
+        }
+        p.text(
+            if self.busy() {
+                "B CANCEL"
+            } else {
+                "B BACK    A SELECT"
+            },
+            24,
+            430,
+            592,
+            20.0,
+        );
+        UndoFace {
+            rgba: p.rgba,
+            w: 640,
+            h: 480,
+        }
+    }
+    pub fn render(&self) -> UndoFace {
+        if let (None, Some(ra)) = (&self.keyboard, &self.ra) {
+            return self.render_ra(ra);
+        }
+        let mut p = Painter::new();
+        p.text(
+            if self.ra.is_some() {
+                "RETROACHIEVEMENTS"
+            } else {
+                "WI-FI"
+            },
+            32,
+            24,
+            576,
+            30.0,
+        );
         p.text(&self.status, 32, 66, 576, 18.0);
         if let Some(k) = &self.keyboard {
-            p.text(&name(&k.network.ssid), 32, 102, 576, 24.0);
+            let title = match &k.target {
+                KeyTarget::Wifi(n) => name(&n.ssid),
+                KeyTarget::RaUser => "USERNAME".into(),
+                KeyTarget::RaPassword => "PASSWORD".into(),
+            };
+            p.text(&title, 32, 102, 576, 24.0);
             p.text(
-                &format!(
-                    "{}  ({}/64)",
-                    "*".repeat(k.password.len().min(30)),
-                    k.password.len()
-                ),
+                &format!("{}  ({}/64)", masked(k), k.password.len()),
                 32,
                 142,
                 576,
@@ -730,7 +1103,11 @@ impl WifiMenu {
                 18.0,
             );
             p.text(
-                "B BACK                    START CONNECT",
+                if matches!(k.target, KeyTarget::Wifi(_)) {
+                    "B BACK                    START CONNECT"
+                } else {
+                    "B BACK                    START DONE"
+                },
                 24,
                 430,
                 592,
@@ -1057,6 +1434,73 @@ mod tests {
         t.join().unwrap();
     }
     #[test]
+    fn joined_without_an_address_is_not_online() {
+        let head = "Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\n";
+        assert!(!routed(head));
+        assert!(!routed(&format!(
+            "{head}wlan0\t0001A8C0\t00000000\t0001\t0\t0\t0\t00FFFFFF\n"
+        )));
+        assert!(routed(&format!(
+            "{head}wlan0\t00000000\t0101A8C0\t0003\t0\t0\t0\t00000000\n"
+        )));
+        assert!(!routed(&format!(
+            "{head}usb0\t00000000\t0101A8C0\t0003\t0\t0\t0\t00000000\n"
+        )));
+    }
+    fn ra_menu(account: Option<crate::ra::Account>) -> WifiMenu {
+        WifiMenu {
+            worker: None,
+            face: None,
+            dirty: true,
+            on: true,
+            status: String::new(),
+            networks: Vec::new(),
+            row: 0,
+            keyboard: None,
+            refreshed: Instant::now(),
+            awaiting_ip: false,
+            ra: Some(RaScreen {
+                account,
+                user: String::new(),
+                password: String::new(),
+                job: None,
+                test: None,
+            }),
+        }
+    }
+    #[test]
+    fn ra_screen_types_the_login_and_needs_both_fields() {
+        let mut m = ra_menu(None);
+        m.input(Action::GbaDown(Btn::A));
+        assert!(matches!(
+            m.keyboard.as_ref().map(|k| &k.target),
+            Some(KeyTarget::RaUser)
+        ));
+        m.input(Action::GbaDown(Btn::A));
+        m.input(Action::GbaDown(Btn::Start));
+        assert_eq!(m.ra.as_ref().unwrap().user, "a");
+        m.row = 2;
+        m.input(Action::GbaDown(Btn::A));
+        assert_eq!(m.status, "Enter your username and password first");
+        assert!(!m.busy());
+        m.render();
+    }
+    #[test]
+    fn ra_screen_sends_one_test_unlock() {
+        let account = crate::ra::Account {
+            user: "someone".into(),
+            token: "t".into(),
+        };
+        let mut m = ra_menu(Some(account));
+        m.row = 2;
+        assert!(m.take_test_unlock().is_none());
+        m.input(Action::GbaDown(Btn::A));
+        let t = m.take_test_unlock().unwrap();
+        assert_eq!((t.title.as_str(), t.points), ("Test Achievement", 5));
+        assert!(m.take_test_unlock().is_none(), "taken once");
+        assert!(!m.busy());
+    }
+    #[test]
     fn render_fixture() {
         let s = WifiMenu {
             worker: None,
@@ -1066,13 +1510,16 @@ mod tests {
             status: "Password is case sensitive".into(),
             networks: Vec::new(),
             row: 0,
+            awaiting_ip: false,
             keyboard: Some(Keyboard {
-                network: network(),
+                target: KeyTarget::Wifi(network()),
+                secret: true,
                 password: "Test".into(),
                 key: 0,
                 page: 0,
             }),
             refreshed: Instant::now(),
+            ra: None,
         };
         let f = s.render();
         assert_eq!(f.rgba.len(), 640 * 480 * 4);

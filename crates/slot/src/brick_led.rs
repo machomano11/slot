@@ -286,7 +286,8 @@ impl BrickLeds {
             return Some(Value::Unavailable);
         }
         let s = self.settings;
-        let brightness = |v: u8| [Value::Off, Value::Low, Value::Medium, Value::High][v as usize];
+        let brightness =
+            |v: u8| [Value::Off, Value::LedLow, Value::LedMedium, Value::LedHigh][v as usize];
         Some(match row {
             Row::LedMode => {
                 if s.mode == 1 {

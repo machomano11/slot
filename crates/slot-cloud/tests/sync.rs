@@ -1,0 +1,357 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use slot_cloud::{belongs_to, sync, sync_holding, Error, Listed, Remote, Report};
+
+#[derive(Default)]
+struct Memory {
+    files: BTreeMap<String, (Vec<u8>, u64, u64)>,
+    dirs: BTreeSet<String>,
+    version: u64,
+    clock: u64,
+}
+
+impl Memory {
+    fn store(&mut self, rel: &str, bytes: &[u8], modified: u64) {
+        self.version += 1;
+        let parts: Vec<&str> = rel.split('/').collect();
+        for i in 1..parts.len() {
+            self.dirs.insert(parts[..i].join("/"));
+        }
+        self.files
+            .insert(rel.into(), (bytes.to_vec(), self.version, modified));
+    }
+
+    fn bytes(&self, rel: &str) -> Option<&[u8]> {
+        self.files.get(rel).map(|f| f.0.as_slice())
+    }
+
+    fn listed(&self, rel: &str) -> Option<Listed> {
+        self.files.get(rel).map(|(b, v, m)| Listed {
+            name: rel.rsplit('/').next().unwrap().into(),
+            is_dir: false,
+            size: b.len() as u64,
+            tag: format!("v{v}"),
+            modified: Some(*m),
+        })
+    }
+}
+
+impl Remote for Memory {
+    fn list(&mut self, dir: &str) -> Result<Option<Vec<Listed>>, Error> {
+        if !self.dirs.contains(dir) {
+            return Ok(None);
+        }
+        let prefix = format!("{dir}/");
+        let mut out: Vec<Listed> = Vec::new();
+        for d in &self.dirs {
+            if let Some(name) = d.strip_prefix(&prefix).filter(|n| !n.contains('/')) {
+                out.push(Listed {
+                    name: name.into(),
+                    is_dir: true,
+                    size: 0,
+                    tag: String::new(),
+                    modified: None,
+                });
+            }
+        }
+        for rel in self.files.keys() {
+            if rel.strip_prefix(&prefix).is_some_and(|n| !n.contains('/')) {
+                out.push(self.listed(rel).unwrap());
+            }
+        }
+        Ok(Some(out))
+    }
+
+    fn stat(&mut self, rel: &str) -> Result<Option<Listed>, Error> {
+        Ok(self.listed(rel))
+    }
+
+    fn get(&mut self, rel: &str) -> Result<Vec<u8>, Error> {
+        self.bytes(rel)
+            .map(<[u8]>::to_vec)
+            .ok_or(Error::new(format!("404 {rel}")))
+    }
+
+    fn put(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error> {
+        let parent = rel.rsplit_once('/').map(|p| p.0).unwrap_or("");
+        if !parent.is_empty() && !self.dirs.contains(parent) {
+            return Err(Error::new(format!("409 no folder for {rel}")));
+        }
+        self.clock += 1;
+        let now = self.clock;
+        self.store(rel, bytes, now);
+        Ok(())
+    }
+
+    fn mkdir(&mut self, rel: &str) -> Result<(), Error> {
+        self.dirs.insert(rel.into());
+        Ok(())
+    }
+
+    fn delete(&mut self, rel: &str) -> Result<(), Error> {
+        self.files.remove(rel);
+        Ok(())
+    }
+}
+
+const HOUR: u64 = 3600;
+
+fn secs_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+/// Writes a file as if it was last touched `ago` seconds back, so it doesn't
+/// count as still being written.
+fn write_aged(root: &Path, rel: &str, bytes: &[u8], ago: u64) {
+    let path = root.join(rel);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, bytes).unwrap();
+    let f = std::fs::File::options().write(true).open(&path).unwrap();
+    f.set_modified(SystemTime::now() - Duration::from_secs(ago))
+        .unwrap();
+}
+
+fn run(root: &Path, remote: &mut Memory) -> Report {
+    sync(
+        root,
+        &root.join("Config/cloudsync.manifest"),
+        remote,
+        &AtomicBool::new(false),
+    )
+    .expect("sync")
+}
+
+fn read(root: &Path, rel: &str) -> Option<Vec<u8>> {
+    std::fs::read(root.join(rel)).ok()
+}
+
+#[test]
+fn the_first_run_copies_each_side_to_the_other() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"mine", HOUR);
+    write_aged(root, "States/GBA/mgba/a/resume.state", b"state", HOUR);
+    let mut remote = Memory::default();
+    remote.store("Saves/GB/b.sav", b"theirs", secs_now() - HOUR);
+
+    let r = run(root, &mut remote);
+    assert_eq!((r.uploaded, r.downloaded, r.deleted), (2, 1, 0));
+    assert_eq!(remote.bytes("Saves/GBA/a.sav"), Some(&b"mine"[..]));
+    assert_eq!(
+        remote.bytes("States/GBA/mgba/a/resume.state"),
+        Some(&b"state"[..])
+    );
+    assert_eq!(
+        read(root, "Saves/GB/b.sav").as_deref(),
+        Some(&b"theirs"[..])
+    );
+
+    assert_eq!(
+        run(root, &mut remote),
+        Report::default(),
+        "a second run has nothing to do"
+    );
+}
+
+#[test]
+fn a_change_on_one_side_goes_to_the_other() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"v1", 2 * HOUR);
+    write_aged(root, "Saves/GBA/b.sav", b"v1", 2 * HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+
+    write_aged(root, "Saves/GBA/a.sav", b"v2 here", HOUR);
+    remote.store("Saves/GBA/b.sav", b"v2 there", secs_now());
+    let r = run(root, &mut remote);
+    assert_eq!((r.uploaded, r.downloaded), (1, 1));
+    assert!(r.conflicts.is_empty());
+    assert_eq!(remote.bytes("Saves/GBA/a.sav"), Some(&b"v2 here"[..]));
+    assert_eq!(
+        read(root, "Saves/GBA/b.sav").as_deref(),
+        Some(&b"v2 there"[..])
+    );
+}
+
+#[test]
+fn when_both_sides_change_the_newer_wins_and_the_other_is_kept_on_the_card() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/old_here.sav", b"v1", 3 * HOUR);
+    write_aged(root, "Saves/GBA/new_here.sav", b"v1", 3 * HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+
+    // This card played old_here two hours ago; the other device an hour ago.
+    write_aged(root, "Saves/GBA/old_here.sav", b"card", 2 * HOUR);
+    remote.store("Saves/GBA/old_here.sav", b"server", secs_now() - HOUR);
+    // And the other way round for new_here.
+    remote.store("Saves/GBA/new_here.sav", b"server", secs_now() - 2 * HOUR);
+    write_aged(root, "Saves/GBA/new_here.sav", b"card", HOUR);
+
+    let r = run(root, &mut remote);
+    assert_eq!(r.conflicts.len(), 2);
+    assert_eq!(
+        read(root, "Saves/GBA/old_here.sav").as_deref(),
+        Some(&b"server"[..])
+    );
+    assert_eq!(remote.bytes("Saves/GBA/new_here.sav"), Some(&b"card"[..]));
+
+    let kept: Vec<String> = std::fs::read_dir(root.join("Saves/GBA"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n.contains(".conflict-"))
+        .collect();
+    assert_eq!(kept.len(), 2, "{kept:?}");
+    for name in &kept {
+        let bytes = read(root, &format!("Saves/GBA/{name}")).unwrap();
+        match name.starts_with("old_here") {
+            true => assert_eq!(bytes, b"card"),
+            false => assert_eq!(bytes, b"server"),
+        }
+        assert!(
+            remote.bytes(&format!("Saves/GBA/{name}")).is_none(),
+            "conflict copies stay on the card"
+        );
+    }
+    assert_eq!(run(root, &mut remote), Report::default());
+}
+
+#[test]
+fn identical_files_found_on_both_sides_are_not_a_conflict() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"same", HOUR);
+    let mut remote = Memory::default();
+    remote.store("Saves/GBA/a.sav", b"same", secs_now());
+    let r = run(root, &mut remote);
+    assert_eq!(r, Report::default());
+}
+
+#[test]
+fn deleted_states_are_deleted_on_the_other_side_but_saves_come_back() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"save", HOUR);
+    write_aged(root, "States/GBA/mgba/a/1.state", b"one", HOUR);
+    write_aged(root, "States/GBA/mgba/a/2.state", b"two", HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+
+    std::fs::remove_file(root.join("Saves/GBA/a.sav")).unwrap();
+    std::fs::remove_file(root.join("States/GBA/mgba/a/1.state")).unwrap();
+    remote.delete("States/GBA/mgba/a/2.state").unwrap();
+
+    let r = run(root, &mut remote);
+    assert_eq!((r.deleted, r.downloaded), (2, 1));
+    assert_eq!(read(root, "Saves/GBA/a.sav").as_deref(), Some(&b"save"[..]));
+    assert!(remote.bytes("States/GBA/mgba/a/1.state").is_none());
+    assert!(read(root, "States/GBA/mgba/a/2.state").is_none());
+
+    remote.delete("Saves/GBA/a.sav").unwrap();
+    // The copy that just came back is old enough to sync by the next run.
+    write_aged(root, "Saves/GBA/a.sav", b"save", HOUR);
+    let r = run(root, &mut remote);
+    assert_eq!(r.uploaded, 1, "a save the server lost is uploaded again");
+}
+
+#[test]
+fn files_still_being_written_and_hidden_files_wait() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/fresh.sav", b"x", 0);
+    write_aged(root, "Saves/GBA/.fresh.sav.1.2.tmp", b"x", HOUR);
+    let mut remote = Memory::default();
+    let r = run(root, &mut remote);
+    assert_eq!(r, Report::default());
+    assert!(remote.files.is_empty());
+}
+
+#[test]
+fn a_cancelled_run_stops_before_touching_anything() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"x", HOUR);
+    let mut remote = Memory::default();
+    let r = sync(
+        root,
+        &root.join("Config/m"),
+        &mut remote,
+        &AtomicBool::new(true),
+    )
+    .unwrap();
+    assert!(r.cancelled);
+    assert!(remote.files.is_empty());
+}
+
+#[test]
+fn a_running_game_s_files_are_sent_but_never_replaced() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/Zelda.sav", b"v1", 3 * HOUR);
+    write_aged(root, "Saves/GBA/Metroid.sav", b"v1", 3 * HOUR);
+    write_aged(root, "States/GBA/mgba/Zelda/1.state", b"one", 3 * HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+    let zelda = |rel: &str| belongs_to(rel, "GBA", "Zelda");
+    let held = |root: &Path, remote: &mut Memory| {
+        sync_holding(
+            root,
+            &root.join("Config/cloudsync.manifest"),
+            remote,
+            &AtomicBool::new(false),
+            &zelda,
+        )
+        .unwrap()
+    };
+
+    // Played here: sent while still playing.
+    write_aged(root, "Saves/GBA/Zelda.sav", b"v2", 2 * HOUR);
+    let r = held(root, &mut remote);
+    assert_eq!(r.uploaded, 1);
+    assert_eq!(remote.bytes("Saves/GBA/Zelda.sav"), Some(&b"v2"[..]));
+
+    // Changed elsewhere, or deleted elsewhere: left alone until the game ends.
+    remote.store("Saves/GBA/Zelda.sav", b"other device", secs_now());
+    remote.delete("States/GBA/mgba/Zelda/1.state").unwrap();
+    remote.store("Saves/GBA/Metroid.sav", b"other device", secs_now());
+    let r = held(root, &mut remote);
+    assert_eq!(
+        (r.uploaded, r.downloaded, r.deleted),
+        (0, 1, 0),
+        "only Metroid moves: {r:?}"
+    );
+    assert_eq!(
+        read(root, "Saves/GBA/Zelda.sav").as_deref(),
+        Some(&b"v2"[..])
+    );
+    assert!(read(root, "States/GBA/mgba/Zelda/1.state").is_some());
+
+    // Once the game is closed the server's newer save comes down.
+    let r = run(root, &mut remote);
+    assert_eq!((r.downloaded, r.deleted), (1, 1), "{r:?}");
+    assert_eq!(
+        read(root, "Saves/GBA/Zelda.sav").as_deref(),
+        Some(&b"other device"[..])
+    );
+}
+
+#[test]
+fn a_game_s_files_are_its_save_and_its_states() {
+    let z = |rel: &str| belongs_to(rel, "GBA", "Zelda");
+    assert!(z("Saves/GBA/Zelda.sav"));
+    assert!(z("Saves/GBA/Zelda.rtc"));
+    assert!(z("States/GBA/mgba/Zelda/resume.state"));
+    assert!(z("States/GBA/gpsp/Zelda/20261014-100300.png"));
+    assert!(!z("Saves/GBA/Zelda II.sav"));
+    assert!(!z("Saves/GB/Zelda.sav"));
+    assert!(!z("States/GBA/mgba/Zelda II/resume.state"));
+    assert!(!z("Saves/GBA/Zelda"));
+}

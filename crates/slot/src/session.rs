@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use slot_input::{Action, Gestures, Millis, RawEvent};
 use slot_retro::Rumble;
@@ -11,6 +11,7 @@ pub const RUMBLE_MAX_MS: Millis = 150;
 
 use crate::app::{App, Phase};
 use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
+use crate::cloud::CloudSync;
 use crate::core::open_core;
 use crate::emu::{CoreState, EmuHandle, Speed};
 use crate::frames::FrameRef;
@@ -32,6 +33,8 @@ pub struct Session {
     prefetch: Prefetch,
     reloading: bool,
     driven: bool,
+    ra: RaLogin,
+    cloud: Option<CloudSync>,
 }
 
 impl Session {
@@ -58,7 +61,16 @@ impl Session {
             pulse: None,
             reloading: false,
             driven: false,
+            ra: RaLogin::default(),
+            cloud: None,
         };
+        session.cloud = CloudSync::boot(&session.root);
+        if crate::ra::load(&session.root).is_none() && old_ra_config(&session.root) {
+            eprintln!("slot: cheevos: an old RetroAchievements config file is no longer read");
+            session
+                .app
+                .show_message("RetroAchievements", "Log in from HOME > RetroAchievements");
+        }
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
         // left a cold boot (after a power off) idle on the slot for the whole load.
@@ -165,10 +177,14 @@ impl Session {
 
     pub fn feed(&mut self, events: impl IntoIterator<Item = RawEvent>, now: Millis) {
         let mut actions = Vec::new();
+        let latched = self.gestures.ff_latched();
         for ev in events {
             actions.extend(self.gestures.feed(ev, now));
         }
         actions.extend(self.gestures.tick(now));
+        if !latched && self.app.in_game_menu().is_some() {
+            actions.extend(self.gestures.drop_ff_latch());
+        }
         for action in actions {
             self.act(action);
         }
@@ -182,6 +198,10 @@ impl Session {
         self.rewinding = false;
         self.fast = false;
         self.sync_pad();
+    }
+
+    pub fn set_menu_dpad_display(&mut self, enabled: bool) {
+        self.gestures.set_menu_dpad_display(enabled);
     }
 
     fn sync_pad(&mut self) {
@@ -214,10 +234,11 @@ impl Session {
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
         }
+        let menu_open = self.app.in_game_menu().is_some();
         match action {
-            Action::RewindStart => self.rewinding = true,
+            Action::RewindStart if !menu_open => self.rewinding = true,
             Action::RewindStop => self.rewinding = false,
-            Action::FfStart => self.fast = true,
+            Action::FfStart if !menu_open => self.fast = true,
             Action::FfStop => self.fast = false,
             _ => {}
         }
@@ -257,16 +278,26 @@ impl Session {
                 None => eprintln!("slot: link: a transport arrived with no core to run it"),
             }
         }
+        let mut recoloured = false;
         if let Some(p) = self.app.take_gb_palette() {
             if let Some(emu) = &self.emu {
                 emu.set_option("mgba_gb_colors", p.core_name());
+                recoloured = true;
             }
         }
         if let Some(on) = self.app.take_colour_correction() {
-            if let Some((key, value)) = crate::core::colour_option(self.app.core(), on) {
+            if let Some((key, value)) =
+                crate::core::colour_option(self.app.core(), self.app.playing_platform(), on)
+            {
                 if let Some(emu) = &self.emu {
                     emu.set_option(key, value);
+                    recoloured = true;
                 }
+            }
+        }
+        if recoloured && self.held() && !self.app.link_active() {
+            if let Some(emu) = &self.emu {
+                emu.refresh();
             }
         }
         if let Some((stem, serial)) = self.app.take_link_reload() {
@@ -286,6 +317,10 @@ impl Session {
         }
         self.sync_core();
         self.sync_reload();
+        self.sync_achievements();
+        if let Some(cloud) = self.cloud.as_mut() {
+            cloud.update(self.emu.is_some(), &mut self.app);
+        }
         if !self.reloading {
             if let Some((stem, serial)) = self.app.take_solo_reload() {
                 eprintln!("slot: link: restoring single-player mode");
@@ -387,7 +422,10 @@ impl Session {
     }
 
     fn held(&self) -> bool {
-        self.app.power_menu().is_some() || self.app.game_menu_open() || self.app.shutting_down()
+        self.app.power_menu().is_some()
+            || self.app.game_menu_open()
+            || self.app.in_game_menu().is_some()
+            || self.app.shutting_down()
     }
 
     fn dozing(&self) -> bool {
@@ -469,6 +507,9 @@ impl Session {
         else {
             return;
         };
+        if let Some(cloud) = self.cloud.as_mut() {
+            cloud.game_started(stem, platform);
+        }
         let core = slot_store::core_for_platform(&self.root, stem, platform);
         launch(&format!("opening {stem} on {}", core.as_str()));
         self.app.set_core(core);
@@ -488,8 +529,9 @@ impl Session {
         let opened = open_core(
             &self.root,
             core,
+            platform,
             serial,
-            self.app.colour_correction(),
+            self.app.colour_correction_for(platform),
             palette,
             player,
         );
@@ -504,8 +546,71 @@ impl Session {
         };
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
+        // Logged in to RetroAchievements: this game earns achievements (softcore).
+        self.ra = RaLogin::default();
+        if let Some(account) = crate::ra::load(&self.root) {
+            let console = match platform {
+                Platform::Gba => slot_cheevos::Console::Gba,
+                Platform::Gb => slot_cheevos::Console::Gb,
+                Platform::Gbc => slot_cheevos::Console::Gbc,
+            };
+            emu.achievements(&account.user, &account.token, console);
+            self.ra.console = Some(console);
+        }
         self.app.set_snapshot(Box::new(emu.snapshot()));
         self.emu = Some(emu);
+    }
+
+    fn sync_achievements(&mut self) {
+        let Some(emu) = &self.emu else {
+            self.ra = RaLogin::default();
+            return;
+        };
+        crate::badge::prefetch(&self.root, emu.take_badge_urls());
+        for notice in emu.take_achievement_notices() {
+            match &notice {
+                // Signing in at game start often beats Wi-Fi: try again once it is up,
+                // rather than going without achievements for the whole game.
+                slot_cheevos::Notice::LoggedIn(Err(e)) if self.ra.tries < RA_RETRIES => {
+                    eprintln!("slot: cheevos: sign-in failed ({e}); trying again when online");
+                    if self.ra.tries == 0 {
+                        self.app
+                            .announce("Not logged in", "Trying again once online");
+                    }
+                    self.ra.tries += 1;
+                    self.ra.retry_at = Some(Instant::now() + RA_RETRY_AFTER);
+                    continue;
+                }
+                // Follows a failed sign-in; the retry loads the game again.
+                slot_cheevos::Notice::GameLoaded(Err(_)) if self.ra.retry_at.is_some() => continue,
+                _ => {}
+            }
+            let badge = match &notice {
+                slot_cheevos::Notice::Unlocked { badge, .. }
+                | slot_cheevos::Notice::GameCompleted { badge, .. }
+                | slot_cheevos::Notice::GameLoaded(Ok((_, badge))) => Some(badge.clone()),
+                _ => None,
+            };
+            let badge = badge.and_then(|url| {
+                crate::badge::prefetch(&self.root, vec![url.clone()]);
+                crate::badge::path(&self.root, &url)
+            });
+            self.app.achievement_notice(notice, badge);
+        }
+        let (Some(at), Some(console)) = (self.ra.retry_at, self.ra.console) else {
+            return;
+        };
+        if Instant::now() < at || !net_online() {
+            return;
+        }
+        self.ra.retry_at = None;
+        if let Some(account) = crate::ra::load(&self.root) {
+            eprintln!(
+                "slot: cheevos: signing in again (try {})",
+                self.ra.tries + 1
+            );
+            emu.achievements(&account.user, &account.token, console);
+        }
     }
 
     fn reload_for_link(&mut self, stem: &str, serial: &'static str) {
@@ -538,6 +643,39 @@ impl Session {
             }
         }
     }
+}
+
+/// Signing in to RetroAchievements again after it failed: how many times, and how soon.
+const RA_RETRIES: u32 = 5;
+const RA_RETRY_AFTER: Duration = Duration::from_secs(10);
+
+/// The game's RetroAchievements sign-in: its console, and the retries after a failure.
+#[derive(Default)]
+struct RaLogin {
+    console: Option<slot_cheevos::Console>,
+    tries: u32,
+    retry_at: Option<Instant>,
+}
+
+/// Wi-Fi has an address, so a sign-in can reach the server.
+fn net_online() -> bool {
+    #[cfg(feature = "brick")]
+    return crate::brick_wifi::online();
+    #[cfg(not(feature = "brick"))]
+    true
+}
+
+/// A login file from the earlier RetroAchievements build (plain or saved by TextEdit),
+/// which the sign-in screen has replaced. Only its name is looked at.
+fn old_ra_config(root: &std::path::Path) -> bool {
+    std::fs::read_dir(root.join("Config")).is_ok_and(|d| {
+        d.flatten().any(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .starts_with("retroachievements.ini")
+        })
+    })
 }
 
 pub(crate) fn trace() -> bool {

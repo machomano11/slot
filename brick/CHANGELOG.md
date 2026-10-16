@@ -1,5 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
+## Unreleased
+- RetroAchievements now uses Slot-Brick's version: log in from HOME > RetroAchievements
+  instead of editing a file, and unlocks show as corner pop-ups with their badges.
+- A game started before Wi-Fi had an address signs in to RetroAchievements again once it does.
+
 ## v0.23
 - Settings > About credits the port to LordNordyx.
 - Short app names in the stock Apps list: Slot, Logo, Check and Stock, each with its own icon.

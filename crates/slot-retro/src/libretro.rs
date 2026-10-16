@@ -38,6 +38,46 @@ struct Host {
     options: std::collections::HashMap<String, std::ffi::CString>,
     options_dirty: bool,
     declared: std::collections::HashMap<String, Vec<String>>,
+    memory_maps: MemoryMaps,
+}
+
+/// The core's own description of its address space, copied out of
+/// SET_MEMORY_MAPS as the API asks, for RetroAchievements to read through.
+#[derive(Default)]
+struct MemoryMaps {
+    descriptors: Vec<MemoryDescriptor>,
+    _names: Vec<CString>,
+}
+
+// The pointers are into the core's own memory and the names this struct owns;
+// both move with the core, which is only ever driven from one thread at a time.
+unsafe impl Send for MemoryMaps {}
+
+impl MemoryMaps {
+    unsafe fn copy(from: &MemoryMap) -> MemoryMaps {
+        let given = if from.descriptors.is_null() {
+            &[][..]
+        } else {
+            std::slice::from_raw_parts(from.descriptors, from.num_descriptors as usize)
+        };
+        let mut names = Vec::new();
+        let descriptors: Vec<MemoryDescriptor> = given
+            .iter()
+            .map(|d| {
+                let mut d = *d;
+                if !d.addrspace.is_null() {
+                    let name = std::ffi::CStr::from_ptr(d.addrspace).to_owned();
+                    d.addrspace = name.as_ptr();
+                    names.push(name);
+                }
+                d
+            })
+            .collect();
+        MemoryMaps {
+            descriptors,
+            _names: names,
+        }
+    }
 }
 
 thread_local! {
@@ -200,6 +240,13 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             }
             let cb = std::ptr::read(data as *const AudioBufferStatusCallback);
             with_host(|h| h.audio_status = cb.callback).is_some()
+        }
+        SET_MEMORY_MAPS => {
+            if data.is_null() {
+                return false;
+            }
+            let maps = MemoryMaps::copy(&*(data as *const MemoryMap));
+            with_host(|h| h.memory_maps = maps).is_some()
         }
         SET_NETPACKET_INTERFACE => {
             if data.is_null() {
@@ -484,6 +531,7 @@ impl LibretroCore {
             options: std::collections::HashMap::new(),
             options_dirty: false,
             declared: std::collections::HashMap::new(),
+            memory_maps: MemoryMaps::default(),
         });
         unsafe {
             let _a = Active::bind(&mut host);
@@ -513,9 +561,12 @@ impl LibretroCore {
         if !self.loaded {
             return;
         }
-        let _a = Active::bind(&mut self.host);
-        unsafe { (self.api.unload_game)() };
+        {
+            let _a = Active::bind(&mut self.host);
+            unsafe { (self.api.unload_game)() };
+        }
         self.loaded = false;
+        self.host.memory_maps = MemoryMaps::default();
     }
 
     fn memory(&self, id: c_uint) -> Option<&[u8]> {
@@ -588,6 +639,23 @@ impl RetroCore for LibretroCore {
 
     fn run_frame(&mut self, input: ButtonMask) {
         self.run_frame_linked(input, ButtonMask::default());
+    }
+
+    fn memory_map(&self) -> (*const c_void, u32) {
+        let d = &self.host.memory_maps.descriptors;
+        match (self.loaded, d.is_empty()) {
+            (true, false) => (d.as_ptr() as *const c_void, d.len() as u32),
+            _ => (ptr::null(), 0),
+        }
+    }
+
+    fn memory_region(&mut self, id: u32) -> Option<(*mut u8, usize)> {
+        if !self.loaded {
+            return None;
+        }
+        let data = unsafe { (self.api.get_memory_data)(id) };
+        let len = unsafe { (self.api.get_memory_size)(id) };
+        (!data.is_null() && len > 0).then_some((data as *mut u8, len))
     }
 
     fn run_frame_linked(&mut self, p1: ButtonMask, p2: ButtonMask) {
@@ -715,6 +783,7 @@ mod tests {
             options,
             options_dirty,
             declared: HashMap::new(),
+            memory_maps: MemoryMaps::default(),
         })
     }
 

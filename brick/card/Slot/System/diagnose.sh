@@ -19,6 +19,15 @@ OUT="${1:-./slot-diagnostics.txt}"
     done
     echo '--- audio devices'
     [ ! -r /proc/asound/cards ] || cat /proc/asound/cards
+    echo '--- usb devices'
+    for d in /sys/bus/usb/devices/*; do
+        [ -r "$d/idVendor" ] || continue
+        echo "$(basename "$d"): $(cat "$d/idVendor"):$(cat "$d/idProduct") $(cat "$d/manufacturer" 2>/dev/null) $(cat "$d/product" 2>/dev/null)"
+    done
+    for f in /sys/class/gpio/gpio107/value /sys/class/usb_role/*/role /sys/devices/platform/soc/usbc0/usb_host; do
+        [ ! -r "$f" ] || echo "$f: $(cat "$f")"
+    done
+    grep -i snd_usb /proc/modules 2>/dev/null
     echo '--- power supply'
     for d in /sys/class/power_supply/*; do
         [ -d "$d" ] || continue

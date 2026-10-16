@@ -18,6 +18,8 @@ slot-power = { path = "../slot-power" }
 slot-retro = { path = "../slot-retro" }
 slot-store = { path = "../slot-store" }
 slot-ui = { path = "../slot-ui" }
+slot-cheevos = { path = "../slot-cheevos" }
+slot-cloud = { path = "../slot-cloud" }
 winit = { workspace = true, optional = true }
 cpal = { workspace = true, optional = true }
 gilrs = { workspace = true, optional = true }
@@ -25,6 +27,8 @@ libloading = { workspace = true }
 libc = { workspace = true }
 lz4_flex = { workspace = true }
 png = { workspace = true }
+rustls = { workspace = true }
+webpki-roots = { workspace = true }
 
 [dev-dependencies]
 slot-gfx = { path = "../slot-gfx", default-features = false, features = ["test-support"] }

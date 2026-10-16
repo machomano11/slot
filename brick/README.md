@@ -114,6 +114,63 @@ No router is needed. This hasn't been tested on two physical devices yet. If it 
 
 ---
 
+## RetroAchievements (experimental)
+
+1. Connect the Brick to Wi-Fi.
+2. Press **HOME** and open **RetroAchievements**. Enter your
+   [retroachievements.org](https://retroachievements.org) username and password with the
+   on-screen keyboard (START when done), then choose **Log in**.
+3. Start a GBA, GB or GBC game. A small pop-up in the top-right corner shows the game's
+   achievement count and each one you unlock, with its badge.
+
+Only a login token is kept, in `Slot/Config/retroachievements.txt`; your password is never
+saved. The same screen can test the connection, show a test pop-up, and log out. If the game
+starts before Wi-Fi has an address, Slot signs in again once it does.
+
+The `retroachievements.ini` file used by earlier builds is no longer read. Delete it, since it
+holds your password in plain text.
+
+Achievements are **softcore only** for now: save states, rewind and fast forward stay
+available, and unlocks count toward softcore. If nothing appears, check `Slot/Logs/slot.log`
+for lines starting with `slot: cheevos`.
+
+---
+
+## Cloud sync (experimental)
+
+Keeps `Slot/Saves` and `Slot/States` in step with a folder on any WebDAV server: Nextcloud,
+ownCloud, Koofr, a Synology or other NAS, or `rclone serve webdav` on a computer.
+
+1. Connect the Brick to Wi-Fi.
+2. Create `Slot/Config/cloudsync.ini`:
+
+   ```ini
+   url=https://cloud.example.com/remote.php/dav/files/YourName/Slot
+   username=YourName
+   password=an-app-password
+   ```
+
+   On Nextcloud, make an app password under *Settings → Security* rather than using your
+   real one. The folder is created if it doesn't exist.
+
+Sync runs in the background when Slot starts, as soon as you close a game, and every 10
+minutes. A banner says when files were sent or received. Use the same folder on every device
+to carry a game between them.
+
+- While a game is running, its own save and states are only ever **sent**. Anything newer
+  for it on the server comes down after you close the game.
+- If a file changed on both sides, the newer copy wins. The other is kept on the card next to
+  it as `<name>.conflict-<date>`, so nothing is lost.
+- Deleting a state deletes it on the other side too. Saves are never deleted by sync: a save
+  missing on one side is copied back from the other.
+- With only one game on the card, Slot never leaves it, so saves from other devices only
+  arrive after you close it.
+
+Add `enabled=0` to pause sync. Details are in `Slot/Logs/slot.log` on lines starting with
+`slot: cloud`.
+
+---
+
 ## Troubleshooting
 
 | Problem                               | Fix                                                                 |
