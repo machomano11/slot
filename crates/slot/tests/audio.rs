@@ -353,3 +353,24 @@ fn reopening_the_device_forgets_the_released_schedule() {
     pace.reset();
     assert_eq!(pace.wait(start + span * 3), span);
 }
+
+const BRICK_CARDS: &str =
+    " 0 [audiocodec     ]: audiocodec - audiocodec\n                      audiocodec\n";
+
+#[test]
+fn a_brick_without_a_dac_has_no_usb_card() {
+    assert_eq!(slot::audio::usb_card(BRICK_CARDS), None);
+    assert_eq!(slot::audio::usb_card(""), None);
+    assert_eq!(slot::audio::devices(None)[0], "plug:default");
+}
+
+#[test]
+fn a_usb_dac_is_tried_before_the_built_in_codec() {
+    let cards = format!(
+        "{BRICK_CARDS} 1 [D700           ]: USB-Audio - BTD 700\n                      Sennheiser BTD 700 at usb-sunxi-ehci-1, full speed\n"
+    );
+    assert_eq!(slot::audio::usb_card(&cards), Some(1));
+    let devices = slot::audio::devices(Some(1));
+    assert_eq!(devices[0], "plughw:1,0");
+    assert_eq!(devices[1], "plug:default");
+}

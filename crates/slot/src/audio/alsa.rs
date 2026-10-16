@@ -24,6 +24,37 @@ const RELEASE_AFTER: Duration = Duration::from_secs(3);
 
 const DEVICES: [&str; 4] = ["plug:default", "default", "plughw:0,0", "hw:0,0"];
 
+const CARDS: &str = "/proc/asound/cards";
+
+/// How often playback looks for a USB DAC being plugged in or pulled out.
+const ROUTE_EVERY: Duration = Duration::from_secs(1);
+
+/// The ALSA card number of a USB audio device (a USB-C DAC on the Brick's
+/// OTG port), read from the text of /proc/asound/cards.
+pub fn usb_card(cards: &str) -> Option<u32> {
+    cards.lines().find_map(|line| {
+        let (index, rest) = line.trim_start().split_once(' ')?;
+        let index = index.parse().ok()?;
+        rest.contains("USB-Audio").then_some(index)
+    })
+}
+
+fn present_usb_card() -> Option<u32> {
+    std::fs::read_to_string(CARDS)
+        .ok()
+        .as_deref()
+        .and_then(usb_card)
+}
+
+/// Devices to try in order: a USB DAC first when one is plugged in, so sound
+/// follows it like on stock, then the Brick's own speaker/headphone codec.
+pub fn devices(usb: Option<u32>) -> Vec<String> {
+    let usb = usb.map(|n| format!("plughw:{n},0"));
+    usb.into_iter()
+        .chain(DEVICES.iter().map(|d| d.to_string()))
+        .collect()
+}
+
 type PcmOpen = unsafe extern "C" fn(*mut *mut c_void, *const c_char, c_int, c_int) -> c_int;
 type PcmSetParams =
     unsafe extern "C" fn(*mut c_void, c_int, c_int, c_uint, c_uint, c_int, c_uint) -> c_int;
@@ -79,10 +110,10 @@ impl Alsa {
         }
     }
 
-    fn open_pcm(&self, rate: u32) -> Result<*mut c_void, AudioError> {
+    fn open_pcm(&self, rate: u32, usb: Option<u32>) -> Result<*mut c_void, AudioError> {
         let mut last = AudioError::NoDevice;
-        for name in DEVICES {
-            let Ok(cname) = CString::new(name) else {
+        for name in devices(usb) {
+            let Ok(cname) = CString::new(name.as_str()) else {
                 continue;
             };
             let mut pcm: *mut c_void = std::ptr::null_mut();
@@ -197,11 +228,14 @@ struct Playback {
     pcm: Option<*mut c_void>,
     rate: u32,
     failing: bool,
+    /// The USB card present when the device was last opened.
+    usb: Option<u32>,
 }
 
 fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
     let alsa = Alsa::load()?;
-    let pcm = match alsa.open_pcm(sample_rate) {
+    let usb = present_usb_card();
+    let pcm = match alsa.open_pcm(sample_rate, usb) {
         Ok(pcm) => Some(pcm),
         Err(e) => {
             eprintln!("slot: audio: {e}, retrying");
@@ -214,6 +248,7 @@ fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
         pcm,
         rate: sample_rate,
         failing: pcm.is_none(),
+        usb,
     })
 }
 
@@ -223,15 +258,30 @@ impl Playback {
         let span = Duration::from_secs_f64(PERIOD_FRAMES as f64 / self.rate as f64);
         let mut silence = Silence::new(RELEASE_AFTER);
         let mut pace = Pacer::new(span);
+        let mut routed = Instant::now();
         while !stop.load(Ordering::Relaxed) {
             ring.fill(&mut buf);
             let hold = silence.hear(&buf, span);
+            if routed.elapsed() >= ROUTE_EVERY {
+                routed = Instant::now();
+                let usb = present_usb_card();
+                if usb != self.usb {
+                    match usb {
+                        Some(n) => eprintln!("slot: audio: USB audio plugged in (card {n})"),
+                        None => eprintln!("slot: audio: USB audio removed"),
+                    }
+                    self.usb = usb;
+                    // Reopened below on the new route.
+                    self.release();
+                    self.failing = false;
+                }
+            }
             match (self.pcm, hold) {
                 (Some(_), false) => {
                     self.release();
                     eprintln!("slot: audio released after silence");
                 }
-                (None, true) => match self.alsa.open_pcm(self.rate) {
+                (None, true) => match self.alsa.open_pcm(self.rate, self.usb) {
                     Ok(pcm) => {
                         eprintln!("slot: audio reopened at {:.1} ms", crate::boot_time::ms());
                         self.pcm = Some(pcm);
@@ -249,8 +299,14 @@ impl Playback {
             match self.pcm {
                 Some(pcm) => {
                     pace.reset();
-                    if !self.write(pcm, &buf) {
-                        return;
+                    if let Err(e) = self.write(pcm, &buf) {
+                        // A pulled DAC fails here; retry on whatever is left.
+                        if !self.failing {
+                            eprintln!("slot: audio: {e}, retrying");
+                            self.failing = true;
+                        }
+                        self.release();
+                        self.usb = present_usb_card();
                     }
                 }
                 None => std::thread::sleep(pace.wait(Instant::now())),
@@ -258,7 +314,7 @@ impl Playback {
         }
     }
 
-    fn write(&self, pcm: *mut c_void, buf: &[i16]) -> bool {
+    fn write(&self, pcm: *mut c_void, buf: &[i16]) -> Result<(), String> {
         let mut written = 0;
         while written < PERIOD_FRAMES {
             let at = written * CHANNELS as usize;
@@ -272,14 +328,13 @@ impl Playback {
             if frames < 0 {
                 let err = unsafe { (self.alsa.recover)(pcm, frames as c_int, 1) };
                 if err < 0 {
-                    eprintln!("slot: audio: {}", self.alsa.message(err));
-                    return false;
+                    return Err(self.alsa.message(err));
                 }
                 continue;
             }
             written += frames as usize;
         }
-        true
+        Ok(())
     }
 
     fn release(&mut self) {
