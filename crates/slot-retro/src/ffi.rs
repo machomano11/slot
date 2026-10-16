@@ -18,6 +18,9 @@ pub const GET_SAVE_DIRECTORY: c_uint = 31;
 pub const SET_AUDIO_BUFFER_STATUS_CALLBACK: c_uint = 62;
 pub const SET_NETPACKET_INTERFACE: c_uint = 78;
 pub const SET_MEMORY_MAPS: c_uint = 36 | ENVIRONMENT_EXPERIMENTAL;
+pub const SET_DISK_CONTROL_INTERFACE: c_uint = 13;
+pub const GET_DISK_CONTROL_INTERFACE_VERSION: c_uint = 57;
+pub const SET_DISK_CONTROL_EXT_INTERFACE: c_uint = 58;
 pub const ENVIRONMENT_EXPERIMENTAL: c_uint = 0x10000;
 
 pub const RUMBLE_STRONG: c_uint = 0;
@@ -64,6 +67,47 @@ pub struct GameInfo {
     pub size: usize,
     pub meta: *const c_char,
 }
+
+/// `retro_system_info`.
+#[repr(C)]
+pub struct SystemInfo {
+    pub library_name: *const c_char,
+    pub library_version: *const c_char,
+    pub valid_extensions: *const c_char,
+    pub need_fullpath: bool,
+    pub block_extract: bool,
+}
+
+impl Default for SystemInfo {
+    fn default() -> Self {
+        SystemInfo {
+            library_name: std::ptr::null(),
+            library_version: std::ptr::null(),
+            valid_extensions: std::ptr::null(),
+            need_fullpath: false,
+            block_extract: false,
+        }
+    }
+}
+
+/// `retro_disk_control_ext_callback`; a core giving the older interface fills the first seven.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct DiskControl {
+    pub set_eject_state: Option<unsafe extern "C" fn(bool) -> bool>,
+    pub get_eject_state: Option<unsafe extern "C" fn() -> bool>,
+    pub get_image_index: Option<unsafe extern "C" fn() -> c_uint>,
+    pub set_image_index: Option<unsafe extern "C" fn(c_uint) -> bool>,
+    pub get_num_images: Option<unsafe extern "C" fn() -> c_uint>,
+    pub replace_image_index: Option<unsafe extern "C" fn(c_uint, *const GameInfo) -> bool>,
+    pub add_image_index: Option<unsafe extern "C" fn() -> bool>,
+    pub set_initial_image: Option<unsafe extern "C" fn(c_uint, *const c_char) -> bool>,
+    pub get_image_path: Option<unsafe extern "C" fn(c_uint, *mut c_char, usize) -> bool>,
+    pub get_image_label: Option<unsafe extern "C" fn(c_uint, *mut c_char, usize) -> bool>,
+}
+
+/// The seven calls of `retro_disk_control_callback`, the interface before the ext one.
+pub const DISK_CONTROL_BASIC: usize = 7;
 
 #[repr(C)]
 #[derive(Default)]
@@ -168,6 +212,7 @@ pub struct Api {
     pub unserialize: unsafe extern "C" fn(*const c_void, usize) -> bool,
     pub get_memory_data: unsafe extern "C" fn(c_uint) -> *mut c_void,
     pub get_memory_size: unsafe extern "C" fn(c_uint) -> usize,
+    pub get_system_info: unsafe extern "C" fn(*mut SystemInfo),
 }
 
 impl Api {
@@ -198,6 +243,7 @@ impl Api {
             unserialize: get!("retro_unserialize"),
             get_memory_data: get!("retro_get_memory_data"),
             get_memory_size: get!("retro_get_memory_size"),
+            get_system_info: get!("retro_get_system_info"),
         })
     }
 }

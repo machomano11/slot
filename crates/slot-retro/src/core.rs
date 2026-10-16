@@ -92,6 +92,14 @@ pub trait RetroCore: Send {
     fn frame_size(&self) -> (u32, u32) {
         self.canvas()
     }
+    /// The disc in the tray and how many the game has (from its .m3u), for a disc system.
+    fn discs(&self) -> Option<(u32, u32)> {
+        None
+    }
+    /// Swaps the disc in the tray for disc `index` (from 0); false if the core refused.
+    fn insert_disc(&mut self, _index: u32) -> bool {
+        false
+    }
     fn video_xrgb8888(&self) -> &[u8];
     fn take_audio(&mut self) -> Vec<i16>;
     fn serialize(&mut self) -> Result<Vec<u8>, CoreError>;

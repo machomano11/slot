@@ -24,8 +24,8 @@ fn main() {
         .include("libretro")
         .define("RC_STATIC", None)
         .define("RC_CLIENT_SUPPORTS_HASH", None)
-        // GB, GBC, GBA, NES, SNES, Game Gear and Master System hash the ROM file itself: no discs, archives or encryption.
-        .define("RC_HASH_NO_DISC", None)
+        // Carts hash the ROM file itself; CD images (.cue/.bin, .iso, .m3u) go through
+        // rcheevos' own disc reader. No archives or encryption.
         .define("RC_HASH_NO_ENCRYPTED", None)
         .define("RC_HASH_NO_ZIP", None)
         .flag_if_supported("-std=gnu99")

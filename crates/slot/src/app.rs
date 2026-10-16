@@ -363,6 +363,9 @@ pub struct App {
     colour_pending: Option<bool>,
     palette_live: bool,
     palette_pending: Option<GbPalette>,
+    /// The running game's disc in the tray and count of discs, for a disc system.
+    discs: Option<(u32, u32)>,
+    disc_pending: Option<u32>,
     link_player: Option<u8>,
     solo_serial: Option<&'static str>,
     platform: Platform,
@@ -551,6 +554,8 @@ impl App {
             core: Core::default(),
             colour_pending: None,
             palette_live: false,
+            discs: None,
+            disc_pending: None,
             palette_pending: None,
             link_player: None,
             solo_serial: None,
@@ -1986,6 +1991,17 @@ impl App {
         self.palette_pending.take()
     }
 
+    /// What the emulator says is in the tray; ignored while a change is on its way.
+    pub fn set_discs(&mut self, discs: Option<(u32, u32)>) {
+        if self.disc_pending.is_none() {
+            self.discs = discs;
+        }
+    }
+
+    pub fn take_disc_change(&mut self) -> Option<u32> {
+        self.disc_pending.take()
+    }
+
     pub fn core(&self) -> Core {
         self.core
     }
@@ -2575,6 +2591,19 @@ impl App {
             return true;
         }
         if let Action::PaletteNext | Action::PalettePrev = action {
+            if let (false, Some((index, count))) = (self.palette_live, self.discs) {
+                // SELECT + L2 / R2 on a game of several discs: the previous or next one.
+                if count > 1 && matches!(self.phase, Phase::Playing { .. }) {
+                    let to = match action {
+                        Action::PalettePrev => (index + count - 1) % count,
+                        _ => (index + 1) % count,
+                    };
+                    self.disc_pending = Some(to);
+                    self.discs = Some((to, count));
+                    self.show_message(format!("Disc {}", to + 1), format!("of {count}"));
+                }
+                return true;
+            }
             if self.palette_live && matches!(self.phase, Phase::Playing { .. }) {
                 let to = match action {
                     Action::PalettePrev => self.state.gb_palette.prev(),

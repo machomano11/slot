@@ -161,6 +161,27 @@ impl Platform {
         matches!(self, Platform::Gba | Platform::Gb | Platform::Gbc)
     }
 
+    /// A console whose games are disc images: they may sit in a folder of their own, and the
+    /// discs an .m3u playlist names are one game, not one each.
+    pub fn discs(self) -> bool {
+        false
+    }
+
+    /// The BIOS files a console cannot start without, any one of which will do (by region),
+    /// looked for in Slot/BIOS. Empty for a console whose core needs none.
+    pub fn bios(self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// The BIOS this console needs that is missing from `bios_dir`, named for the player.
+    pub fn missing_bios(self, bios_dir: &Path) -> Option<String> {
+        let names = self.bios();
+        match names.is_empty() || names.iter().any(|n| bios_dir.join(n).is_file()) {
+            true => None,
+            false => Some(names.join(" or ")),
+        }
+    }
+
     /// A console whose games may turn the screen upright, so its picture follows the frames
     /// the core draws rather than one fixed size.
     pub fn turns(self) -> bool {

@@ -79,6 +79,7 @@ enum Cmd {
     EndLink,
     BeginCable(u8, Box<dyn LinkChannel>),
     SetOption(String, String),
+    InsertDisc(u32),
     Refresh,
 }
 
@@ -107,6 +108,8 @@ struct Shared {
     published: AtomicU64,
     /// The last published frame's size on the canvas, width in the high half.
     frame_size: AtomicU64,
+    /// The disc in the tray and the game's count of them, index in the high half; 0 for none.
+    discs: AtomicU64,
     resume_refused: AtomicBool,
     sav_refused: AtomicBool,
     link_lost: AtomicBool,
@@ -181,6 +184,7 @@ impl EmuHandle {
             runahead: AtomicU8::new(0),
             published: AtomicU64::new(0),
             frame_size: AtomicU64::new(0),
+            discs: AtomicU64::new(0),
             resume_refused: AtomicBool::new(false),
             sav_refused: AtomicBool::new(false),
             link_lost: AtomicBool::new(false),
@@ -369,6 +373,18 @@ impl EmuHandle {
 
     pub fn published_count(&self) -> u64 {
         self.shared.published.load(Ordering::Relaxed)
+    }
+
+    /// The disc in the tray (from 0) and how many the game has, for a disc system.
+    pub fn discs(&self) -> Option<(u32, u32)> {
+        match self.shared.discs.load(Ordering::Relaxed) {
+            0 => None,
+            v => Some(((v >> 32) as u32, v as u32)),
+        }
+    }
+
+    pub fn insert_disc(&self, index: u32) {
+        request(&self.cmds, &self.shared, Cmd::InsertDisc(index));
     }
 
     /// The last frame's size on the canvas, once one has been drawn.
@@ -626,6 +642,7 @@ impl Worker {
         };
         let mut resampler = Resampler::new(core_hz, device_hz);
         ring.clear_faults();
+        self.note_discs(core.as_ref());
         self.shared
             .state
             .store(CoreState::Ready as u8, Ordering::Release);
@@ -1138,6 +1155,12 @@ impl Worker {
             Cmd::SetOption(key, value) => {
                 core.set_option(&key, &value);
             }
+            Cmd::InsertDisc(index) => {
+                if !core.insert_disc(index) {
+                    eprintln!("slot: the core refused disc {}", index + 1);
+                }
+                self.note_discs(core);
+            }
             Cmd::EndLink => {
                 self.shared.link_lost.store(false, Ordering::Relaxed);
                 self.shared.peer_ended.store(false, Ordering::Relaxed);
@@ -1192,6 +1215,13 @@ impl Worker {
                 Err(e) => e.into_inner().0,
             };
         }
+    }
+
+    fn note_discs(&self, core: &dyn RetroCore) {
+        let discs = core
+            .discs()
+            .map_or(0, |(index, count)| ((index as u64) << 32) | count as u64);
+        self.shared.discs.store(discs, Ordering::Relaxed);
     }
 
     fn publish(&self, video: &[u8], (w, h): (u32, u32)) {

@@ -59,7 +59,7 @@ doesn't flash anything to the device.
 | `SELECT + A` / `B`          | Next / previous shader                              |
 | `SELECT + X`                | GBA/SNES/MD/WS: original or full screen (per game)  |
 | `SELECT + Y`                | Colour correction on / off (GB, GBC, GBA)           |
-| `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
+| `SELECT + L2` / `R2`        | GB: previous / next palette; CD games: change disc  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
 | `SELECT + Left` / `Right`   | Blue light filter                                   |
 | `L1` / `R1`                 | GB/GBC/NES/GG/SMS/NGP: stretched / original picture |
