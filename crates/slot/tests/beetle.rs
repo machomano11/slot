@@ -4,13 +4,19 @@ use slot_store::{Core, Platform};
 
 /// Opens a Beetle core on a blank cart of the right size, runs it and checks its frame sits
 /// centred on the platform's canvas, with black round it, and that a save state comes back.
-fn runs_centred(core: Core, platform: Platform, rom: &[u8], name: &str, outside: (u32, u32)) {
+fn runs_centred(
+    core: Core,
+    platform: Platform,
+    rom: &[u8],
+    name: &str,
+    outside: (u32, u32),
+) -> (u32, u32) {
     let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../vendor")
         .join(slot::core::dylib_name(core));
     if !path.exists() {
         eprintln!("no {} dylib on this host, skipping", core.as_str());
-        return;
+        return platform.picture();
     }
     let _g = common::core_lock();
     let d = tempfile::tempdir().unwrap();
@@ -18,6 +24,9 @@ fn runs_centred(core: Core, platform: Platform, rom: &[u8], name: &str, outside:
     std::fs::write(&file, rom).unwrap();
     let mut opened =
         slot::core::open_core_for_palette(d.path(), core, platform, "auto", false, None, &[path]);
+    if platform.turns() {
+        opened.set_option("wswan_rotate_display", slot::core::wonderswan_held(&file));
+    }
     opened.load(&file).expect("the core refused the cart");
     for _ in 0..30 {
         opened.run_frame(slot_retro::ButtonMask(0));
@@ -43,6 +52,7 @@ fn runs_centred(core: Core, platform: Platform, rom: &[u8], name: &str, outside:
     opened
         .unserialize(&state)
         .expect("its own save state was refused");
+    opened.frame_size()
 }
 
 /// A 2 Mbit Neo Geo Pocket cart: SNK's licence string, a colour-mode byte and a title.
@@ -59,13 +69,14 @@ fn ngp_rom(colour: bool) -> Vec<u8> {
 #[test]
 fn a_neo_geo_pocket_game_runs_centred_on_the_gba_canvas() {
     // 160x152 in the middle of the 240x160 canvas: x 40..200.
-    runs_centred(
+    let size = runs_centred(
         Core::MednafenNgp,
         Platform::Ngp,
         &ngp_rom(false),
         "test.ngp",
         (20, 80),
     );
+    assert!(size == (160, 152) || size == (240, 160), "{size:?}");
     runs_centred(
         Core::MednafenNgp,
         Platform::Ngpc,
@@ -73,4 +84,47 @@ fn a_neo_geo_pocket_game_runs_centred_on_the_gba_canvas() {
         "test.ngc",
         (220, 80),
     );
+}
+
+/// A 1 Mbit WonderSwan cart: a footer whose jump lands on a loop, and its flags byte.
+fn ws_rom(colour: bool, upright: bool) -> Vec<u8> {
+    let mut rom = vec![0xffu8; 0x20000];
+    let n = rom.len();
+    rom[n - 0x100..n - 0xfe].copy_from_slice(&[0xeb, 0xfe]); // JMP $ at f000:ff00
+    rom[n - 16..n - 11].copy_from_slice(&[0xea, 0x00, 0xff, 0x00, 0xf0]); // JMP F000:FF00
+    rom[n - 9] = u8::from(colour);
+    rom[n - 6] = 0x01; // 1 Mbit
+    rom[n - 5] = 0x00; // no save
+    rom[n - 4] = u8::from(upright) | 0x04;
+    rom
+}
+
+#[test]
+fn a_wonderswan_game_is_shown_the_way_its_header_says_to_hold_it() {
+    if !std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../vendor")
+        .join(slot::core::dylib_name(Core::MednafenWswan))
+        .exists()
+    {
+        eprintln!("no mednafen_wswan dylib on this host, skipping");
+        return;
+    }
+    // 224x144 flat in the middle of the 300x225 canvas: x 38..262, y 40..184.
+    let flat = runs_centred(
+        Core::MednafenWswan,
+        Platform::Ws,
+        &ws_rom(false, false),
+        "flat.ws",
+        (20, 112),
+    );
+    assert_eq!(flat, (224, 144));
+    // Upright, 144x224: x 78..222.
+    let upright = runs_centred(
+        Core::MednafenWswan,
+        Platform::Wsc,
+        &ws_rom(true, true),
+        "upright.wsc",
+        (60, 112),
+    );
+    assert_eq!(upright, (144, 224));
 }

@@ -40,7 +40,7 @@ doesn't flash anything to the device.
 | Button           | Action                                  |
 | ---------------- | --------------------------------------- |
 | `Left` / `Right` | Browse games                            |
-| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS, MD, NGP, NGPC) |
+| `L1` / `R1`      | Switch shelves (one per console)  |
 | Tap `A`          | Resume from the last save state         |
 | Hold `A`         | Start the game fresh                    |
 | `START`          | Cart colour and finish (GBA: and core)   |
@@ -57,7 +57,7 @@ doesn't flash anything to the device.
 | `SELECT + R1`               | Save state                                          |
 | `SELECT + L1`               | Load the latest save state                          |
 | `SELECT + A` / `B`          | Next / previous shader                              |
-| `SELECT + X`                | GBA/SNES/MD: original or full screen (per game)     |
+| `SELECT + X`                | GBA/SNES/MD/WS: original or full screen (per game)  |
 | `SELECT + Y`                | Colour correction on / off (GB, GBC, GBA)           |
 | `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
@@ -114,6 +114,12 @@ switches between the original and full-screen picture. RetroAchievements work; l
 `Slot/Games/NGPC` (either extension works in either folder); they run on Beetle NeoPop, set to
 English. No BIOS is needed. `B` and `A` are the console's A and B, `START` is Option, and
 `L1` / `R1` switch between the original and stretched picture. RetroAchievements work.
+
+**WonderSwan and Color:** put `.ws` ROMs in `Slot/Games/WS` and `.wsc` ROMs in `Slot/Games/WSC`;
+they run on Beetle Cygne. No BIOS is needed. Held flat, the D-pad is the X pad, `A` / `B` are A
+and B and `L1` / `R1` the Y pad's left and right. A game made to be played upright (Gunpey,
+Judgement Silversword...) is shown upright: then the D-pad is the Y pad, the four face buttons
+the X pad, and `L1` / `R1` are A and B. `SELECT + X` switches the picture. RetroAchievements work.
 
 **Cart art:** connect to Wi-Fi, then open **HOME → Cart Art**.
 **GET CART ART** gives every game with no label a scan of its real cartridge label; labels you

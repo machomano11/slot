@@ -159,6 +159,10 @@ impl Session {
         self.emu.as_ref().is_some_and(EmuHandle::frame_ready)
     }
 
+    pub fn frame_size(&self) -> Option<(u32, u32)> {
+        self.emu.as_ref().and_then(EmuHandle::frame_size)
+    }
+
     pub fn frames_published(&self) -> u64 {
         self.emu.as_ref().map_or(0, EmuHandle::published_count)
     }
@@ -523,7 +527,7 @@ impl Session {
         let player = self.app.link_player();
         let palette = crate::core::palette_for(self.app.gb_palette(), platform, &rom, player);
         self.app.set_palette_live(palette.is_some());
-        let opened = open_core(
+        let mut opened = open_core(
             &self.root,
             core,
             platform,
@@ -532,6 +536,11 @@ impl Session {
             palette,
             player,
         );
+        if platform.turns() {
+            // Held the way the game's header says: upright games are shown upright.
+            let held = crate::core::wonderswan_held(&rom);
+            opened.core.set_option("wswan_rotate_display", held);
+        }
         self.app.set_named_core(opened.named);
         launch("core opened");
         let sav = persist::read_sav(&self.root, platform, stem);
@@ -557,6 +566,7 @@ impl Session {
                 Platform::Sms => slot_cheevos::Console::Sms,
                 Platform::Md => slot_cheevos::Console::Md,
                 Platform::Ngp | Platform::Ngpc => slot_cheevos::Console::Ngp,
+                Platform::Ws | Platform::Wsc => slot_cheevos::Console::Ws,
             };
             emu.achievements(&account.user, &account.token, console);
             self.ra.console = Some(console);

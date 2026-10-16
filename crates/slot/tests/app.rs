@@ -2659,3 +2659,22 @@ fn a_famicom_cart_offers_a_colour_and_a_nes_cart_does_not() {
     );
     assert!(saved.starts_with(&format!("rounded {red_hex}")), "{saved}");
 }
+
+#[test]
+fn a_wonderswan_picture_turns_with_the_frames_and_a_gba_one_does_not() {
+    let mut app = app_with_platforms(&[(Platform::Ws, "Gunpey")]);
+    app.set_platform(Platform::Ws);
+    assert_eq!(app.picture(), (224, 144));
+    app.set_frame_size((144, 224));
+    assert_eq!(app.picture(), (144, 224));
+    let [x0, y0, x1, y1] = app.picture_rect();
+    let (cw, ch) = Platform::Ws.canvas();
+    assert_eq!(((x1 - x0) * cw as f32).round(), 144.0);
+    assert_eq!(((y1 - y0) * ch as f32).round(), 224.0);
+    // The size seen for one console is not taken for the next.
+    app.set_platform(Platform::Wsc);
+    assert_eq!(app.picture(), (224, 144));
+    app.set_platform(Platform::Gba);
+    app.set_frame_size((120, 80));
+    assert_eq!(app.picture(), (240, 160));
+}

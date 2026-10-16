@@ -5,7 +5,7 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC"]
+        vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC"]
     );
 }
 
@@ -23,7 +23,9 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Sms,
             Platform::Md,
             Platform::Ngp,
-            Platform::Ngpc
+            Platform::Ngpc,
+            Platform::Ws,
+            Platform::Wsc
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -92,4 +94,17 @@ fn both_neo_geo_pockets_take_either_extension() {
         assert_eq!(p.picture(), (160, 152));
         assert_eq!(p.canvas(), (240, 160));
     }
+}
+
+#[test]
+fn a_wonderswan_canvas_holds_its_screen_either_way_up() {
+    for p in [Platform::Ws, Platform::Wsc] {
+        assert!(p.accepts(std::path::Path::new("Gunpey.ws")));
+        assert!(p.accepts(std::path::Path::new("Judgement Silversword.wsc")));
+        assert!(p.turns());
+        let (w, h) = p.picture();
+        let (cw, ch) = p.canvas();
+        assert!(w <= cw && h <= ch && h <= cw && w <= ch);
+    }
+    assert!(!Platform::Gba.turns());
 }

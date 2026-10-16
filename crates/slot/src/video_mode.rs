@@ -55,9 +55,16 @@ pub fn write_video_mode(root: &Path, stem: &str, mode: VideoMode) -> std::io::Re
 }
 
 pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
-    let (w, h) = platform.picture();
+    picture_source_rect(platform.picture(), platform.canvas(), mode)
+}
+
+/// The source rect for a picture of `(w, h)` centred on a canvas of `(src_w, src_h)`.
+pub fn picture_source_rect(
+    (w, h): (u32, u32),
+    (src_w, src_h): (u32, u32),
+    mode: VideoMode,
+) -> [f32; 4] {
     // In canvas units: a NES frame arrives on a 256x240 canvas, the Game Boys' on 240x160.
-    let (src_w, src_h) = platform.canvas();
     #[cfg(feature = "brick")]
     if mode == VideoMode::Actual {
         // Expand the source rectangle to 4:3; the shader paints the region

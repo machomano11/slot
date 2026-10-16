@@ -22,6 +22,8 @@ const MD_CART_SVG: &str = include_str!("../assets/md_cart.svg");
 const MD_DETAIL_SVG: &str = include_str!("../assets/md_cart_detail.svg");
 const NGP_CART_SVG: &str = include_str!("../assets/ngp_cart.svg");
 const NGP_DETAIL_SVG: &str = include_str!("../assets/ngp_cart_detail.svg");
+const WS_CART_SVG: &str = include_str!("../assets/ws_cart.svg");
+const WS_DETAIL_SVG: &str = include_str!("../assets/ws_cart_detail.svg");
 
 /// A cart of one fixed shape, drawn from its SVG outline and moulding: the consoles whose
 /// carts have no regional or colour variants to choose between.
@@ -31,14 +33,16 @@ pub enum PlainCart {
     MasterSystem,
     MegaDrive,
     NeoGeoPocket,
+    WonderSwan,
 }
 
 impl PlainCart {
-    pub const ALL: [PlainCart; 4] = [
+    pub const ALL: [PlainCart; 5] = [
         PlainCart::GameGear,
         PlainCart::MasterSystem,
         PlainCart::MegaDrive,
         PlainCart::NeoGeoPocket,
+        PlainCart::WonderSwan,
     ];
 
     fn svgs(self) -> (&'static str, &'static str) {
@@ -47,6 +51,7 @@ impl PlainCart {
             PlainCart::MasterSystem => (SMS_CART_SVG, SMS_DETAIL_SVG),
             PlainCart::MegaDrive => (MD_CART_SVG, MD_DETAIL_SVG),
             PlainCart::NeoGeoPocket => (NGP_CART_SVG, NGP_DETAIL_SVG),
+            PlainCart::WonderSwan => (WS_CART_SVG, WS_DETAIL_SVG),
         }
     }
 }

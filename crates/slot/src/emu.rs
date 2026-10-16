@@ -105,6 +105,8 @@ struct Shared {
     ff_sound: AtomicBool,
     runahead: AtomicU8,
     published: AtomicU64,
+    /// The last published frame's size on the canvas, width in the high half.
+    frame_size: AtomicU64,
     resume_refused: AtomicBool,
     sav_refused: AtomicBool,
     link_lost: AtomicBool,
@@ -178,6 +180,7 @@ impl EmuHandle {
             ff_sound: AtomicBool::new(false),
             runahead: AtomicU8::new(0),
             published: AtomicU64::new(0),
+            frame_size: AtomicU64::new(0),
             resume_refused: AtomicBool::new(false),
             sav_refused: AtomicBool::new(false),
             link_lost: AtomicBool::new(false),
@@ -366,6 +369,14 @@ impl EmuHandle {
 
     pub fn published_count(&self) -> u64 {
         self.shared.published.load(Ordering::Relaxed)
+    }
+
+    /// The last frame's size on the canvas, once one has been drawn.
+    pub fn frame_size(&self) -> Option<(u32, u32)> {
+        match self.shared.frame_size.load(Ordering::Relaxed) {
+            0 => None,
+            v => Some(((v >> 32) as u32, v as u32)),
+        }
     }
 
     pub fn observed_speed(&self) -> Speed {
@@ -780,7 +791,7 @@ impl Worker {
                     }
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
-                    self.publish(core.video_xrgb8888());
+                    self.publish(core.video_xrgb8888(), core.frame_size());
                 }
                 self.shared
                     .rewind_fill
@@ -914,11 +925,14 @@ impl Worker {
                     }
                 }
                 flush_outbound(&mut transport, &link);
-                self.publish(if shown {
-                    &runahead.video
-                } else {
-                    core.video_xrgb8888()
-                });
+                self.publish(
+                    if shown {
+                        &runahead.video
+                    } else {
+                        core.video_xrgb8888()
+                    },
+                    core.frame_size(),
+                );
                 self.frame_done(served);
 
                 since_snapshot += 1;
@@ -1077,7 +1091,7 @@ impl Worker {
                     core.run_frame(ButtonMask(0));
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
-                    self.publish(core.video_xrgb8888());
+                    self.publish(core.video_xrgb8888(), core.frame_size());
                     let _ = core.take_audio();
                     if let Err(e) = core.unserialize(&state) {
                         eprintln!("slot: refresh: {e}");
@@ -1180,7 +1194,10 @@ impl Worker {
         }
     }
 
-    fn publish(&self, video: &[u8]) {
+    fn publish(&self, video: &[u8], (w, h): (u32, u32)) {
+        self.shared
+            .frame_size
+            .store(((w as u64) << 32) | h as u64, Ordering::Relaxed);
         let mut buf = self.frames.take_write();
         buf.clear();
         buf.extend_from_slice(video);

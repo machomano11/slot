@@ -26,6 +26,8 @@ struct Host {
     video: Vec<u8>,
     /// The canvas `video` holds, GBA-sized unless set_canvas says otherwise.
     canvas: (u32, u32),
+    /// The last frame's size on the canvas (after any halving), centred in it.
+    frame: (u32, u32),
     format: PixelFormat,
     audio: Vec<i16>,
     inputs: [u16; 2],
@@ -380,6 +382,7 @@ unsafe extern "C" fn video_refresh(
         if cols != cw as usize || rows != ch as usize {
             h.video.fill(0);
         }
+        h.frame = (cols as u32, rows as u32);
         let format = h.format;
         for y in 0..rows {
             let src = (data as *const u8).add(y * sy * pitch);
@@ -506,6 +509,7 @@ impl LibretroCore {
     /// The canvas frames are drawn into, before the game loads: a NES needs 256x240.
     pub fn set_canvas(&mut self, w: u32, h: u32) {
         self.host.canvas = (w, h);
+        self.host.frame = (w, h);
         self.host.video = vec![0; (w * h * 4) as usize];
     }
 
@@ -556,6 +560,7 @@ impl LibretroCore {
         let mut host = Box::new(Host {
             video: vec![0; VIDEO_BYTES],
             canvas: (GBA_W, GBA_H),
+            frame: (GBA_W, GBA_H),
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -726,6 +731,10 @@ impl RetroCore for LibretroCore {
         self.host.canvas
     }
 
+    fn frame_size(&self) -> (u32, u32) {
+        self.host.frame
+    }
+
     fn video_xrgb8888(&self) -> &[u8] {
         &self.host.video
     }
@@ -820,6 +829,7 @@ mod tests {
         Box::new(Host {
             video: vec![0; VIDEO_BYTES],
             canvas: (GBA_W, GBA_H),
+            frame: (GBA_W, GBA_H),
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],

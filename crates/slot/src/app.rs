@@ -368,6 +368,8 @@ pub struct App {
     platform: Platform,
     named_core: bool,
     video_mode: VideoMode,
+    /// The last frame size the core drew, and for which console.
+    frame_size: Option<(Platform, (u32, u32))>,
     link: Option<LinkSession>,
     sfx: Option<Sfx>,
     polaroids: Option<Polaroids>,
@@ -555,6 +557,7 @@ impl App {
             platform: Platform::default(),
             named_core: false,
             video_mode: VideoMode::default(),
+            frame_size: None,
             link: None,
             sfx: None,
             polaroids: None,
@@ -1547,7 +1550,21 @@ impl App {
     }
 
     pub fn source_rect(&self) -> [f32; 4] {
-        video_mode::source_rect(self.platform, self.video_mode)
+        video_mode::picture_source_rect(self.picture(), self.platform.canvas(), self.video_mode)
+    }
+
+    /// The picture's size on the canvas: the platform's, or for a console whose games turn
+    /// the screen (a WonderSwan held upright) the last frame's.
+    pub fn picture(&self) -> (u32, u32) {
+        match self.frame_size {
+            Some((platform, size)) if platform == self.platform && platform.turns() => size,
+            _ => self.platform.picture(),
+        }
+    }
+
+    /// The size of the frame the core last drew, as the emulator thread saw it.
+    pub fn set_frame_size(&mut self, size: (u32, u32)) {
+        self.frame_size = Some((self.platform, size));
     }
 
     /// L1/R1 switch the picture on consoles without shoulder buttons; on a GBA or SNES
@@ -1603,7 +1620,10 @@ impl App {
             return;
         }
         // Consoles whose L and R are the game's take this shortcut instead.
-        if !matches!(self.platform, Platform::Gba | Platform::Snes | Platform::Md) {
+        if !matches!(
+            self.platform,
+            Platform::Gba | Platform::Snes | Platform::Md | Platform::Ws | Platform::Wsc
+        ) {
             self.refuse();
             return;
         }
@@ -1661,7 +1681,7 @@ impl App {
     }
 
     pub fn picture_rect(&self) -> [f32; 4] {
-        let (w, h) = self.platform.picture();
+        let (w, h) = self.picture();
         let (sw, sh) = self.platform.canvas();
         let (sw, sh) = (sw as f32, sh as f32);
         let (x, y) = ((sw - w as f32) / 2.0, (sh - h as f32) / 2.0);

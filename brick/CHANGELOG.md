@@ -1,6 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- WonderSwan and WonderSwan Color: `.ws` and `.wsc` ROMs in `Slot/Games/WS` and `Slot/Games/WSC`
+  get shelves of near-black Bandai cartridges and run on Beetle Cygne, with save states, rewind,
+  fast-forward and RetroAchievements. A game made to be played upright is shown upright (read
+  from its header), with the controls turned to match. `SELECT + X` switches the picture.
 - Neo Geo Pocket and Neo Geo Pocket Color: `.ngp`, `.ngc` and `.ngpc` ROMs in `Slot/Games/NGP` and
   `Slot/Games/NGPC` get shelves of slate-grey SNK cartridges and run on Beetle NeoPop (in
   English), with save states, rewind, fast-forward and RetroAchievements. `B` and `A` are the

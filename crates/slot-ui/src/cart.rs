@@ -151,6 +151,8 @@ const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
         PlainCart::MegaDrive => (280, MD_SEATED_H, [83, 181, 917, 868]),
         // ngp_cart.svg: the label below the grip, x 22..218, y 44..206 of 240x228.
         PlainCart::NeoGeoPocket => (240, NGP_SEATED_H, [92, 193, 908, 904]),
+        // ws_cart.svg: the label above the grip, x 18..222, y 14..160 of 240x200.
+        PlainCart::WonderSwan => (270, WS_SEATED_H, [75, 70, 925, 800]),
     }
 }
 
@@ -302,6 +304,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Sms => Some(PlainCart::MasterSystem),
         Platform::Md => Some(PlainCart::MegaDrive),
         Platform::Ngp | Platform::Ngpc => Some(PlainCart::NeoGeoPocket),
+        Platform::Ws | Platform::Wsc => Some(PlainCart::WonderSwan),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }
 }
@@ -451,6 +454,8 @@ const SMS_SEATED_H: u32 = 300;
 const MD_SEATED_H: u32 = 288;
 /// A Neo Geo Pocket cart is a little taller than wide.
 const NGP_SEATED_H: u32 = 228;
+/// A WonderSwan cart is wider than tall.
+const WS_SEATED_H: u32 = 200;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     if let Some(plain) = plain_cart_for(platform) {
