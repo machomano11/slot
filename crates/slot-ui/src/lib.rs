@@ -50,12 +50,12 @@ pub use cart::{
     cart_backing, cart_box, cart_face, cart_face_with, cart_interior, cart_shadow, clean_label,
     famicom_label_panel, fitted_label, gb_cart_shadow, gb_label_panel, gb_shell_of, is_clear,
     label_colour, label_panel, label_size, label_tags, label_text, nes_cart_shadow, nes_famicom_of,
-    nes_label_panel, neutral_shell, seated_box, shown_label, shows_interior, snes_cart_shadow,
-    snes_label_panel, snes_shell_of, CartFace, CART_H, CART_W, GBC_LABEL_H, GBC_LABEL_W,
-    GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y,
-    LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y, NES_CART_H, NES_CART_W, NES_LABEL_H,
-    NES_LABEL_W, NES_LABEL_X, NES_LABEL_Y, SNES_CART_H, SNES_CART_W, SNES_LABEL_H, SNES_LABEL_W,
-    SNES_LABEL_X, SNES_LABEL_Y,
+    nes_label_panel, neutral_shell, plain_cart_for, plain_cart_shadow, plain_label, seated_box,
+    shown_label, shows_interior, snes_cart_shadow, snes_label_panel, snes_shell_of, CartFace,
+    CART_H, CART_W, GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W,
+    GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y,
+    NES_CART_H, NES_CART_W, NES_LABEL_H, NES_LABEL_W, NES_LABEL_X, NES_LABEL_Y, SNES_CART_H,
+    SNES_CART_W, SNES_LABEL_H, SNES_LABEL_W, SNES_LABEL_X, SNES_LABEL_Y,
 };
 pub use cart_menu::{
     cart_menu_label_face, cart_menu_legend_faces, cart_menu_value_face, colour_choices,
@@ -94,9 +94,9 @@ pub use shell::{
     famicom_shell, gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
     lookup_order_is_exact_then_family_then_default, nes_shell_for, shell_for, shell_presets,
     snes_pal, table_keys, Finish, Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, FAMICOM_SHELLS,
-    GB_CLEAR_SHELL, NES_SHELL, SNES_PAL_SHELL, SNES_SHELL,
+    GB_CLEAR_SHELL, NES_SHELL, SEGA_SHELL, SNES_PAL_SHELL, SNES_SHELL,
 };
-pub use silhouette::{gb_silhouette, silhouette, GbShell, NesShell, SnesShell};
+pub use silhouette::{gb_silhouette, silhouette, GbShell, NesShell, PlainCart, SnesShell};
 pub use slot_chrome::{
     draw_empty_slot, draw_slot_name, draw_slot_title, ease, edge, housing, opening, recess,
     slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H, MOUTH_W,

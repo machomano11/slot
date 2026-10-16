@@ -209,6 +209,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_gbc: Shader::Simpletex,
             shader_nes: Shader::Off,
             shader_snes: Shader::Off,
+            shader_gg: Shader::Grid,
+            shader_sms: Shader::Off,
             eject_save: true,
             turbo: true,
             rewind: true,

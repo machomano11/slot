@@ -6,8 +6,9 @@ use crate::bitmaps::{self, Mould};
 use crate::board::{BOARD_H, BOARD_W};
 use crate::shell::{japanese, shell_for, snes_pal, Finish, Shell};
 use crate::silhouette::{
-    cart_mask, gb_cart_mask, nes_cart_depth, nes_cart_mask, nes_detail_mask, snes_cart_depth,
-    snes_cart_mask, snes_detail_mask, Detail, GbShell, NesShell, SnesShell,
+    cart_mask, gb_cart_mask, nes_cart_depth, nes_cart_mask, nes_detail_mask, plain_cart_depth,
+    plain_cart_mask, plain_detail_mask, snes_cart_depth, snes_cart_mask, snes_detail_mask, Detail,
+    GbShell, NesShell, PlainCart, SnesShell,
 };
 use crate::text;
 
@@ -137,6 +138,31 @@ const FAMICOM_LABEL: (u32, u32, u32, u32) = {
     (x0, y0, x1 - x0, y1 - y0)
 };
 
+/// A plain cart's size on the shelf and its label recess (as fractions of its outline, x0 y0
+/// x1 y1). The Game Gear's small landscape cart is drawn a little narrower than a GBA one,
+/// the Master System's tall one about as wide as a NES cart.
+const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
+    match cart {
+        // gg_cart.svg: the label below the grip, x 20..220, y 36..166 of 240x192.
+        PlainCart::GameGear => (300, GG_SEATED_H, [83, 188, 917, 865]),
+        // sms_cart.svg: the label over the top, x 18..222, y 12..198 of 240x300.
+        PlainCart::MasterSystem => (264, SMS_SEATED_H, [75, 40, 925, 660]),
+    }
+}
+
+pub const fn plain_cart_box(cart: PlainCart) -> (u32, u32) {
+    let (w, seated_h, _) = plain_geometry(cart);
+    (w, (w * seated_h + SEATED_W / 2) / SEATED_W)
+}
+
+pub const fn plain_label(cart: PlainCart) -> (u32, u32, u32, u32) {
+    let (w, h) = plain_cart_box(cart);
+    let [x0, y0, x1, y1] = plain_geometry(cart).2;
+    let (x0, y0) = ((w * x0 + 500) / 1000, (h * y0 + 500) / 1000);
+    let (x1, y1) = ((w * x1 + 500) / 1000, (h * y1 + 500) / 1000);
+    (x0, y0, x1 - x0, y1 - y0)
+}
+
 const NES_MAX_PX: f32 = (NES_LABEL_H - 2 * PAD) as f32 / MAX_LINES as f32;
 const FAMICOM_MAX_PX: f32 = FAMICOM_LABEL.3 as f32 / (MAX_LINES as f32 * 1.36);
 const SNES_MAX_PX: f32 = SNES_LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
@@ -185,11 +211,12 @@ enum Shape {
     Gb(GbShell),
     Nes(NesShell),
     Snes(SnesShell),
+    Plain(PlainCart),
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Nes | Platform::Snes => None,
+        Platform::Gba | Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -264,7 +291,19 @@ pub fn nes_famicom_of(cart: &Cart) -> bool {
         }
 }
 
+/// The one shape a console's carts all had, for a console with no choice of shapes.
+pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
+    match platform {
+        Platform::Gg => Some(PlainCart::GameGear),
+        Platform::Sms => Some(PlainCart::MasterSystem),
+        Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
+    }
+}
+
 fn shape_of(cart: &Cart) -> Shape {
+    if let Some(plain) = plain_cart_for(cart.platform) {
+        return Shape::Plain(plain);
+    }
     match (cart.platform, gb_shell_of(cart)) {
         (Platform::Nes, _) if nes_famicom_of(cart) => Shape::Nes(NesShell::Famicom),
         (Platform::Nes, _) => Shape::Nes(NesShell::Nes),
@@ -362,6 +401,32 @@ fn spec(shape: Shape) -> Spec {
                 },
             }),
         },
+        Shape::Plain(cart) => {
+            let (w, h) = plain_cart_box(cart);
+            let label = plain_label(cart);
+            Spec {
+                w,
+                h,
+                label,
+                mask: plain_cart_mask(cart),
+                mould: Mould::Gba,
+                paint: &[],
+                drawn: Some(Drawn {
+                    depth: plain_cart_depth(cart),
+                    detail: plain_detail_mask(cart),
+                    max_px: label.3 as f32 / (MAX_LINES as f32 * 1.36),
+                    max_h: f32::INFINITY,
+                    rim: (5 * w + SEATED_W / 2) / SEATED_W,
+                    board: Board {
+                        x: (0.06, 0.94),
+                        top: 0.04,
+                        pins: (0.1, 0.9),
+                        contacts_from: 0.93,
+                        traces_from: 0.86,
+                    },
+                }),
+            }
+        }
     }
 }
 
@@ -372,6 +437,10 @@ const GB_SEATED_H: u32 = 259;
 const NES_SEATED_H: u32 = 288;
 /// A US SNES cart's face is about 3:2, wide and low like a GBA's.
 const SNES_SEATED_H: u32 = 157;
+/// A Game Gear cart is about 5:4, wide and low.
+const GG_SEATED_H: u32 = 192;
+/// A Master System cart is about 4:5, connector foot included.
+const SMS_SEATED_H: u32 = 300;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
@@ -379,6 +448,8 @@ pub fn seated_box(platform: Platform) -> (u32, u32) {
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         Platform::Nes => (SEATED_W, NES_SEATED_H),
         Platform::Snes => (SEATED_W, SNES_SEATED_H),
+        Platform::Gg => (SEATED_W, GG_SEATED_H),
+        Platform::Sms => (SEATED_W, SMS_SEATED_H),
     }
 }
 
@@ -388,6 +459,8 @@ pub fn cart_box(platform: Platform) -> (u32, u32) {
         Platform::Gb | Platform::Gbc => Shape::Gb(GbShell::Notched),
         Platform::Nes => Shape::Nes(NesShell::Nes),
         Platform::Snes => Shape::Snes(SnesShell::Us),
+        Platform::Gg => Shape::Plain(PlainCart::GameGear),
+        Platform::Sms => Shape::Plain(PlainCart::MasterSystem),
     });
     (s.w, s.h)
 }
@@ -406,6 +479,11 @@ pub fn nes_cart_shadow(shell: NesShell) -> CartFace {
 
 pub fn snes_cart_shadow(shell: SnesShell) -> CartFace {
     shadow(SNES_CART_W, SNES_CART_H, snes_cart_mask(shell))
+}
+
+pub fn plain_cart_shadow(cart: PlainCart) -> CartFace {
+    let (w, h) = plain_cart_box(cart);
+    shadow(w, h, plain_cart_mask(cart))
 }
 
 fn shadow(w: u32, h: u32, mask: &[u8]) -> CartFace {

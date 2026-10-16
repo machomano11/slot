@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300">
+  <defs>
+    <g id="grip">
+      <rect x="34" y="214.0" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="222.5" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="231.0" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="239.5" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="248.0" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="256.5" width="172" height="2.4" rx="0.6"/>
+      <rect x="34" y="265.0" width="172" height="2.4" rx="0.6"/>
+      <rect x="0" y="282" width="240" height="1.6"/>
+    </g>
+  </defs>
+  <g fill="#fff">
+    <use href="#grip" x="1.1" y="1.1"/>
+  </g>
+  <g fill="#000">
+    <use href="#grip"/>
+  </g>
+</svg>

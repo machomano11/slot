@@ -8,7 +8,7 @@ use crate::cart::{
     snes_shell_of, CART_H, CART_W,
 };
 use crate::hud::Millis;
-use crate::silhouette::{GbShell, NesShell, SnesShell};
+use crate::silhouette::{GbShell, NesShell, PlainCart, SnesShell};
 use crate::slot_chrome::{draw_empty_slot, MOUTH_H};
 
 const SIDE_SCALE: f32 = 0.78;
@@ -50,9 +50,13 @@ enum Backing {
     Gb(GbShell),
     Nes(NesShell),
     Snes(SnesShell),
+    Plain(PlainCart),
 }
 
 fn backing(cart: &Cart) -> Backing {
+    if let Some(plain) = crate::cart::plain_cart_for(cart.platform) {
+        return Backing::Plain(plain);
+    }
     match cart.platform {
         Platform::Nes if nes_famicom_of(cart) => Backing::Nes(NesShell::Famicom),
         Platform::Nes => Backing::Nes(NesShell::Nes),
@@ -77,6 +81,7 @@ pub struct Shelf {
     famicom_shadow: Option<TexId>,
     snes_shadow: Option<TexId>,
     snes_pal_shadow: Option<TexId>,
+    plain_shadows: [Option<TexId>; PlainCart::ALL.len()],
     /// Each cart's shape: reading it needs the ROM, so it is read once, on first use.
     shells: Vec<OnceLock<Backing>>,
     clears: Vec<OnceLock<bool>>,
@@ -109,6 +114,7 @@ impl Shelf {
             famicom_shadow: None,
             snes_shadow: None,
             snes_pal_shadow: None,
+            plain_shadows: [None; PlainCart::ALL.len()],
             ride: 0.0,
             vel: 0.0,
             held: None,
@@ -192,6 +198,10 @@ impl Shelf {
             SnesShell::Us => self.snes_shadow = Some(face),
             SnesShell::Pal => self.snes_pal_shadow = Some(face),
         }
+    }
+
+    pub fn set_plain_shadow(&mut self, cart: PlainCart, face: TexId) {
+        self.plain_shadows[cart as usize] = Some(face);
     }
 
     pub fn set_backing(&mut self, face: TexId) {
@@ -524,6 +534,7 @@ impl Shelf {
                     Some(Backing::Nes(NesShell::Famicom)) => self.famicom_shadow,
                     Some(Backing::Snes(SnesShell::Us)) => self.snes_shadow,
                     Some(Backing::Snes(SnesShell::Pal)) => self.snes_pal_shadow,
+                    Some(Backing::Plain(cart)) => self.plain_shadows[cart as usize],
                     Some(Backing::Gba) | None => self.shadow,
                 };
                 if let Some(tex) = backing {

@@ -553,6 +553,8 @@ impl Session {
                 Platform::Gbc => slot_cheevos::Console::Gbc,
                 Platform::Nes => slot_cheevos::Console::Nes,
                 Platform::Snes => slot_cheevos::Console::Snes,
+                Platform::Gg => slot_cheevos::Console::Gg,
+                Platform::Sms => slot_cheevos::Console::Sms,
             };
             emu.achievements(&account.user, &account.token, console);
             self.ra.console = Some(console);

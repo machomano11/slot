@@ -3,7 +3,7 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC", "NES", "SNES"]);
+    assert_eq!(names, vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS"]);
 }
 
 #[test]
@@ -15,7 +15,9 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Gb,
             Platform::Gbc,
             Platform::Nes,
-            Platform::Snes
+            Platform::Snes,
+            Platform::Gg,
+            Platform::Sms
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -24,6 +26,17 @@ fn every_platform_is_a_shelf_of_its_own() {
             "{p:?} is named twice in the ring, so two shelves would hold one platform"
         );
     }
+}
+
+#[test]
+fn the_sega_8_bits_take_their_own_extensions() {
+    assert!(Platform::Gg.accepts(std::path::Path::new("Sonic Chaos.gg")));
+    assert!(Platform::Gg.accepts(std::path::Path::new("Shinobi.GG")));
+    assert!(!Platform::Gg.accepts(std::path::Path::new("Alex Kidd.sms")));
+    assert!(Platform::Sms.accepts(std::path::Path::new("Alex Kidd.sms")));
+    assert!(!Platform::Sms.accepts(std::path::Path::new("Sonic Chaos.gg")));
+    assert_eq!(Platform::Gg.picture(), (160, 144));
+    assert_eq!(Platform::Sms.picture(), (256, 192));
 }
 
 #[test]
