@@ -413,6 +413,9 @@ fn run(
                     Outcome::NoMatch => outcome,
                     Outcome::Saved(from, label) => {
                         covered.insert(place.clone());
+                        // At once: a run cut short (power off) must not leave a cover unmarked,
+                        // which would then never make way for the cart's picture.
+                        save_covered(root, &covered);
                         Outcome::Saved(from, label)
                     }
                     cover => cover,
@@ -427,6 +430,7 @@ fn run(
                 Outcome::Saved(from, label) => {
                     if cover {
                         covered.remove(&place);
+                        save_covered(root, &covered);
                     }
                     summary.found += 1;
                     report.push_str(&format!("found     {place} <- {from}\n"));
@@ -454,10 +458,6 @@ fn run(
     })();
     // Checksums read before a cancel or a network failure are kept for next time.
     src.crcs.save(root);
-    let list: String = covered.iter().map(|p| format!("{p}\n")).collect();
-    if let Err(e) = atomic_write(&root.join(COVER_LABELS), list.as_bytes()) {
-        eprintln!("slot: cart art: {COVER_LABELS}: {e}");
-    }
     result?;
     eprintln!(
         "slot: cart art: {} found, {} no match, {} failed",
@@ -467,6 +467,13 @@ fn run(
         eprintln!("slot: cart art: {REPORT}: {e}");
     }
     Ok(summary)
+}
+
+fn save_covered(root: &Path, covered: &std::collections::BTreeSet<String>) {
+    let list: String = covered.iter().map(|p| format!("{p}\n")).collect();
+    if let Err(e) = atomic_write(&root.join(COVER_LABELS), list.as_bytes()) {
+        eprintln!("slot: cart art: {COVER_LABELS}: {e}");
+    }
 }
 
 enum Outcome {

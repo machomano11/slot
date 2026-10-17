@@ -209,3 +209,13 @@ Zaxxon's Motherbase 2000 (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
 ＷＷＦ・ロウ (Europe)	058d46ff-56e2-4943-93dd-7e753ca999c9.png
 ＷＷＦ・ロウ (Japan)	9492f218-c395-4e33-95e7-1fc06dd353e7.png
 ＷＷＦ・ロウ (USA)	460f617e-7fe8-443e-9353-51338be9968d.png
+Disney’s Pinocchio (USA)	c467beb8-5c25-44d5-a1d3-d6b59bcfb291.png
+Golden Axe 32x Edition (USA)	35f1ea87-17f7-4ff4-a067-7e93d961d855.png
+Golden Axe: 32X Edition (USA)	35f1ea87-17f7-4ff4-a067-7e93d961d855.png
+Pinocchio (USA)	c467beb8-5c25-44d5-a1d3-d6b59bcfb291.png
+Sonic Robo Blast 2 32X (Japan)	98407df5-d54d-4fd9-ab6d-3755a87f53f3.png
+Sonic Robo Blast 32X (Japan)	98407df5-d54d-4fd9-ab6d-3755a87f53f3.png
+SoulStar X (USA)	73fa1ff5-8a17-49f4-9c7d-7c705d44fd2c.png
+Virtua Hamster (USA)	0e80e378-503a-46b7-8489-89f3824a8906.png
+X-Men (USA)	420acca2-d4e2-4690-be0f-31a10eb819bc.png
+X-Men: Mind Games (USA)	420acca2-d4e2-4690-be0f-31a10eb819bc.png

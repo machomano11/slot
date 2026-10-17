@@ -30,7 +30,7 @@ JAPAN = {'Japan': 'Japan'}
 OTHERS = {'Brazil': 'Brazil', 'Asia': 'Asia', 'Korea': 'Korea', 'Oceania': 'Australia'}
 EVERYWHERE = {**AMERICAS, **EUROPE, **JAPAN, **OTHERS}
 WEST = {**AMERICAS, **EUROPE, **OTHERS}
-CART, DISC = 'Cart - Front', 'Disc'
+CART, DISC, FANART = 'Cart - Front', 'Disc', 'Fanart - Cart - Front'
 # console: (LaunchBox platform, regions whose pictures show that cart, picture type)
 CONSOLES = {
     'nes': ('Nintendo Entertainment System', {**AMERICAS, **EUROPE}, CART),
@@ -79,30 +79,41 @@ with metadata().open('Metadata.xml') as f:
                 (el.findtext('AlternateName') or '', el.findtext('Region') or ''))
             el.clear()
         elif el.tag == 'GameImage':
-            if el.findtext('Type') in (CART, DISC):
+            if el.findtext('Type') in (CART, DISC, FANART):
                 carts.setdefault(el.findtext('DatabaseID'), []).append(
                     (el.findtext('Type'), el.findtext('FileName') or '', el.findtext('Region') or ''))
             el.clear()
 
+def lines_of(gid, name, regions, kind):
+    lines = set()
+    for file_kind, file, region in carts.get(gid, []):
+        if file_kind != kind or region not in regions or not file.endswith('.png') \
+                or not set(file) <= SAFE or len(file) > 64:
+            continue
+        tag = regions[region]
+        for title, alt_region in [(name, '')] + names.get(gid, []):
+            # The game's main (English) name too, so a ROM named for its US release finds
+            # its Famicom picture.
+            if (alt_region in regions or not alt_region) and title and not any(ord(c) < 32 for c in title):
+                lines.add(f'{title} ({tag})\t{file}' if tag else f'{title}\t{file}')
+    return lines
+
+
 for console in WANTED:
     platform, regions, kind = CONSOLES[console]
-    lines = set()
+    lines, fanart = set(), set()
     for gid, (game_platform, name) in games.items():
         if game_platform != platform:
             continue
-        for file_kind, file, region in carts.get(gid, []):
-            if file_kind != kind or region not in regions or not file.endswith('.png') \
-                    or not set(file) <= SAFE or len(file) > 64:
-                continue
-            tag = regions[region]
-            for title, alt_region in [(name, '')] + names.get(gid, []):
-                # The game's main (English) name too, so a ROM named for its US release finds
-                # its Famicom picture.
-                if (alt_region in regions or not alt_region) and title and not any(ord(c) < 32 for c in title):
-                    lines.add(f'{title} ({tag})\t{file}' if tag else f'{title}\t{file}')
+        real = lines_of(gid, name, regions, kind)
+        lines |= real
+        # Fans' pictures of the cart, drawn from its real label, for a game with no photo:
+        # listed after every photo, so a name with both tries the photos first.
+        if not real and kind == CART:
+            fanart |= lines_of(gid, name, regions, FANART)
     out = pathlib.Path(__file__).parent / f'card/Slot/System/{console}-cart-labels.txt'
     what = 'disc' if kind == DISC else 'cart'
     header = f'# {platform} {what} pictures from the LaunchBox Games Database ({URL}): name (region), file\n'
-    out.write_text(header + '\n'.join(sorted(lines)) + '\n')
+    out.write_text(header + '\n'.join(sorted(lines) + sorted(fanart)) + '\n')
     shown = sum(1 for g, (p, _) in games.items() if p == platform and any(k == kind for k, _, _ in carts.get(g, [])))
-    print(f'{console}: {len(lines)} names for {shown} games; wrote {out}', file=sys.stderr)
+    print(f'{console}: {len(lines)} names for {shown} games, {len(fanart)} fan pictures; wrote {out}', file=sys.stderr)
