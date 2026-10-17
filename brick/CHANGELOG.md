@@ -1,6 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Cart Art fetches real labels for the newer consoles: cut from LaunchBox's pictures of Mega
+  Drive, Game Gear, Master System, 32X, Neo Geo Pocket and WonderSwan carts, and the whole
+  printed disc for PlayStation and Sega CD games. Covers fetched before are swapped for them on
+  the next GET CART ART; games with no picture keep their cover.
 - The carts of the newer consoles are redrawn from photos of the real ones: the 32X, Game Gear,
   Mega Drive, Neo Geo Pocket (black, and slate for the Color), Master System and WonderSwan
   (with its bare contacts) carts, and the print area of PlayStation and Sega CD discs.

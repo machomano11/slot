@@ -1,0 +1,211 @@
+# Sega 32X cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+After Burner (Europe)	ece7c137-3a7d-4be0-b462-3f5661ee560d.png
+After Burner (Japan)	c218d8cc-4668-44c0-961e-e3f6a28e71e7.png
+After Burner (USA)	951124d6-06be-4f11-9d97-f02be64c58e2.png
+After Burner Complete (Europe)	ece7c137-3a7d-4be0-b462-3f5661ee560d.png
+After Burner Complete (Japan)	c218d8cc-4668-44c0-961e-e3f6a28e71e7.png
+After Burner Complete (USA)	951124d6-06be-4f11-9d97-f02be64c58e2.png
+After Burner II Complete (Europe)	ece7c137-3a7d-4be0-b462-3f5661ee560d.png
+After Burner II Complete (Japan)	c218d8cc-4668-44c0-961e-e3f6a28e71e7.png
+After Burner II Complete (USA)	951124d6-06be-4f11-9d97-f02be64c58e2.png
+BC Racers (USA)	ebd2c7ff-f8a6-4fba-a9b7-c19c185c75e6.png
+Blackthorne (USA)	3179bb4d-397c-4a02-9bd9-8fa5a91e969a.png
+Brutal Unleashed: Above the Claw (USA)	de20fb5b-bef5-4aea-81d2-ef9adc3cd10a.png
+Brutal: Above the Claw (USA)	de20fb5b-bef5-4aea-81d2-ef9adc3cd10a.png
+Chaotix (Europe)	60d85fce-866b-4fc3-ab9b-052c60542b6e.png
+Chaotix (Japan)	e57b8a32-4247-412a-bff8-dd16a0c9a263.png
+Chaotix (USA)	de84278e-94d2-4ac6-b65c-daae67ef84a4.png
+Chaotix: Featuring Knuckles the Echidna (Europe)	60d85fce-866b-4fc3-ab9b-052c60542b6e.png
+Chaotix: Featuring Knuckles the Echidna (Japan)	e57b8a32-4247-412a-bff8-dd16a0c9a263.png
+Chaotix: Featuring Knuckles the Echidna (USA)	de84278e-94d2-4ac6-b65c-daae67ef84a4.png
+Cosmic Carnage (Europe)	7ce23e4d-f3d9-49ed-b357-8a39aa0b0c46.png
+Cosmic Carnage (Japan)	156c8ff5-d88a-4f73-9a0a-ebac447f7a11.png
+Cosmic Carnage (USA)	0e037625-a69c-4956-ad94-d1dc8c4cc9d7.png
+Cyber Brawl (Europe)	7ce23e4d-f3d9-49ed-b357-8a39aa0b0c46.png
+Cyber Brawl (Japan)	156c8ff5-d88a-4f73-9a0a-ebac447f7a11.png
+Cyber Brawl (USA)	0e037625-a69c-4956-ad94-d1dc8c4cc9d7.png
+DOOM (Europe)	163aef0f-387b-493e-9b5e-f97951433917.png
+DOOM (Japan)	c3b58e59-e909-42f0-8a89-42085eb601b5.png
+DOOM (USA)	2d65c663-aa42-4a12-9ebd-ece6cf8c3084.png
+DOOM 32X (Europe)	163aef0f-387b-493e-9b5e-f97951433917.png
+DOOM 32X (Japan)	c3b58e59-e909-42f0-8a89-42085eb601b5.png
+DOOM 32X (USA)	2d65c663-aa42-4a12-9ebd-ece6cf8c3084.png
+DOOM 64 32X	f7b376bb-3490-41b2-95f4-9765ffd45d8e.png
+DOOM RR (Europe)	163aef0f-387b-493e-9b5e-f97951433917.png
+DOOM RR (Japan)	c3b58e59-e909-42f0-8a89-42085eb601b5.png
+DOOM RR (USA)	2d65c663-aa42-4a12-9ebd-ece6cf8c3084.png
+DOOM: Jaguar Levels (Europe)	a90506ac-c137-4120-b963-0bcdb22772e3.png
+DarXide (Europe)	19b3899d-b179-48c6-a07c-76bd50d82026.png
+Doom 64	f7b376bb-3490-41b2-95f4-9765ffd45d8e.png
+FIFA Soccer 96 (Europe)	b65b1885-c70f-4f3c-8035-af3e5ba672d7.png
+Golf Magazine Presents: 36 Great Holes Starring Fred Couples (Europe)	3fc3e203-5536-4636-ae48-972eb334ae6f.png
+Golf Magazine Presents: 36 Great Holes Starring Fred Couples (Japan)	bf406d83-0810-4803-9e42-c8c05e697074.png
+Golf Magazine Presents: 36 Great Holes Starring Fred Couples (USA)	9ab83968-ab8e-4863-b316-8fc8bf946124.png
+Golf Magazine presents 36 Great Holes starring Fred Couples (Europe)	3fc3e203-5536-4636-ae48-972eb334ae6f.png
+Golf Magazine presents 36 Great Holes starring Fred Couples (Japan)	bf406d83-0810-4803-9e42-c8c05e697074.png
+Golf Magazine presents 36 Great Holes starring Fred Couples (USA)	9ab83968-ab8e-4863-b316-8fc8bf946124.png
+Golf Magazine: 36 Great Holes Starring Fred Couples (Europe)	3fc3e203-5536-4636-ae48-972eb334ae6f.png
+Golf Magazine: 36 Great Holes Starring Fred Couples (Japan)	bf406d83-0810-4803-9e42-c8c05e697074.png
+Golf Magazine: 36 Great Holes Starring Fred Couples (USA)	9ab83968-ab8e-4863-b316-8fc8bf946124.png
+JagDoom (Europe)	a90506ac-c137-4120-b963-0bcdb22772e3.png
+Knuckles' Chaotix (Europe)	60d85fce-866b-4fc3-ab9b-052c60542b6e.png
+Knuckles' Chaotix (Japan)	e57b8a32-4247-412a-bff8-dd16a0c9a263.png
+Knuckles' Chaotix (USA)	de84278e-94d2-4ac6-b65c-daae67ef84a4.png
+Kolibri (Europe)	52155be6-5b07-426a-b118-40637c3a077c.png
+Kolibri (USA)	dca0efce-63e0-42ca-ab0a-e8292b00c82a.png
+Metal Head (Europe)	fcc1c179-96f2-42cb-b73a-7f7dd3b3732c.png
+Metal Head (Japan)	c9ac9095-6322-4c6d-aab1-95e9d0f23b8d.png
+Metal Head (USA)	412d89b4-c25e-48b2-ad7a-9dbe51fb0b00.png
+Mortal Kombat II (Europe)	4ab9287e-7135-45e3-aa36-8babfec0d7f6.png
+Mortal Kombat II (Japan)	4ba6f649-3f32-4630-bcfb-e4935b44cfc4.png
+Mortal Kombat II (USA)	e7fe0566-716a-4a92-a718-d1a4c6c1fefd.png
+Mortal Kombat II Kyūkyoku Shinken (Europe)	4ab9287e-7135-45e3-aa36-8babfec0d7f6.png
+Mortal Kombat II Kyūkyoku Shinken (Japan)	4ba6f649-3f32-4630-bcfb-e4935b44cfc4.png
+Mortal Kombat II Kyūkyoku Shinken (USA)	e7fe0566-716a-4a92-a718-d1a4c6c1fefd.png
+Mortal Kombat II: Kyuukyoku Shinken (Europe)	4ab9287e-7135-45e3-aa36-8babfec0d7f6.png
+Mortal Kombat II: Kyuukyoku Shinken (Japan)	4ba6f649-3f32-4630-bcfb-e4935b44cfc4.png
+Mortal Kombat II: Kyuukyoku Shinken (USA)	e7fe0566-716a-4a92-a718-d1a4c6c1fefd.png
+Motherbase (Europe)	b580e9da-fb25-4b58-9a38-75667efc551a.png
+Motherbase (Japan)	790e08b7-babf-4db7-945a-43391f75af38.png
+Motherbase (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
+Motocross Championship (Europe)	d346bf38-dfab-443c-8b92-e194721b309a.png
+Motocross Championship (USA)	41be81d1-ee8f-4d04-8e61-37f47975cb0e.png
+NBA Jam Tournament Edition (Europe)	42516991-2bb1-48de-8b05-b01d2251a805.png
+NBA Jam Tournament Edition (Japan)	43cfbf8c-df1d-4af9-97ce-775b0a5d9574.png
+NBA Jam Tournament Edition (USA)	6e02c13b-a217-4c07-96d9-ffd1dfb7d118.png
+NFL Prime Time (USA)	r2_af801817-12fa-43cf-aa17-e4230c0969a6.png
+NFL Quarterback Club (Europe)	dd468de8-48bd-4e17-a037-defab7759509.png
+NFL Quarterback Club (Japan)	c7967056-31ef-4142-b468-53e38e68c7bf.png
+NFL Quarterback Club (USA)	ccddd076-867f-4600-9d4e-92472b94470f.png
+Parasquad (Europe)	b580e9da-fb25-4b58-9a38-75667efc551a.png
+Parasquad (Japan)	790e08b7-babf-4db7-945a-43391f75af38.png
+Parasquad (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
+Pitfall: The Mayan Adventure (USA)	ab6c9092-3f0a-460b-a813-cfbc7088bfba.png
+Primal Rage (Europe)	77333557-b787-45b0-9708-e5c68afacada.png
+Primal Rage (USA)	e1d7694b-5fee-4d44-8f26-f0d8bffefebf.png
+Prime Time NFL (USA)	r2_af801817-12fa-43cf-aa17-e4230c0969a6.png
+Prime Time NFL Football (USA)	r2_af801817-12fa-43cf-aa17-e4230c0969a6.png
+Prime Time NFL Starring Deion Sanders (USA)	r2_af801817-12fa-43cf-aa17-e4230c0969a6.png
+RBI Baseball '95 (USA)	5686245a-e5ad-48c4-bce4-a4339dbc574d.png
+Romance of the Three Kingdoms IV: Wall of Fire (Japan)	ce42659b-463c-4c45-a993-714f310a0a0c.png
+Sangokushi IV (Japan)	ce42659b-463c-4c45-a993-714f310a0a0c.png
+Shadow Squadron (Europe)	c35077c7-fdfe-491e-8216-ebd60565b7e1.png
+Shadow Squadron (Japan)	9c33aa78-7b71-421f-a7c4-8b52ed0a7534.png
+Shadow Squadron (USA)	9bc511b9-0f46-4a28-9c19-6a67e1e3d43d.png
+Space Harrier (Europe)	r2_469efde8-fd47-4cc3-b40c-854542c9a034.png
+Space Harrier (Japan)	dbcfe954-b2ca-41a9-889d-d81287f1a977.png
+Space Harrier (USA)	r2_24ac1f25-db3a-4f5d-95fb-595dc7a4102f.png
+Spider-Man: Web of Fire (USA)	f1dda227-2c5e-47c8-ac1f-4322ab71b9ae.png
+Star Trek: Starfleet Academy Starship Bridge Simulator (USA)	39196967-bc71-4ffd-949f-d21850f08b14.png
+Star Trek: Starfleet Academy: Starship Bridge Simulator (USA)	39196967-bc71-4ffd-949f-d21850f08b14.png
+Star Wars Arcade (Europe)	52b7a3f7-f77d-4728-8430-fdcea97ca5e8.png
+Star Wars Arcade (Japan)	126fe879-a4ad-462b-9dd5-35964a4fa686.png
+Star Wars Arcade (USA)	c99a82c3-d90f-4f81-8d12-0343416b4568.png
+Stellar Assault (Europe)	c35077c7-fdfe-491e-8216-ebd60565b7e1.png
+Stellar Assault (Japan)	9c33aa78-7b71-421f-a7c4-8b52ed0a7534.png
+Stellar Assault (USA)	9bc511b9-0f46-4a28-9c19-6a67e1e3d43d.png
+T-MEK (Europe)	41bd4c82-49c1-405c-9dac-69ea6178d4ed.png
+T-MEK (USA)	42ec707e-6798-47b5-a6c4-9f1bd610b616.png
+Tempo (Japan)	b608a6cf-eacc-482e-ae4d-3a7c098ae369.png
+Tempo (USA)	811b8398-296d-49ac-989d-eea27a6648fa.png
+The Amazing Spider-Man: Web of Fire (USA)	f1dda227-2c5e-47c8-ac1f-4322ab71b9ae.png
+Toughman Contest (Europe)	72c6205b-acb3-49c3-ab9c-f78013d21586.png
+Toughman Contest (USA)	4d212bd6-b863-4f4e-a5a9-1734cf2079d4.png
+V.R. Virtua Racing Deluxe (Europe)	6e92f84a-fae7-4f95-adac-6486a0d250ec.png
+V.R. Virtua Racing Deluxe (Japan)	b515b6c0-a117-4e90-a963-0e308f062389.png
+V.R. Virtua Racing Deluxe (USA)	6a3eed69-a641-475a-a40c-09e7ac98e497.png
+Virtua Fighter (Europe)	19337f10-c941-46bf-91a8-a5bedfe3b396.png
+Virtua Fighter (Japan)	880d30d2-5492-4f83-b7cd-cabda3d22a9e.png
+Virtua Fighter (USA)	18cee021-8660-43bf-b120-7576c1df48a0.png
+Virtua Racing Deluxe (Europe)	6e92f84a-fae7-4f95-adac-6486a0d250ec.png
+Virtua Racing Deluxe (Japan)	b515b6c0-a117-4e90-a963-0e308f062389.png
+Virtua Racing Deluxe (USA)	6a3eed69-a641-475a-a40c-09e7ac98e497.png
+WWF Raw (Europe)	058d46ff-56e2-4943-93dd-7e753ca999c9.png
+WWF Raw (Japan)	9492f218-c395-4e33-95e7-1fc06dd353e7.png
+WWF Raw (USA)	460f617e-7fe8-443e-9353-51338be9968d.png
+WWF Rou (Europe)	058d46ff-56e2-4943-93dd-7e753ca999c9.png
+WWF Rou (Japan)	9492f218-c395-4e33-95e7-1fc06dd353e7.png
+WWF Rou (USA)	460f617e-7fe8-443e-9353-51338be9968d.png
+WWF Rō (Europe)	058d46ff-56e2-4943-93dd-7e753ca999c9.png
+WWF Rō (Japan)	9492f218-c395-4e33-95e7-1fc06dd353e7.png
+WWF Rō (USA)	460f617e-7fe8-443e-9353-51338be9968d.png
+WWF WrestleMania: The Arcade Game (USA)	7fb438a5-14e7-4ff5-b2f9-33e1a6a8f2e3.png
+Wolfenstein 3D (Europe)	42ea411e-92b0-43e9-8514-c15719bf873c.png
+World Series Baseball starring Deion Sanders (USA)	c40c4eb8-2667-4be7-9a9e-e28df95ad30d.png
+Zaxxon's Motherbase 2000 (Europe)	b580e9da-fb25-4b58-9a38-75667efc551a.png
+Zaxxon's Motherbase 2000 (Japan)	790e08b7-babf-4db7-945a-43391f75af38.png
+Zaxxon's Motherbase 2000 (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
+~Zaxxon's Motherbase (Europe)	b580e9da-fb25-4b58-9a38-75667efc551a.png
+~Zaxxon's Motherbase (Japan)	790e08b7-babf-4db7-945a-43391f75af38.png
+~Zaxxon's Motherbase (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
+アフターバーナー・コンプリート (Europe)	ece7c137-3a7d-4be0-b462-3f5661ee560d.png
+アフターバーナー・コンプリート (Japan)	c218d8cc-4668-44c0-961e-e3f6a28e71e7.png
+アフターバーナー・コンプリート (USA)	951124d6-06be-4f11-9d97-f02be64c58e2.png
+カオティクス (Europe)	60d85fce-866b-4fc3-ab9b-052c60542b6e.png
+カオティクス (Japan)	e57b8a32-4247-412a-bff8-dd16a0c9a263.png
+カオティクス (USA)	de84278e-94d2-4ac6-b65c-daae67ef84a4.png
+カオティクス　～ＦＥＡＴＵＲＩＮＧ　ナックルズ　ザ　エキドゥナ～ (Europe)	60d85fce-866b-4fc3-ab9b-052c60542b6e.png
+カオティクス　～ＦＥＡＴＵＲＩＮＧ　ナックルズ　ザ　エキドゥナ～ (Japan)	e57b8a32-4247-412a-bff8-dd16a0c9a263.png
+カオティクス　～ＦＥＡＴＵＲＩＮＧ　ナックルズ　ザ　エキドゥナ～ (USA)	de84278e-94d2-4ac6-b65c-daae67ef84a4.png
+ゴルフマ ガジン プレゼンツ ３６グレート ホールス スターリング フレッド・カプルス (Europe)	3fc3e203-5536-4636-ae48-972eb334ae6f.png
+ゴルフマ ガジン プレゼンツ ３６グレート ホールス スターリング フレッド・カプルス (Japan)	bf406d83-0810-4803-9e42-c8c05e697074.png
+ゴルフマ ガジン プレゼンツ ３６グレート ホールス スターリング フレッド・カプルス (USA)	9ab83968-ab8e-4863-b316-8fc8bf946124.png
+サイバーブロール (Europe)	7ce23e4d-f3d9-49ed-b357-8a39aa0b0c46.png
+サイバーブロール (Japan)	156c8ff5-d88a-4f73-9a0a-ebac447f7a11.png
+サイバーブロール (USA)	0e037625-a69c-4956-ad94-d1dc8c4cc9d7.png
+スターウォーズ アーケード (Europe)	52b7a3f7-f77d-4728-8430-fdcea97ca5e8.png
+スターウォーズ アーケード (Japan)	126fe879-a4ad-462b-9dd5-35964a4fa686.png
+スターウォーズ アーケード (USA)	c99a82c3-d90f-4f81-8d12-0343416b4568.png
+ステラアサルト (Europe)	c35077c7-fdfe-491e-8216-ebd60565b7e1.png
+ステラアサルト (Japan)	9c33aa78-7b71-421f-a7c4-8b52ed0a7534.png
+ステラアサルト (USA)	9bc511b9-0f46-4a28-9c19-6a67e1e3d43d.png
+スペースハリアー (Europe)	r2_469efde8-fd47-4cc3-b40c-854542c9a034.png
+スペースハリアー (Japan)	dbcfe954-b2ca-41a9-889d-d81287f1a977.png
+スペースハリアー (USA)	r2_24ac1f25-db3a-4f5d-95fb-595dc7a4102f.png
+テンポ (Japan)	b608a6cf-eacc-482e-ae4d-3a7c098ae369.png
+テンポ (USA)	811b8398-296d-49ac-989d-eea27a6648fa.png
+ドゥーム (Europe)	163aef0f-387b-493e-9b5e-f97951433917.png
+ドゥーム (Japan)	c3b58e59-e909-42f0-8a89-42085eb601b5.png
+ドゥーム (USA)	2d65c663-aa42-4a12-9ebd-ece6cf8c3084.png
+バーチャファイター (Europe)	19337f10-c941-46bf-91a8-a5bedfe3b396.png
+バーチャファイター (Japan)	880d30d2-5492-4f83-b7cd-cabda3d22a9e.png
+バーチャファイター (USA)	18cee021-8660-43bf-b120-7576c1df48a0.png
+バーチャレーシング デラックス (Europe)	6e92f84a-fae7-4f95-adac-6486a0d250ec.png
+バーチャレーシング デラックス (Japan)	b515b6c0-a117-4e90-a963-0e308f062389.png
+バーチャレーシング デラックス (USA)	6a3eed69-a641-475a-a40c-09e7ac98e497.png
+パラスコード (Europe)	b580e9da-fb25-4b58-9a38-75667efc551a.png
+パラスコード (Japan)	790e08b7-babf-4db7-945a-43391f75af38.png
+パラスコード (USA)	b451317c-2239-4717-aeca-35b86f8b6cb6.png
+ピットフォール (USA)	ab6c9092-3f0a-460b-a813-cfbc7088bfba.png
+ピットフォール マヤの大冒険 (USA)	ab6c9092-3f0a-460b-a813-cfbc7088bfba.png
+ブラックソーン (USA)	3179bb4d-397c-4a02-9bd9-8fa5a91e969a.png
+プライマルレイジ (Europe)	77333557-b787-45b0-9708-e5c68afacada.png
+プライマルレイジ (USA)	e1d7694b-5fee-4d44-8f26-f0d8bffefebf.png
+メタルヘッド (Europe)	fcc1c179-96f2-42cb-b73a-7f7dd3b3732c.png
+メタルヘッド (Japan)	c9ac9095-6322-4c6d-aab1-95e9d0f23b8d.png
+メタルヘッド (USA)	412d89b4-c25e-48b2-ad7a-9dbe51fb0b00.png
+モータルコンバットＩＩ ～究極神拳～ (Europe)	4ab9287e-7135-45e3-aa36-8babfec0d7f6.png
+モータルコンバットＩＩ ～究極神拳～ (Japan)	4ba6f649-3f32-4630-bcfb-e4935b44cfc4.png
+モータルコンバットＩＩ ～究極神拳～ (USA)	e7fe0566-716a-4a92-a718-d1a4c6c1fefd.png
+レッスルマニア・ジ・アーケードゲーム (USA)	7fb438a5-14e7-4ff5-b2f9-33e1a6a8f2e3.png
+三國志ＩＶ (Japan)	ce42659b-463c-4c45-a993-714f310a0a0c.png
+스페이스 해리어 (Europe)	r2_469efde8-fd47-4cc3-b40c-854542c9a034.png
+스페이스 해리어 (Japan)	dbcfe954-b2ca-41a9-889d-d81287f1a977.png
+스페이스 해리어 (USA)	r2_24ac1f25-db3a-4f5d-95fb-595dc7a4102f.png
+ＦＩＦＡサッカー９６ (Europe)	b65b1885-c70f-4f3c-8035-af3e5ba672d7.png
+ＮＢＡ ＪＡＭ トーナメントエディション (Europe)	42516991-2bb1-48de-8b05-b01d2251a805.png
+ＮＢＡ ＪＡＭ トーナメントエディション (Japan)	43cfbf8c-df1d-4af9-97ce-775b0a5d9574.png
+ＮＢＡ ＪＡＭ トーナメントエディション (USA)	6e02c13b-a217-4c07-96d9-ffd1dfb7d118.png
+ＮＢＡジャム・トーナメントエディション (Europe)	42516991-2bb1-48de-8b05-b01d2251a805.png
+ＮＢＡジャム・トーナメントエディション (Japan)	43cfbf8c-df1d-4af9-97ce-775b0a5d9574.png
+ＮＢＡジャム・トーナメントエディション (USA)	6e02c13b-a217-4c07-96d9-ffd1dfb7d118.png
+ＮＦＬクォーターバッククラブ (Europe)	dd468de8-48bd-4e17-a037-defab7759509.png
+ＮＦＬクォーターバッククラブ (Japan)	c7967056-31ef-4142-b468-53e38e68c7bf.png
+ＮＦＬクォーターバッククラブ (USA)	ccddd076-867f-4600-9d4e-92472b94470f.png
+Ｖ．Ｒ．バーチャレーシング デラックス (Europe)	6e92f84a-fae7-4f95-adac-6486a0d250ec.png
+Ｖ．Ｒ．バーチャレーシング デラックス (Japan)	b515b6c0-a117-4e90-a963-0e308f062389.png
+Ｖ．Ｒ．バーチャレーシング デラックス (USA)	6a3eed69-a641-475a-a40c-09e7ac98e497.png
+ＷＷＦレッスルマニア・ジ・アーケードゲーム (USA)	7fb438a5-14e7-4ff5-b2f9-33e1a6a8f2e3.png
+ＷＷＦ・ロウ (Europe)	058d46ff-56e2-4943-93dd-7e753ca999c9.png
+ＷＷＦ・ロウ (Japan)	9492f218-c395-4e33-95e7-1fc06dd353e7.png
+ＷＷＦ・ロウ (USA)	460f617e-7fe8-443e-9353-51338be9968d.png

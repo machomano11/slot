@@ -1095,3 +1095,46 @@ fn a_sega_cart_follows_its_region_unless_the_menu_picks_one() {
         Some(PlainCart::MarkIII)
     );
 }
+
+#[test]
+fn a_mega_drive_label_cut_from_its_cart_keeps_its_own_band() {
+    use slot_ui::{cart_face_with, plain_label, PlainCart};
+    let d = TempDir::new().unwrap();
+    let write = |name: &str, w: u32, h: u32| {
+        let path = d.path().join(name);
+        let mut e = png::Encoder::new(std::fs::File::create(&path).unwrap(), w, h);
+        e.set_color(png::ColorType::Rgba);
+        e.set_depth(png::BitDepth::Eight);
+        let red: Vec<u8> = [200, 20, 20, 255].repeat((w * h) as usize);
+        e.write_header().unwrap().write_image_data(&red).unwrap();
+        path
+    };
+    let cart = |label| slot_store::Cart {
+        platform: Platform::Md,
+        stem: "Game (Europe)".into(),
+        rom: "missing.md".into(),
+        label: Some(label),
+        code: String::new(),
+        shell: None,
+        title: String::new(),
+        famicom_label: None,
+    };
+    let (lx, ly, lw, lh) = plain_label(PlainCart::MegaDrive);
+    let band = |c: &slot_store::Cart| {
+        let (w, h) = slot_ui::label_size(c);
+        let face = cart_face_with(c, Some([200, 20, 20, 255].repeat((w * h) as usize)));
+        let (x, y) = (lx + lw / 2, ly + lh * 9 / 10);
+        let i = ((y * face.w + x) * 4) as usize;
+        face.rgba[i..i + 3].to_vec()
+    };
+    assert_ne!(
+        band(&cart(write("cover.png", 300, 400))),
+        [200, 20, 20],
+        "a cover gets the band"
+    );
+    assert_eq!(
+        band(&cart(write("cart.png", 400, 300))),
+        [200, 20, 20],
+        "a real label has its own"
+    );
+}

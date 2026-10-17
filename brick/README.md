@@ -162,9 +162,13 @@ Games on the Famicom cart get a Famicom cart's label (from the Japanese release)
 a game has only one, both carts show it. Carts of another shape (Tengen, gold Zelda, PAL SNES, unlicensed)
 get the game's cover instead, as do games LaunchBox has no cart picture of (many SNES games).
 
-Every other console (Game Gear, Master System, Mega Drive, 32X, Sega CD, Neo Geo Pocket,
-WonderSwan, PlayStation), and any game the above finds nothing for, gets the game's front cover
-as its label, from [libretro's thumbnails](https://github.com/libretro-thumbnails) on GitHub: the
+Mega Drive, Game Gear, Master System, 32X, Neo Geo Pocket and WonderSwan labels are cut from
+LaunchBox's cart pictures the same way, and PlayStation and Sega CD games get the picture of
+their disc, printing and all. The lists of pictures are `Slot/System/<console>-cart-labels.txt`.
+A label Cart Art made from a cover is swapped for the real one when a picture turns up.
+
+Any game the above finds nothing for gets the game's front cover as its label (except a Western
+Master System game, whose label is its title strip), from [libretro's thumbnails](https://github.com/libretro-thumbnails) on GitHub: the
 cart's label showed the same art. The game is found by its file name, so No-Intro and Redump
 names work best. The names of every cover are kept on the card in `Slot/System/Boxarts`.
 

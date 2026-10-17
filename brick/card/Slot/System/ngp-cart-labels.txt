@@ -1,0 +1,22 @@
+# SNK Neo Geo Pocket cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+Baseball Stars (Europe)	6dd4b95f-783f-43c4-bc82-499e0561207c.png
+Baseball Stars (Japan)	a383a6e1-e92d-42e9-a02d-ff58b2f73960.png
+Baseball Stars: Pocket Sports Series (Europe)	6dd4b95f-783f-43c4-bc82-499e0561207c.png
+Baseball Stars: Pocket Sports Series (Japan)	a383a6e1-e92d-42e9-a02d-ff58b2f73960.png
+King of Fighters R-1 (Europe)	653d24b0-ad90-456d-b5c2-eadc17930095.png
+King of Fighters R-1: Pocket Fighting Series (Europe)	653d24b0-ad90-456d-b5c2-eadc17930095.png
+Melon-chan no Seichou Nikki (Japan)	d433fca1-8166-449c-b281-fa357f86614e.png
+Neo Cherry Master: Real Casino Series (Japan)	6e1ba4db-beb8-4552-8190-27d34ec5ef12.png
+Neo Geo Cup '98 (Europe)	255b6157-e5a6-46bb-98c7-3996e093c7a7.png
+Neo Geo Cup '98 (Japan)	2368d583-138c-48d4-9db2-d6ef8fc679c6.png
+NeoGeo Cup '98 (Europe)	255b6157-e5a6-46bb-98c7-3996e093c7a7.png
+NeoGeo Cup '98 (Japan)	2368d583-138c-48d4-9db2-d6ef8fc679c6.png
+Pocket Tennis: Pocket Sports Series (Europe)	386bcc54-d74c-43ab-9e82-31fbad920af7.png
+Pocket Tennis: Pocket Sports Series (Japan)	8d40d5df-98d5-4fde-98d1-8115f76fc8c0.png
+Puzzle Link (Japan)	072daa77-c65b-40ce-b6dc-68359296efb6.png
+Renketsu Puzzle Tsunagete Pon! (Japan)	072daa77-c65b-40ce-b6dc-68359296efb6.png
+Renketsu Puzzle: Tsunagete Pon! (Japan)	072daa77-c65b-40ce-b6dc-68359296efb6.png
+Samurai Shodown!: Pocket Fighting Series (Europe)	ddfc980f-b74a-41b7-a682-7fb21a931cdb.png
+Samurai Shodown!: Pocket Fighting Series (Japan)	r2_6523b97a-3226-41f8-9d03-aa241448872a.png
+Shougi no Tatsujin (Japan)	06384a13-78f6-4f6c-ae99-8a223db45bee.png
+Shougi no Tatsujin: Master of Syougi (Japan)	06384a13-78f6-4f6c-ae99-8a223db45bee.png

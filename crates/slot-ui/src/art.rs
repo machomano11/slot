@@ -33,6 +33,24 @@ fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// The whole picture squeezed to `w` x `h`: for a label strip whose ends must both show.
+pub fn stretch(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
+    let (src, sw, sh) = decode(path)?;
+    if sw == 0 || sh == 0 {
+        return None;
+    }
+    let (sx, sy) = (sw as f32 / w as f32, sh as f32 / h as f32);
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    for y in 0..h {
+        for x in 0..w {
+            let (x0, y0) = (x as f32 * sx, y as f32 * sy);
+            let px = box_average(&src, sw, sh, x0, y0, x0 + sx, y0 + sy);
+            out[((y * w + x) * 4) as usize..][..4].copy_from_slice(&px);
+        }
+    }
+    Some(out)
+}
+
 /// A Famicom cart label: filled like `cover`, unless the picture is the other way round (a
 /// tall NES label on the wide Famicom one), which would lose most of it. That one is shown whole, the
 /// sides filled with the colour round its edge.

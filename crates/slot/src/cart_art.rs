@@ -48,7 +48,9 @@ struct CartPhoto {
     art: [f32; 4],
     /// Plain plastic, which gives the cart's colour.
     side: [f32; 4],
-    plain: [[f32; 4]; 2],
+    plain: &'static [[f32; 4]],
+    /// A picture of a disc: its printing is the label, all of it, and there is no plastic.
+    disc: bool,
 }
 
 /// The NES cart: label top right of a full-height grip.
@@ -59,7 +61,8 @@ const NES_PHOTO: CartPhoto = CartPhoto {
     label: [0.405, 0.006, 0.865, 0.680],
     art: [0.405, 0.006, 0.865, 0.680],
     side: [0.02, 0.3, 0.065, 0.6],
-    plain: [[0.42, 0.73, 0.85, 0.80], [0.885, 0.1, 0.93, 0.6]],
+    plain: &[[0.42, 0.73, 0.85, 0.80], [0.885, 0.1, 0.93, 0.6]],
+    disc: false,
 };
 
 /// The US SNES cart: label across the top of the middle, ridged wings either side.
@@ -70,7 +73,8 @@ const SNES_PHOTO: CartPhoto = CartPhoto {
     label: [0.200, 0.008, 0.807, 0.432],
     art: [0.200, 0.008, 0.807, 0.432],
     side: [0.04, 0.35, 0.10, 0.65],
-    plain: [[0.25, 0.47, 0.75, 0.55], [0.88, 0.2, 0.97, 0.8]],
+    plain: &[[0.25, 0.47, 0.75, 0.55], [0.88, 0.2, 0.97, 0.8]],
+    disc: false,
 };
 
 /// The Famicom cart: a wide label over most of the front, plain plastic right of it and
@@ -83,7 +87,120 @@ const FAMICOM_PHOTO: CartPhoto = CartPhoto {
     label: [0.09, 0.125, 0.91, 0.74],
     art: [0.25, 0.25, 0.75, 0.65],
     side: [0.3, 0.9, 0.7, 0.95],
-    plain: [[0.1, 0.9, 0.9, 0.97], [0.955, 0.2, 0.975, 0.7]],
+    plain: &[[0.1, 0.9, 0.9, 0.97], [0.955, 0.2, 0.975, 0.7]],
+    disc: false,
+};
+
+/// The Mega Drive / Genesis cart: the label from the top edge between the grips, its band
+/// (the Genesis grid or the Mega Drive stripe) included.
+const MD_PHOTO: CartPhoto = CartPhoto {
+    index: "System/md-cart-labels.txt",
+    sub: "",
+    aspect: (0.6, 0.72),
+    label: [0.16, 0.01, 0.85, 0.89],
+    art: [0.25, 0.15, 0.75, 0.6],
+    side: [0.2, 0.94, 0.8, 0.98],
+    plain: &[[0.2, 0.94, 0.8, 0.98]],
+    disc: false,
+};
+
+/// The Game Gear cart: the label in its recess, the SEGA plate under it.
+const GG_PHOTO: CartPhoto = CartPhoto {
+    index: "System/gg-cart-labels.txt",
+    sub: "",
+    aspect: (0.95, 1.1),
+    label: [0.1, 0.2, 0.9, 0.765],
+    art: [0.1, 0.2, 0.9, 0.765],
+    side: [0.1, 0.85, 0.3, 0.95],
+    plain: &[[0.1, 0.82, 0.3, 0.97], [0.7, 0.82, 0.9, 0.97]],
+    disc: false,
+};
+
+/// The European and US Master System cart: the title strip along the top.
+const SMS_PHOTO: CartPhoto = CartPhoto {
+    index: "System/sms-cart-labels.txt",
+    sub: "",
+    aspect: (0.6, 0.68),
+    label: [0.02, 0.03, 0.98, 0.23],
+    art: [0.1, 0.06, 0.9, 0.2],
+    side: [0.1, 0.5, 0.9, 0.9],
+    plain: &[[0.1, 0.45, 0.9, 0.95]],
+    disc: false,
+};
+
+/// The Japanese (Mark III) cart: tall, a picture label over its top.
+const MARK3_PHOTO: CartPhoto = CartPhoto {
+    index: "System/mark3-cart-labels.txt",
+    sub: "",
+    aspect: (1.2, 1.4),
+    label: [0.085, 0.02, 0.915, 0.585],
+    art: [0.2, 0.15, 0.8, 0.5],
+    side: [0.2, 0.75, 0.8, 0.95],
+    plain: &[[0.2, 0.7, 0.8, 0.95]],
+    disc: false,
+};
+
+/// The 32X cart: the label on its raised middle.
+const S32X_PHOTO: CartPhoto = CartPhoto {
+    index: "System/32x-cart-labels.txt",
+    sub: "",
+    aspect: (0.58, 0.7),
+    label: [0.18, 0.1, 0.82, 0.71],
+    art: [0.3, 0.2, 0.7, 0.6],
+    side: [0.03, 0.8, 0.12, 0.9],
+    plain: &[[0.25, 0.8, 0.75, 0.9], [0.88, 0.3, 0.95, 0.7]],
+    disc: false,
+};
+
+/// The Neo Geo Pocket cart: the label between the grooved grip and the foot.
+const NGP_PHOTO: CartPhoto = CartPhoto {
+    index: "System/ngp-cart-labels.txt",
+    sub: "",
+    aspect: (0.82, 0.98),
+    label: [0.115, 0.235, 0.885, 0.73],
+    art: [0.25, 0.35, 0.75, 0.65],
+    side: [0.02, 0.4, 0.07, 0.65],
+    plain: &[[0.02, 0.3, 0.07, 0.7], [0.93, 0.3, 0.98, 0.7]],
+    disc: false,
+};
+
+const NGPC_PHOTO: CartPhoto = CartPhoto {
+    index: "System/ngpc-cart-labels.txt",
+    ..NGP_PHOTO
+};
+
+/// The WonderSwan cart: the label over most of the front, the contacts bare below it.
+const WS_PHOTO: CartPhoto = CartPhoto {
+    index: "System/ws-cart-labels.txt",
+    sub: "",
+    aspect: (0.55, 0.7),
+    label: [0.035, 0.15, 0.965, 0.7],
+    art: [0.2, 0.25, 0.8, 0.6],
+    side: [0.03, 0.03, 0.2, 0.08],
+    plain: &[],
+    disc: false,
+};
+
+const WSC_PHOTO: CartPhoto = CartPhoto {
+    index: "System/wsc-cart-labels.txt",
+    ..WS_PHOTO
+};
+
+/// A Sega CD disc: all of its printing.
+const SEGACD_DISC: CartPhoto = CartPhoto {
+    index: "System/segacd-cart-labels.txt",
+    sub: "",
+    aspect: (0.95, 1.05),
+    label: [0.0, 0.0, 1.0, 1.0],
+    art: [0.0, 0.0, 1.0, 1.0],
+    side: [0.0, 0.0, 1.0, 1.0],
+    plain: &[],
+    disc: true,
+};
+
+const PS_DISC: CartPhoto = CartPhoto {
+    index: "System/ps-cart-labels.txt",
+    ..SEGACD_DISC
 };
 
 /// The pictures a cart's label is cut from: a NES game on the Famicom cart takes a Famicom
@@ -97,7 +214,20 @@ fn photo_specs(cart: &Cart) -> &'static [&'static CartPhoto] {
         Platform::Nes if slot_ui::nes_famicom_of(cart) => &[&FAMICOM_PHOTO],
         Platform::Nes => &[&NES_PHOTO],
         Platform::Snes => &[&SNES_PHOTO],
-        _ => &[],
+        Platform::Md => &[&MD_PHOTO],
+        Platform::Gg => &[&GG_PHOTO],
+        Platform::Sms if slot_ui::plain_cart_of(cart) == Some(slot_ui::PlainCart::MarkIII) => {
+            &[&MARK3_PHOTO]
+        }
+        Platform::Sms => &[&SMS_PHOTO],
+        Platform::S32x => &[&S32X_PHOTO],
+        Platform::Ngp => &[&NGP_PHOTO, &NGPC_PHOTO],
+        Platform::Ngpc => &[&NGPC_PHOTO, &NGP_PHOTO],
+        Platform::Ws => &[&WS_PHOTO, &WSC_PHOTO],
+        Platform::Wsc => &[&WSC_PHOTO, &WS_PHOTO],
+        Platform::Scd => &[&SEGACD_DISC],
+        Platform::Ps => &[&PS_DISC],
+        Platform::Gba | Platform::Gb | Platform::Gbc => &[],
     }
 }
 
@@ -113,6 +243,9 @@ const CRC_CACHE: &str = "System/Cache/crc32.txt";
 /// brick/make-cart-art-games.py, so the multi-megabyte DATs are never downloaded here.
 const GAMES: &str = "System/cart-art-games.txt";
 const REPORT: &str = "Logs/cart-art.txt";
+/// The labels Cart Art made from covers ("<console>/<game>"), which a cart picture replaces
+/// once one is listed.
+const COVER_LABELS: &str = "System/Cache/cover-labels.txt";
 
 /// A label written to (or, with None, deleted from) the card, for the running library to pick up.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -203,6 +336,8 @@ struct Sources<'a> {
     /// Each picture list (by its file), read when its first cart needs it.
     photos: HashMap<&'static str, PhotoIndex>,
     covers: HashMap<Platform, CoverIndex>,
+    /// The cart being fetched wears a cover Cart Art saved, which its picture may replace.
+    replace: bool,
 }
 
 fn run(
@@ -211,10 +346,19 @@ fn run(
     cancel: &AtomicBool,
     tx: &mpsc::Sender<Progress>,
 ) -> Result<Summary, String> {
+    let mut covered: std::collections::BTreeSet<String> =
+        std::fs::read_to_string(root.join(COVER_LABELS))
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_string)
+            .collect();
+    let place_of = |cart: &Cart| format!("{}/{}", cart.platform.dir_name(), cart.stem);
     let carts: Vec<Cart> = scan(root)
         .map_err(|e| format!("Cannot read games: {e}"))?
         .into_iter()
-        .filter(needs_label)
+        .filter(|c| {
+            needs_label(c) || (covered.contains(&place_of(c)) && !photo_specs(c).is_empty())
+        })
         .collect();
     let mut summary = Summary::default();
     let mut report = String::new();
@@ -228,6 +372,7 @@ fn run(
         games: Games::load(root),
         photos: HashMap::new(),
         covers: HashMap::new(),
+        replace: false,
     };
     let result = (|| {
         for (at, cart) in carts.iter().enumerate() {
@@ -239,6 +384,10 @@ fn run(
                 total: carts.len(),
                 name: cart.stem.clone(),
             });
+            let place = place_of(cart);
+            // A cover Cart Art saved before is swapped for the cart's picture, if there is one.
+            let cover = covered.contains(&place) && !needs_label(cart);
+            src.replace = cover;
             let outcome = match photo_specs(cart) {
                 [] if has_label_scans(cart.platform) => fetch_label(cart, &mut src)?,
                 [] => Outcome::NoMatch,
@@ -255,17 +404,30 @@ fn run(
             };
             // No label or cart picture: the cover, else (homebrew, most hacks) the shelf's
             // file-name label stays. The first source's reason is kept when there is no cover.
+            // A Western Master System cart's label is a title strip, which no cover fits.
+            let strip = slot_ui::plain_cart_of(cart) == Some(slot_ui::PlainCart::MasterSystem);
             let outcome = match outcome {
+                Outcome::NoMatch | Outcome::Unusable(_) if cover || strip => outcome,
                 Outcome::NoMatch | Outcome::Unusable(_) => match fetch_cover_label(cart, &mut src)?
                 {
                     Outcome::NoMatch => outcome,
+                    Outcome::Saved(from, label) => {
+                        covered.insert(place.clone());
+                        Outcome::Saved(from, label)
+                    }
                     cover => cover,
                 },
                 outcome => outcome,
             };
-            let place = format!("{}/{}", cart.platform.dir_name(), cart.stem);
+            if cover && !matches!(outcome, Outcome::Saved(..)) {
+                // The cover stays; nothing to report again.
+                continue;
+            }
             match outcome {
                 Outcome::Saved(from, label) => {
+                    if cover {
+                        covered.remove(&place);
+                    }
                     summary.found += 1;
                     report.push_str(&format!("found     {place} <- {from}\n"));
                     let _ = tx.send(Progress::Got(Fetched {
@@ -292,6 +454,10 @@ fn run(
     })();
     // Checksums read before a cancel or a network failure are kept for next time.
     src.crcs.save(root);
+    let list: String = covered.iter().map(|p| format!("{p}\n")).collect();
+    if let Err(e) = atomic_write(&root.join(COVER_LABELS), list.as_bytes()) {
+        eprintln!("slot: cart art: {COVER_LABELS}: {e}");
+    }
     result?;
     eprintln!(
         "slot: cart art: {} found, {} no match, {} failed",
@@ -373,6 +539,7 @@ fn fetch_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> {
         "",
         &png,
         format!("label scan {path} ({how})"),
+        false,
     ))
 }
 
@@ -380,10 +547,6 @@ fn fetch_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> {
 /// even when it has a NES one.
 fn needs_label(cart: &Cart) -> bool {
     match cart.platform {
-        // The Western cart's label is the title on Sega's grid, drawn from the file name.
-        Platform::Sms if slot_ui::plain_cart_of(cart) == Some(slot_ui::PlainCart::MasterSystem) => {
-            false
-        }
         Platform::Nes if slot_ui::nes_famicom_of(cart) => cart.famicom_label.is_none(),
         _ => cart.label.is_none(),
     }
@@ -470,6 +633,7 @@ fn fetch_photo_label(cart: &Cart, spec: &CartPhoto, src: &mut Sources) -> Result
                     spec.sub,
                     &label,
                     format!("{name} cart {file}"),
+                    src.replace,
                 ))
             }
             Err(e) => why.push(format!("{file}: {e}")),
@@ -575,7 +739,14 @@ fn fetch_cover_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> 
         } else {
             ""
         };
-        return Ok(save_label(root, cart, sub, &label, format!("cover {file}")));
+        return Ok(save_label(
+            root,
+            cart,
+            sub,
+            &label,
+            format!("cover {file}"),
+            false,
+        ));
     }
     Ok(Outcome::NoMatch)
 }
@@ -635,6 +806,21 @@ fn label_from_photo(png: &[u8], spec: &CartPhoto) -> Result<Vec<u8>, &'static st
         })
     };
     // The plastic beside the label.
+    let [fx0, fy0, fx1, fy1] = spec.label;
+    let (lx, ly) = (x0 + (cw * fx0).ceil() as u32, y0 + (ch * fy0).ceil() as u32);
+    let (lw, lh) = (x0 + (cw * fx1) as u32 - lx, y0 + (ch * fy1) as u32 - ly);
+    let cut = |rgba: &[u8]| {
+        let mut out = Vec::with_capacity((lw * lh * 4) as usize);
+        for y in ly..ly + lh {
+            let i = ((y * w + lx) * 4) as usize;
+            out.extend_from_slice(&rgba[i..i + (lw * 4) as usize]);
+        }
+        let (out, lw, lh) = shrink(out, lw, lh, LABEL_MAX);
+        encode_png(&out, lw, lh)
+    };
+    if spec.disc {
+        return cut(&rgba);
+    }
     let mut side: Vec<[u8; 4]> = grid(spec.side, 4).map(|(fx, fy)| at(fx, fy)).collect();
     side.sort_by_key(|p| p[0] as u32 + p[1] as u32 + p[2] as u32);
     let shell = side[side.len() / 2];
@@ -651,17 +837,8 @@ fn label_from_photo(png: &[u8], spec: &CartPhoto) -> Result<Vec<u8>, &'static st
     if share(spec.art) > 0.5 {
         return Err("no label on the cart");
     }
-    // Rounded inward, so no sliver of plastic rides along the label's edge.
-    let [fx0, fy0, fx1, fy1] = spec.label;
-    let (lx, ly) = (x0 + (cw * fx0).ceil() as u32, y0 + (ch * fy0).ceil() as u32);
-    let (lw, lh) = (x0 + (cw * fx1) as u32 - lx, y0 + (ch * fy1) as u32 - ly);
-    let mut out = Vec::with_capacity((lw * lh * 4) as usize);
-    for y in ly..ly + lh {
-        let i = ((y * w + lx) * 4) as usize;
-        out.extend_from_slice(&rgba[i..i + (lw * 4) as usize]);
-    }
-    let (out, lw, lh) = shrink(out, lw, lh, LABEL_MAX);
-    encode_png(&out, lw, lh)
+    // Rounded inward (above), so no sliver of plastic rides along the label's edge.
+    cut(&rgba)
 }
 
 /// `rgba` (w x h) scaled down so its longer side is at most `max`, each pixel the average of
@@ -823,13 +1000,24 @@ impl Games {
     }
 }
 
-fn save_label(root: &Path, cart: &Cart, sub: &str, png: &[u8], from: String) -> Outcome {
-    let label = root
-        .join("Labels")
-        .join(cart.platform.dir_name())
-        .join(sub)
-        .join(format!("{}.png", cart.stem));
-    if label.exists() {
+fn save_label(
+    root: &Path,
+    cart: &Cart,
+    sub: &str,
+    png: &[u8],
+    from: String,
+    replace: bool,
+) -> Outcome {
+    let label = match (&cart.label, replace) {
+        // The cover's own file, whatever case its name is in.
+        (Some(cover), true) if sub.is_empty() => cover.clone(),
+        _ => root
+            .join("Labels")
+            .join(cart.platform.dir_name())
+            .join(sub)
+            .join(format!("{}.png", cart.stem)),
+    };
+    if label.exists() && !replace {
         return Outcome::Failed("a label appeared meanwhile; kept it".into());
     }
     if let Some(dir) = label.parent() {
@@ -2177,6 +2365,95 @@ mod tests {
         ));
         assert_eq!(done.unwrap().found, 1);
         assert!(root.join("Labels/NES/Hard Drivin' (USA).png").exists());
+    }
+
+    #[test]
+    fn a_cover_cart_art_saved_is_swapped_for_the_carts_picture() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        rom(root, "MD/Gunstar Heroes (USA).md");
+        rom(root, "MD/Obscure Game (USA).md");
+        for stem in ["Gunstar Heroes (USA)", "Obscure Game (USA)"] {
+            let label = root.join(format!("Labels/MD/{stem}.png"));
+            std::fs::create_dir_all(label.parent().unwrap()).unwrap();
+            std::fs::write(&label, cover_label(&cover_png(300, 400)).unwrap()).unwrap();
+        }
+        std::fs::create_dir_all(root.join("System/Cache")).unwrap();
+        std::fs::write(
+            root.join(COVER_LABELS),
+            "MD/Gunstar Heroes (USA)\nMD/Obscure Game (USA)\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join(MD_PHOTO.index),
+            "Gunstar Heroes (USA)\tgunstar.png\n",
+        )
+        .unwrap();
+        let photos = serve(vec![(
+            "/gunstar.png".into(),
+            200,
+            cart_png(600, 390, [10, 10, 10], RED, MD_PHOTO.label),
+        )]);
+        let (got, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos,
+                covers: "http://127.0.0.1:1".into(),
+            },
+        ));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 0,
+                failed: 0
+            }),
+            "the game with no picture keeps its cover, unreported"
+        );
+        assert_eq!(got.len(), 1);
+        let label = std::fs::read(root.join("Labels/MD/Gunstar Heroes (USA).png")).unwrap();
+        let (_, w, h) = decode_rgba(&label).unwrap();
+        assert!(w > h, "the cart's label, not the cover: {w}x{h}");
+        assert_eq!(
+            std::fs::read_to_string(root.join(COVER_LABELS)).unwrap(),
+            "MD/Obscure Game (USA)\n"
+        );
+    }
+
+    #[test]
+    fn a_disc_picture_is_its_label_whole() {
+        let (w, h) = (300u32, 300u32);
+        let mut px = Vec::new();
+        for y in 0..h {
+            for x in 0..w {
+                let (dx, dy) = (x as f32 - 149.5, y as f32 - 149.5);
+                let on = (dx * dx + dy * dy).sqrt() < 140.0;
+                px.extend_from_slice(&if on { [200, 30, 30, 255] } else { [0, 0, 0, 0] });
+            }
+        }
+        let png = encode_png(&px, w, h).unwrap();
+        let (_, lw, lh) = decode_rgba(&label_from_photo(&png, &PS_DISC).unwrap()).unwrap();
+        assert_eq!((lw, lh), (280, 280));
+        let wide = encode_png(&vec![255; 400 * 200 * 4], 400, 200).unwrap();
+        assert_eq!(
+            label_from_photo(&wide, &PS_DISC),
+            Err("not the cart's shape")
+        );
+    }
+
+    #[test]
+    fn a_western_master_system_game_gets_no_cover() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        rom(root, "SMS/Alex Kidd in Miracle World (Europe).sms");
+        covers(root, "SMS", "Alex Kidd in Miracle World (Europe)\n");
+        let (_, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            servers("http://127.0.0.1:1"),
+        ));
+        assert_eq!(done.unwrap().found, 0, "its label is the title strip");
+        assert!(!root.join("Labels/SMS").exists());
     }
 
     #[test]

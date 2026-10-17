@@ -1,0 +1,153 @@
+# WonderSwan cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+Anchor Field Z (Japan)	r2_52c5e453-09fd-4bd9-90af-c62b4685324d.png
+Anchorz Field (Japan)	r2_52c5e453-09fd-4bd9-90af-c62b4685324d.png
+Armored Unit (Japan)	r2_af06b97d-e7c0-49c4-a0bf-a4a2d931c8cf.png
+Bakusou Dekotora Densetsu (Japan)	r2_9e737026-fa39-4af8-90ba-eebd5f2fbbaf.png
+Bakusou Dekotora Densetsu for WonderSwan (Japan)	r2_9e737026-fa39-4af8-90ba-eebd5f2fbbaf.png
+Bakusō Dekotora Densetsu for WonderSwan (Japan)	r2_9e737026-fa39-4af8-90ba-eebd5f2fbbaf.png
+Beatmania (Japan)	r2_3f153d68-804c-4775-bb15-1ea5fa9f043d.png
+Buffers Evolution (Japan)	r2_955add27-a30e-4004-a4f9-b81cf8582a8c.png
+Cardcaptor Sakura: Sakura to Fushigi na Clow Card (Japan)	r2_64631133-025f-4a26-b335-c5b12e264dc3.png
+Chaos Gear: Michibi Kareshi Mono (Japan)	r2_d2415a53-33d9-4dc4-982d-fc0776789e68.png
+Chaos Gear: Michibikareshi Mono (Japan)	r2_d2415a53-33d9-4dc4-982d-fc0776789e68.png
+Cho Aniki: Otoko no Tamafuda (Japan)	r2_43de7dd1-c124-4314-b89a-4c30c3d60c22.png
+Chocobo no Fushigi na Dungeon (Japan)	r2_b76322ec-5b14-46cd-982b-cac76a15a77e.png
+Chocobo no Fushigi na Dungeon for WonderSwan (Japan)	r2_b76322ec-5b14-46cd-982b-cac76a15a77e.png
+Chocobo's Dungeon For WonderSwan (Japan)	r2_b76322ec-5b14-46cd-982b-cac76a15a77e.png
+Chocobo's Mysterious Dungeon (Japan)	r2_b76322ec-5b14-46cd-982b-cac76a15a77e.png
+Chou Aniki: Otoko no Tamafuda (Japan)	r2_43de7dd1-c124-4314-b89a-4c30c3d60c22.png
+Chou-Denki Card Battle: Youfu Makai - Kikuchi Shuugyou (Japan)	r2_7f1523b6-53be-412f-813a-bfe2edf5af1b.png
+Chō Aniki: Otoko no Tamafuda (Japan)	r2_43de7dd1-c124-4314-b89a-4c30c3d60c22.png
+Clock Tower (Japan)	r2_c0909a7f-b0f1-4d30-ad89-115828925515.png
+Clock Tower for WonderSwan (Japan)	r2_c0909a7f-b0f1-4d30-ad89-115828925515.png
+Crazy Climber (Japan)	r2_f73b390f-9814-411c-95d0-79ffbd0ebe97.png
+D's Garage 21 Koubo Game: Tane o Maku Tori (Japan)	r2_fdbd9ea5-1116-43fd-aae2-dfca8302359f.png
+D's Garage 21 Koubo Game: Tane wo Maku Tori (Japan)	r2_fdbd9ea5-1116-43fd-aae2-dfca8302359f.png
+Densha de Go! (Japan)	r2_6a1b11e0-a127-4c15-a334-6e1d6aa52e09.png
+Densha de Go! 2 (Japan)	r2_4610ce48-ca3c-4342-bf5c-df143e5dbccf.png
+Digimon 02: Tag Tamers (Japan)	r2_0f1fdfb2-5c69-415e-8c8c-9f4fa0bae913.png
+Digimon Adventure 02: Tag Tamers (Japan)	r2_0f1fdfb2-5c69-415e-8c8c-9f4fa0bae913.png
+Digimon Adventure: Anode Tamer (Japan)	r2_b7371657-a26b-40a1-9e17-b565774bec0d.png
+Digimon Adventure: Campaign Limited Version (Japan)	d38d4eb4-b243-42fc-b65e-b9466e8ac383.png
+Digimon Adventure: Cathode Tamer (Japan)	r2_ebb20b66-78b9-4f5b-b1c3-364ba46285e6.png
+Digimon: Ver. WonderSwan (Japan)	r2_bb76a432-b7af-40bd-b5aa-dd96ca5bd3ea.png
+Digital Monster Ver. WonderSwan (Japan)	r2_bb76a432-b7af-40bd-b5aa-dd96ca5bd3ea.png
+Digital Partner (Japan)	r2_6ec5453b-f015-45ea-9334-25a15fbcca08.png
+Engacho! (Japan)	r2_d0b22d62-4f7b-45d8-865d-2bd5ef0f4551.png
+Engacho! for WonderSwan (Japan)	r2_d0b22d62-4f7b-45d8-865d-2bd5ef0f4551.png
+Fever: Sankyo Koushiki Pachinko Simulation (Japan)	r2_7160e0dc-c9e6-4256-b4e9-ca02c8f3b218.png
+Fever: Sankyo Koushiki Pachinko Simulation for WonderSwan (Japan)	r2_7160e0dc-c9e6-4256-b4e9-ca02c8f3b218.png
+Final Lap 2000 (Japan)	r2_89b099f3-d453-48a0-a4b8-193445362534.png
+Fire Pro Wrestling for WonderSwan (Japan)	r2_8d3401e6-f6b7-46fb-806c-6d179ebacd51.png
+Fishing Freaks: Bass Rise for WonderSwan (Japan)	r2_fad7a865-2ac1-4906-9b84-3d95347d5d31.png
+Fishing Freaks: BassRise for WonderSwan (Japan)	r2_fad7a865-2ac1-4906-9b84-3d95347d5d31.png
+Ganso JaJaMaru-kun (Japan)	r2_b429c97a-f3bd-4fe5-901f-19d166dbad72.png
+Glocal Hexcite (Japan)	r2_5d485b13-a7e6-492e-bd25-248d288fc115.png
+Gomoku Narabe & Reversi Tōryūmon (Japan)	r2_eee3a84f-baf6-4114-931f-aec3f700bf71.png
+Gomoku Narabe & Reversi: Touryuumon (Japan)	r2_eee3a84f-baf6-4114-931f-aec3f700bf71.png
+Goraku Ou Tango! (Japan)	r2_d2fc9134-0e69-4dd9-9a5f-1e93803c2bb8.png
+Goraku Ō Tango!  (Japan)	r2_d2fc9134-0e69-4dd9-9a5f-1e93803c2bb8.png
+Gunpey (Japan)	r2_d1a4280b-8f69-4978-b831-db6360a37006.png
+Hanafuda Shiyouyo (Japan)	r2_338cc164-0844-4854-b2d5-33c315ae7f3d.png
+Harobots (Japan)	r2_4c67e378-ffb8-4adb-bb9f-ba268fcb261e.png
+Hunter X Hunter: Ishi o Tsugomono (Japan)	r2_ccac00ce-b996-4d09-947f-b19134ac1560.png
+Hunter X Hunter: Ishi o Tsugu Mono (Japan)	r2_ccac00ce-b996-4d09-947f-b19134ac1560.png
+Hunter × Hunter: Those Who Inherit Will (Japan)	r2_ccac00ce-b996-4d09-947f-b19134ac1560.png
+Itou Junji Uzumaki: Noroi Simulation (Japan)	r2_12aa75e8-5876-4c23-99fa-9b2e90d18fc8.png
+KISS Yori... Seaside Serenade (Japan)	r2_8eff4fe0-155d-4287-b4df-528fdb77ad54.png
+Kakutou Ryouri Densetsu Bistro Recipe: Wonder Battle Hen (Japan)	r2_ae35bc1a-6779-4bcb-a2d5-4cd0fa701275.png
+Kaze no Klonoa: Moonlight Museum (Japan)	r2_c5198a68-4e9a-4382-bfad-79cade4a41d5.png
+Keiba Yosou Shien Soft: Yosou Shin Karon (Japan)	r2_c1b5dfd1-ed3a-42b0-8f0d-e030dc40637d.png
+Keiba Yosou Shien Soft: Yosou Shinkaron (Japan)	r2_c1b5dfd1-ed3a-42b0-8f0d-e030dc40637d.png
+Klonoa: Moonlight Museum (Japan)	r2_c5198a68-4e9a-4382-bfad-79cade4a41d5.png
+Kosodate Quiz: Dokodemo My Angel (Japan)	r2_28f4a56b-dd7b-4103-908f-c87e1be8d888.png
+Kyousouba Ikusei Simulation: Keiba (Japan)	r2_68cf80c6-b817-4258-863c-9de713d8bd30.png
+Langrisser Millennium WS: The Last Century (Japan)	r2_f89c98c0-3548-4447-ab96-a2e67ab70ea7.png
+Last Stand (Japan)	r2_b98a319d-5086-4fdc-9e41-198b9a4f14d1.png
+LastStand (Japan)	r2_b98a319d-5086-4fdc-9e41-198b9a4f14d1.png
+Lode Runner for WonderSwan (Japan)	r2_41c0e2da-d028-487e-b12d-6eac56ebfe0d.png
+Macross: True Love Song (Japan)	r2_177f0848-edb5-49f9-b5d9-6ffe593b122e.png
+Magical Drop for WonderSwan (Japan)	r2_563a1045-a23a-4ef2-acce-ce6104a1450c.png
+Mahjong Touryuumon (Japan)	r2_27adc716-e70d-4a86-af5f-03a2a11d2ebc.png
+Makaimura for WonderSwan (Japan)	000b3de2-81a1-4d73-a307-aaa9f2f386ba.png
+Medarot Perfect Edition: Kabuto Version (Japan)	r2_eb9ee245-0cbe-45d7-83c4-6c625b8ce762.png
+Medarot Perfect Edition: Kuwagata Version (Japan)	r2_2e5eac0c-194d-4486-87f8-e30a1701e7df.png
+Mega Man & Bass: Challenger from the Future (Japan)	90d05042-ba63-4405-bee0-94edba998478.png
+Megaman & Bass: Challenger from the Future (Japan)	90d05042-ba63-4405-bee0-94edba998478.png
+Meitantei Conan: Nishi no Meitantei Saidai no Kiki!? (Japan)	r2_be30b1bb-6286-483c-9c3b-8c69ec4f0657.png
+Meta Communication Therapy: Nee Kiite! (Japan)	r2_7c23107e-fedd-494e-a8f8-c8dbb765d79d.png
+Metakomi Theraphy: Nee Kiite! (Japan)	r2_7c23107e-fedd-494e-a8f8-c8dbb765d79d.png
+Mingle Magnet (Japan)	r2_b40b18b8-7269-4b6a-a0ea-6775b2971d74.png
+Mobile Suit Gundam MSVS (Japan)	r2_a1c93377-537e-4655-a917-367d7d47d247.png
+Moero!! Pro Yakyuu Rookies (Japan)	r2_63b47642-8e85-497a-b43c-5520f981f30c.png
+Morita Shogi for WonderSwan (Japan)	r2_bf79b096-27fb-47b0-9a4b-c0c1c9f6208a.png
+Morita Shougi for WonderSwan (Japan)	r2_bf79b096-27fb-47b0-9a4b-c0c1c9f6208a.png
+Nazo Ou Pocket (Japan)	r2_8ffcd199-4043-44f9-8c79-0110d2cbc1ac.png
+Nazo-Oh Pocket (Japan)	r2_8ffcd199-4043-44f9-8c79-0110d2cbc1ac.png
+Neon Genesis Evangelion: Angel Raising Project (Japan)	r2_b9e71393-2d2d-48f4-a2a1-0c83aa602c9f.png
+Neon Genesis Evangelion: Shito Ikusei (Japan)	r2_b9e71393-2d2d-48f4-a2a1-0c83aa602c9f.png
+Nice On (Japan)	r2_efa41118-a985-4beb-83f1-70e941d64933.png
+Nihon Pro Mahjong Renmei Kounin: Tetsuman (Japan)	r2_294c7b62-32bf-4940-8bae-9d763c5aaad9.png
+Nobunaga no Yabou for Wonderswan (Japan)	r2_7d6ce111-c4f9-4915-8ef5-15e1818fe259.png
+Oh-chan no Oekaki Logic (Japan)	r2_75758169-3102-4b17-920b-fe92a4b77c87.png
+Ou-chan no Oekaki Logic (Japan)	r2_75758169-3102-4b17-920b-fe92a4b77c87.png
+Pocket Fighter (Japan)	34a8631a-81e1-474a-9dc2-179545d32c99.png
+Pro Mahjong Kiwame (Japan)	r2_fd3b69f4-f007-41cd-9d0f-e6c2f36da9c6.png
+Pro Mahjong Kiwame for WonderSwan (Japan)	r2_fd3b69f4-f007-41cd-9d0f-e6c2f36da9c6.png
+Puyo Puyo Tsuu (Japan)	r2_12d3f5e5-c256-4ab7-9744-b67dee08bf23.png
+Puzzle Bobble (Japan)	r2_5dfbd893-9f27-4156-b1bf-59ba9aa97895.png
+Rainbow Islands: Putty's Party (Japan)	r2_8be5af70-a76a-43f0-b182-b02011dfd300.png
+Rekishi Simulation Sangokushi II (Japan)	r2_69265db3-f0ed-4e82-bdcb-0d70ddfc7aff.png
+Ring Infinity (Japan)	r2_21830c9c-e159-4c00-b1cb-360bcce52741.png
+Ring ∞ (Japan)	r2_21830c9c-e159-4c00-b1cb-360bcce52741.png
+Robot Works (Japan)	ca096040-e145-4243-98c3-83762b61fd8c.png
+Rockman & Forte Mirai kara no Chōsensha (Japan)	90d05042-ba63-4405-bee0-94edba998478.png
+Rockman & Forte: Challenger from the Future (Japan)	90d05042-ba63-4405-bee0-94edba998478.png
+Rockman & Forte: Mirai Kara no Chousensha (Japan)	90d05042-ba63-4405-bee0-94edba998478.png
+SD Gundam G Generation: Gather Beat (Japan)	r2_8fb3c8f6-f273-4bec-92dc-a9189f1cb884.png
+SD Gundam: Emotional Jam (Japan)	r2_6cc5aad6-0d10-4bbe-8fad-e71de851f2ab.png
+SD Gundam: Gashapon Senki Episode 1 (Japan)	r2_62b59011-820a-44b8-aa28-5e2522354a2e.png
+Sangokushi II for WonderSwan (Japan)	r2_69265db3-f0ed-4e82-bdcb-0d70ddfc7aff.png
+Sangokushi for WonderSwan (Japan)	r2_9ec7b5a9-c290-43ba-9863-c93a74263f85.png
+Senkaiden: TV Animation Senkaiden Houshin Engi Yori (Japan)	r2_8ac4b371-f6f9-42e2-a33a-0a3b35669134.png
+Sennou Millennium (Japan)	r2_43ec3afa-80f7-4336-86ed-c1b3ddafa534.png
+Shanghai Pocket (Japan)	r2_98b4eff5-0076-4918-9082-bed2cf4e5fad.png
+Shin Nihon Pro Wrestling: Toukon Retsuden (Japan)	r2_204cb11a-bd92-4575-b0a4-1bc1a73931d1.png
+Shin Nippon Pro Wrestling: Toukon Retsuden (Japan)	r2_204cb11a-bd92-4575-b0a4-1bc1a73931d1.png
+Shougi Touryuumon (Japan)	r2_793133f6-caa4-4074-98ac-269b51d81b41.png
+Side Pocket for WonderSwan (Japan)	r2_a6062645-eefa-4098-be90-52e9474bfba6.png
+Soccer Yarou!: Challenge the World (Japan)	r2_0e777d46-9c04-4397-a705-e48ed6eb326d.png
+Sotsugyou for WonderSwan (Japan)	r2_0bc32057-d9e1-4702-b1ba-fa8e31d27410.png
+Sotsugyou: Graduation for WonderSwan (Japan)	r2_0bc32057-d9e1-4702-b1ba-fa8e31d27410.png
+Space Invaders (Japan)	befddf8a-4986-4701-9e24-6c51ec4a6f52.png
+Super Robot Taisen Compact 2 Dai-1-Bu: Chijou Gekidou Hen (Japan)	r2_2387fef1-b250-4cb5-bb78-4fa6987d1954.png
+Super Robot Taisen Compact 2 Dai-2-Bu: Uchuu Gekishin Hen (Japan)	r2_524cd688-0c4a-41c3-be26-38e99380c673.png
+Super Robot Taisen Compact 2 Dai-3-Bu: Ginga Kessen-hen (Japan)	r2_6b060922-1681-440b-b171-3fd970f937fa.png
+Taikyoku Igo: Heisei Kiin (Japan)	r2_6eed1424-1026-4692-88b0-f0de1ba78e8c.png
+Tane o Maku Tori (Japan)	r2_fdbd9ea5-1116-43fd-aae2-dfca8302359f.png
+Tane wo Maku Tori (Japan)	r2_fdbd9ea5-1116-43fd-aae2-dfca8302359f.png
+Tanjou Debut for WonderSwan (Japan)	r2_5d21c070-0ae1-4864-9b05-db6397dfa7f8.png
+Tare Panda no Gunpey (Japan)	r2_6c872efe-c50f-4799-9f04-db99dadc6a24.png
+Tarepanda no Gunpey (Japan)	r2_6c872efe-c50f-4799-9f04-db99dadc6a24.png
+Tekken Card Challenge (Japan)	r2_a420d711-072f-4b24-bb9a-f7a72a633a57.png
+Terrors (Japan)	r2_2e8f2eec-dd0f-4ff9-8eeb-a9d53e0b1883.png
+Tetsujin 28 Gou (Japan)	r2_f6f573bf-f00a-4295-99a3-ed7c0cc6dd27.png
+Time Bokan Series: Bokan Densetsu: Buta mo Odaterya Doronboo (Japan)	r2_8910fac1-0765-43aa-9f53-c01dd9b05ec6.png
+Time Bokan Series: Bokan Densetsu: Butamo Odaterya Doronbou (Japan)	r2_8910fac1-0765-43aa-9f53-c01dd9b05ec6.png
+Tokyo Majin Gakuen: Fuju Houroku (Japan)	r2_8aae9880-d880-4a5a-b8c6-2efa42f09b90.png
+Toryu Gate: Go Meiheibe and Level Nobori Ryuumon (Japan)	r2_eee3a84f-baf6-4114-931f-aec3f700bf71.png
+Trump Collection 2: Bottom Up Teki Sekai Isshuu no Tabi (Japan)	r2_d67356b9-3fa3-4de7-8a10-92caa2e96701.png
+Trump Collection 2: Bottom Up Teki Sekaiisshuu no Tabi (Japan)	r2_d67356b9-3fa3-4de7-8a10-92caa2e96701.png
+Trump Collection: Bottom Up Teki Trump Seikatsu (Japan)	r2_3c670b23-4377-48a0-82e5-3cb38abdb77f.png
+Turntablist: DJ Battle (Japan)	r2_650c43ba-7a00-4d92-94ab-f58c12936e58.png
+Umitsuri ni Ikou! (Japan)	r2_6870f6a1-01d7-4ae5-9a13-30533ba84fab.png
+Umizuri ni Ikou! (Japan)	r2_6870f6a1-01d7-4ae5-9a13-30533ba84fab.png
+Uzumaki ~Curse Simulation~ (Japan)	r2_12aa75e8-5876-4c23-99fa-9b2e90d18fc8.png
+Uzumaki: Noroi Simulation (Japan)	r2_12aa75e8-5876-4c23-99fa-9b2e90d18fc8.png
+Vaitz Blade (Japan)	r2_ba2e5716-efc1-4713-a93d-cb3770f8d117.png
+Wonder Borg (Japan)	ca096040-e145-4243-98c3-83762b61fd8c.png
+Wonder Stadium '99 (Japan)	r2_73c64a69-c09a-419e-bc89-562886edb5c1.png
+WonderSwan Handy Sonar (Japan)	0fce3d4b-cc86-4106-9c4a-33ec747b75e6.png
+beat mania for WonderSwan (Japan)	r2_3f153d68-804c-4775-bb15-1ea5fa9f043d.png
+beatmania for WonderSwan (Japan)	r2_3f153d68-804c-4775-bb15-1ea5fa9f043d.png
+五目並べ&リバーシ: 登龍門 (Japan)	r2_eee3a84f-baf6-4114-931f-aec3f700bf71.png

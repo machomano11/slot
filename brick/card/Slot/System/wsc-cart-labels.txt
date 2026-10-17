@@ -1,0 +1,11 @@
+# WonderSwan Color cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+Digimon Tamers: Battle Spirit (Japan)	f10f7df2-6bb8-4e37-9e96-21f3491f4b19.png
+Digimon: Anode Tamer & Cathode Tamer (Japan)	c22e4b1e-ee7d-4430-9452-f32fba9ae1c1.png
+Digimon: Anode Tamer & Cathode Tamer: Veedramon Version (Japan)	c22e4b1e-ee7d-4430-9452-f32fba9ae1c1.png
+Final Fantasy IV (Japan)	4404d82f-f1b7-4a1b-bfbf-1af978d8549a.png
+Golden Axe (Japan)	9c22a72c-f5dc-4e75-953a-3e0893e450ab.png
+Golden Axe (Japan)	f46760ff-cb93-49ff-9fed-9985cca109fc.png
+Guilty Gear Petit (Japan)	06624a9b-5020-4e77-b8ad-5ef5199c6958.png
+Guilty Gear Petit 2 (Japan)	1dd450bb-dfef-4d24-93e2-7158901f35e9.png
+Mama Mitte 	97f4d754-43b7-438a-bf8e-da3ef112e278.png
+Uchuu Senkan Yamato	0e216dd6-b85c-41eb-9c99-8e96e0ca0d94.png
