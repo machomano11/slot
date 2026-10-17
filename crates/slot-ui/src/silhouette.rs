@@ -24,8 +24,8 @@ const NGP_CART_SVG: &str = include_str!("../assets/ngp_cart.svg");
 const NGP_DETAIL_SVG: &str = include_str!("../assets/ngp_cart_detail.svg");
 const WS_CART_SVG: &str = include_str!("../assets/ws_cart.svg");
 const WS_DETAIL_SVG: &str = include_str!("../assets/ws_cart_detail.svg");
-const DISC_CASE_SVG: &str = include_str!("../assets/disc_case.svg");
-const DISC_DETAIL_SVG: &str = include_str!("../assets/disc_case_detail.svg");
+const DISC_SVG: &str = include_str!("../assets/disc.svg");
+const DISC_DETAIL_SVG: &str = include_str!("../assets/disc_detail.svg");
 const S32X_CART_SVG: &str = include_str!("../assets/s32x_cart.svg");
 const S32X_DETAIL_SVG: &str = include_str!("../assets/s32x_cart_detail.svg");
 
@@ -38,8 +38,8 @@ pub enum PlainCart {
     MegaDrive,
     NeoGeoPocket,
     WonderSwan,
-    /// A CD jewel case, for the disc systems.
-    DiscCase,
+    /// A CD, label side up, for the disc systems.
+    Disc,
     Sega32x,
 }
 
@@ -50,7 +50,7 @@ impl PlainCart {
         PlainCart::MegaDrive,
         PlainCart::NeoGeoPocket,
         PlainCart::WonderSwan,
-        PlainCart::DiscCase,
+        PlainCart::Disc,
         PlainCart::Sega32x,
     ];
 
@@ -61,7 +61,7 @@ impl PlainCart {
             PlainCart::MegaDrive => (MD_CART_SVG, MD_DETAIL_SVG),
             PlainCart::NeoGeoPocket => (NGP_CART_SVG, NGP_DETAIL_SVG),
             PlainCart::WonderSwan => (WS_CART_SVG, WS_DETAIL_SVG),
-            PlainCart::DiscCase => (DISC_CASE_SVG, DISC_DETAIL_SVG),
+            PlainCart::Disc => (DISC_SVG, DISC_DETAIL_SVG),
             PlainCart::Sega32x => (S32X_CART_SVG, S32X_DETAIL_SVG),
         }
     }

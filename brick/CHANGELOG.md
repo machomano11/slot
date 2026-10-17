@@ -4,7 +4,7 @@
 - RetroAchievements now recognise PlayStation and Sega CD games kept as `.chd`, read the same
   way as their `.cue`/`.bin`, so they unlock achievements instead of failing to identify.
 - PlayStation: `.cue`, `.chd`, `.pbp`, `.iso` and `.m3u` images in `Slot/Games/PS` get a shelf of
-  jewel cases and run on PCSX ReARMed with its ARM64 recompiler, save states and
+  discs and run on PCSX ReARMed with its ARM64 recompiler, save states and
   RetroAchievements. The BIOS is optional (`scph5501.bin` and friends in `Slot/BIOS`; a built-in
   one is used otherwise). `L2` / `R2` go to the game, so fast-forward moves to `HOME + R2` and
   PlayStation games have no rewind. `SELECT + L2` / `R2` changes disc.
@@ -12,7 +12,7 @@
   PicoDrive with its SH2 recompiler, the Mega Drive's six-button pad, save states, rewind,
   fast-forward and RetroAchievements. A few heavy games may not hold full speed.
 - Sega CD (Mega-CD): `.cue`, `.chd`, `.iso` and `.m3u` images in `Slot/Games/SEGACD` (a game may
-  sit in a folder of its own) get a shelf of black jewel cases and run on PicoDrive, with the
+  sit in a folder of its own) get a shelf of silver discs and run on PicoDrive, with the
   Mega Drive's six-button pad, save states, rewind, fast-forward and RetroAchievements (for
   `.cue`/`.iso`). It needs a BIOS in `Slot/BIOS`: `bios_CD_U.bin`, `bios_CD_E.bin` or
   `bios_CD_J.bin` for US, European and Japanese games.

@@ -153,8 +153,9 @@ const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
         PlainCart::NeoGeoPocket => (240, NGP_SEATED_H, [92, 193, 908, 904]),
         // ws_cart.svg: the label above the grip, x 18..222, y 14..160 of 240x200.
         PlainCart::WonderSwan => (270, WS_SEATED_H, [75, 70, 925, 800]),
-        // disc_case.svg: the cover behind the front, x 26..232, y 8..232 of 240x240.
-        PlainCart::DiscCase => (290, DISC_SEATED_H, [108, 33, 967, 967]),
+        // disc.svg: the printed ring runs out to 117 of the disc's 120 radius; the hub and
+        // rim are painted back over it (disc_hub).
+        PlainCart::Disc => (290, DISC_SEATED_H, [13, 13, 987, 987]),
         // s32x_cart.svg: the Mega Drive cart's label recess, under a taller ridged crown.
         PlainCart::Sega32x => (280, S32X_SEATED_H, [83, 222, 917, 885]),
     }
@@ -309,7 +310,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Md => Some(PlainCart::MegaDrive),
         Platform::Ngp | Platform::Ngpc => Some(PlainCart::NeoGeoPocket),
         Platform::Ws | Platform::Wsc => Some(PlainCart::WonderSwan),
-        Platform::Scd | Platform::Ps => Some(PlainCart::DiscCase),
+        Platform::Scd | Platform::Ps => Some(PlainCart::Disc),
         Platform::S32x => Some(PlainCart::Sega32x),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }
@@ -462,7 +463,7 @@ const MD_SEATED_H: u32 = 288;
 const NGP_SEATED_H: u32 = 228;
 /// A WonderSwan cart is wider than tall.
 const WS_SEATED_H: u32 = 200;
-/// A CD jewel case is square.
+/// A CD is round, in a square box.
 const DISC_SEATED_H: u32 = 240;
 /// A 32X cart is a Mega Drive one with a taller top.
 const S32X_SEATED_H: u32 = 312;
@@ -602,15 +603,22 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
         Some(d) => drawn_shell_face(&s, d, &shell),
         None => shell_face(&s, &shell),
     };
+    let disc = plain_cart_for(cart.platform) == Some(PlainCart::Disc);
     let label = match art {
         Some(rgba) => rgba,
+        None if disc => generated_disc_label(&s, &label_text(cart)),
         None => generated_label(&s, &label_text(cart)),
     };
     if let Some(d) = &s.drawn {
         mould_detail(d, &mut face);
-        recess_label(&s, &mut face, &shell);
+        if !disc {
+            recess_label(&s, &mut face, &shell);
+        }
     }
     paste_label(&s, &mut face, &label);
+    if disc {
+        disc_hub(&mut face, shell.colour);
+    }
     clip_to_silhouette(&s, &mut face);
     face
 }
@@ -1120,6 +1128,90 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
         text::draw_centred(&mut rgba, lw, lh, &layout, ink(bg));
     }
     rgba
+}
+
+/// A disc's printing: the title over the hole, where a game's name usually sits, clear of the
+/// hub.
+fn generated_disc_label(s: &Spec, title: &str) -> Vec<u8> {
+    let (_, _, lw, lh) = s.label;
+    let bg = label_colour(title);
+    let mut rgba = Vec::with_capacity((lw * lh * 4) as usize);
+    for _ in 0..lw * lh {
+        rgba.extend_from_slice(&[bg[0], bg[1], bg[2], 255]);
+    }
+    if let Some(font) = text::label_font() {
+        // A band across the top of the ring, inside its curve and clear of the hub.
+        let (bw, bh) = (lw * 60 / 100, lh * 17 / 100);
+        let (bx, by) = ((lw - bw) / 2, lh * 13 / 100);
+        let layout = text::fit_box(
+            font,
+            title,
+            bw as f32,
+            bh as f32,
+            MAX_LINES,
+            bh as f32 / (MAX_LINES as f32 * 1.1),
+            MIN_PX,
+        );
+        let mut band = vec![0u8; (bw * bh * 4) as usize];
+        text::draw_centred(&mut band, bw, bh, &layout, ink(bg));
+        for y in 0..bh {
+            for x in 0..bw {
+                let src = ((y * bw + x) * 4) as usize;
+                let a = band[src + 3] as u32;
+                if a == 0 {
+                    continue;
+                }
+                let d = (((y + by) * lw + x + bx) * 4) as usize;
+                for c in 0..3 {
+                    rgba[d + c] =
+                        ((band[src + c] as u32 * a + rgba[d + c] as u32 * (255 - a) + 127) / 255)
+                            as u8;
+                }
+            }
+        }
+    }
+    rgba
+}
+
+/// Paints a disc's unprinted parts over its label, by distance from the centre in the
+/// disc's millimetres: the clear hub to 16.5, the mirrored stacking ring to 23, and the
+/// bare edge past 58.5 in the disc's own colour (silver, or a PlayStation's black).
+fn disc_hub(face: &mut CartFace, edge: [u8; 3]) {
+    let (w, h) = (face.w as f32, face.h as f32);
+    let per_mm = w / 120.0;
+    let (cx, cy) = (w / 2.0, h / 2.0);
+    let clear = [0x9d, 0xa3, 0xab];
+    let mirror = [0xd8, 0xdb, 0xe0];
+    let mirror_dark = [0x9a, 0x9e, 0xa6];
+    for y in 0..face.h {
+        for x in 0..face.w {
+            let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+            let r = (dx * dx + dy * dy).sqrt() / per_mm;
+            // How far into each zone a pixel is, for soft edges a pixel wide.
+            let soft = |edge_mm: f32| ((edge_mm - r) * per_mm + 0.5).clamp(0.0, 1.0);
+            let (colour, cover) = if r < 23.5 {
+                let c = if r < 16.5 {
+                    // Clear plastic, a little darker at the moulded step around the hole.
+                    let t = ((r - 7.5) / 9.0).clamp(0.0, 1.0);
+                    lerp(clear.map(|c| c - 0x1c), clear, (t * 255.0) as u32, 255)
+                } else {
+                    // The stacking ring, lit from the top left.
+                    let lit = (-(dx + dy) / (r * per_mm * 1.42) + 1.0) / 2.0;
+                    lerp(mirror_dark, mirror, (lit * 255.0) as u32, 255)
+                };
+                (c, soft(23.0))
+            } else if r > 58.0 {
+                (edge, 1.0 - soft(58.5))
+            } else {
+                continue;
+            };
+            let a = (cover * 255.0) as u32;
+            let d = ((y * face.w + x) * 4) as usize;
+            for (px, c) in face.rgba[d..d + 3].iter_mut().zip(colour) {
+                *px = ((c as u32 * a + *px as u32 * (255 - a) + 127) / 255) as u8;
+            }
+        }
+    }
 }
 
 fn ink(bg: [u8; 3]) -> [u8; 3] {

@@ -105,7 +105,7 @@ fn both() -> [(&'static str, Cart); 12] {
             plain(Platform::Wsc, "Gunpey EX", "Games/WSC/Gunpey EX.wsc"),
         ),
         (
-            "the Sega CD case",
+            "the Sega CD disc",
             plain(Platform::Scd, "Sonic CD", "Games/SEGACD/Sonic CD.cue"),
         ),
         (
@@ -113,7 +113,7 @@ fn both() -> [(&'static str, Cart); 12] {
             plain(Platform::S32x, "Chaotix", "Games/32X/Chaotix.32x"),
         ),
         (
-            "the PlayStation case",
+            "the PlayStation disc",
             plain(Platform::Ps, "Ridge Racer", "Games/PS/Ridge Racer.cue"),
         ),
     ]

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <!-- A 120 mm disc at 2 units a millimetre, with its 15 mm centre hole. -->
+  <path fill-rule="evenodd" fill="#fff" d="M 120 0 A 120 120 0 1 1 119.99 0 Z M 120 105 A 15 15 0 1 0 120.01 105 Z"/>
+</svg>
