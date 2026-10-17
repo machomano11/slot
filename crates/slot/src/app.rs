@@ -1501,6 +1501,60 @@ impl App {
         }
     }
 
+    /// Files cloud sync brought in: art goes on its cart straight away; new games join
+    /// their shelves once the game list is on screen with nothing open over it. Returns
+    /// whether games are still waiting for that.
+    pub fn take_in_synced(&mut self, received: &[String]) -> bool {
+        let mut games = false;
+        for rel in received {
+            let parts: Vec<&str> = rel.split('/').collect();
+            match parts.as_slice() {
+                ["Games", ..] => games = true,
+                ["Labels", dir, .., file] => {
+                    let platform = Platform::ALL.iter().find(|p| p.dir_name() == *dir);
+                    if let (Some(p), Some(stem)) = (platform, file.strip_suffix(".png")) {
+                        self.adopt_label(*p, stem, None);
+                    }
+                }
+                _ => {}
+            }
+        }
+        games && !self.rescan()
+    }
+
+    /// Reads the game list from the card again, each shelf staying on the game it showed.
+    /// Only on the game list with no menu open; returns whether it ran.
+    pub fn rescan(&mut self) -> bool {
+        let idle = matches!(self.phase, Phase::Shelf)
+            && self.cart_menu.is_none()
+            && self.game_menu.is_none()
+            && self.core_picker.is_none();
+        let Some(root) = self.root.clone().filter(|_| idle) else {
+            return false;
+        };
+        let Ok(carts) = scan(&root) else {
+            return true;
+        };
+        for (rack, shelf) in shelves_of(carts) {
+            let Some(at) = self.shelves.iter().position(|(r, _)| *r == rack) else {
+                continue;
+            };
+            if rack.platform().is_none() {
+                continue;
+            }
+            let was = &self.shelves[at].1;
+            let on = was.carts.get(was.index).map(|c| c.stem.clone());
+            self.restock(at, shelf.carts);
+            let now = &mut self.shelves[at].1;
+            if let Some(i) = on.and_then(|s| now.carts.iter().position(|c| c.stem == s)) {
+                now.select(i);
+            }
+        }
+        self.restock_recents();
+        self.restock_favorites();
+        true
+    }
+
     pub fn shed_faces(&mut self) -> Vec<TexId> {
         let neighbours = self.neighbour_shelves();
         let mut shed = std::mem::take(&mut self.orphaned);
