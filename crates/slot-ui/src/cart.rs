@@ -282,8 +282,11 @@ pub fn fitted_label(cart: &Cart, w: u32, h: u32) -> Option<Vec<u8>> {
     } else if plain_cart_of(cart) == Some(PlainCart::MasterSystem) {
         // A title strip's photo is a little longer than the drawn strip: both ends must show.
         art::stretch(path, w, h)
-    } else {
+    } else if matches!(cart.platform, Platform::Gb | Platform::Gbc | Platform::Gba) {
         art::cover(path, w, h)
+    } else {
+        // Labels cut from photos of the cart, or covers, whose shapes vary.
+        art::fit(path, w, h)
     }
 }
 
