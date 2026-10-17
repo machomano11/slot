@@ -1,11 +1,12 @@
 use crate::lcd3x::ScreenEffect;
-use crate::power::{screen_brightness, screen_rect};
+use crate::power::{screen_brightness, screen_rect_above};
 use crate::quad::Quad;
 use crate::shaders::{GAME_FRAG, RECT_VERT};
 use crate::surface::{GfxError, OUT_H, OUT_W};
 
 pub const SCALE: u32 = 3;
-// Emulator frames have a fixed 240x160 canvas, independent of UI layout.
+// Emulator frames default to a 240x160 canvas (GBA), independent of UI layout; a NES
+// session sets its own with set_canvas. Source and picture rects are in canvas units.
 pub const SRC_W: u32 = 240;
 pub const SRC_H: u32 = 160;
 
@@ -30,7 +31,11 @@ pub struct GamePass {
     effect: ScreenEffect,
     power: f32,
     fills: bool,
+    /// Pixels kept for the carousel footer. The picture scales in the space above them.
+    bottom: f32,
     src: [f32; 4],
+    canvas: (u32, u32),
+    u_src: gl::types::GLint,
 }
 
 impl GamePass {
@@ -45,15 +50,12 @@ impl GamePass {
             crate::gl::gray_format(),
             Some(&[255]),
         );
-        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_origin);
+        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_origin, u_src);
         unsafe {
             gl::UseProgram(prog);
             gl::Uniform1i(crate::gl::uniform_location(prog, "u_game"), 0);
-            gl::Uniform2f(
-                crate::gl::uniform_location(prog, "u_src"),
-                SRC_W as f32,
-                SRC_H as f32,
-            );
+            u_src = crate::gl::uniform_location(prog, "u_src");
+            gl::Uniform2f(u_src, SRC_W as f32, SRC_H as f32);
             gl::Uniform2f(
                 crate::gl::uniform_location(prog, "u_target"),
                 OUT_W as f32,
@@ -88,7 +90,10 @@ impl GamePass {
             effect: ScreenEffect::Lcd3x,
             power: 1.0,
             fills: false,
+            bottom: 0.0,
             src: WHOLE_TEXTURE,
+            canvas: (SRC_W, SRC_H),
+            u_src,
         })
     }
 
@@ -96,10 +101,19 @@ impl GamePass {
         self.power = t.clamp(0.0, 1.0);
     }
 
+    pub fn set_bottom(&mut self, px: f32) {
+        self.bottom = px.max(0.0);
+    }
+
     pub fn frame(&self) -> (f32, f32, f32, f32) {
+        self.placed()
+    }
+
+    fn placed(&self) -> (f32, f32, f32, f32) {
+        let foot = self.bottom;
         match self.fills {
-            true => (0.0, 0.0, OUT_W as f32, OUT_H as f32),
-            false => screen_rect(self.power),
+            true => (0.0, 0.0, OUT_W as f32, OUT_H as f32 - foot),
+            false => screen_rect_above(self.power, foot),
         }
     }
 
@@ -141,8 +155,25 @@ impl GamePass {
         self.src = rect;
     }
 
+    /// The canvas frames arrive in; the game texture is remade to fit when it changes.
+    pub fn set_canvas(&mut self, w: u32, h: u32) {
+        if (w, h) == self.canvas || w == 0 || h == 0 {
+            return;
+        }
+        unsafe {
+            gl::DeleteTextures(1, &self.game);
+            gl::UseProgram(self.prog);
+            gl::Uniform2f(self.u_src, w as f32, h as f32);
+        }
+        self.game = crate::gl::texture(w, h, gl::NEAREST, gl::CLAMP_TO_EDGE, gl::BGRA, None);
+        self.canvas = (w, h);
+    }
+
     pub fn upload(&mut self, xrgb8888: &[u8]) {
-        if xrgb8888.len() < (SRC_W * SRC_H * 4) as usize {
+        // A frame from another canvas (the core before a switch between a NES and a Game Boy)
+        // is skipped rather than drawn out of shape.
+        let (w, h) = self.canvas;
+        if xrgb8888.len() != (w * h * 4) as usize {
             return;
         }
         unsafe {
@@ -153,8 +184,8 @@ impl GamePass {
                 0,
                 0,
                 0,
-                SRC_W as i32,
-                SRC_H as i32,
+                w as i32,
+                h as i32,
                 gl::BGRA,
                 gl::UNSIGNED_BYTE,
                 xrgb8888.as_ptr() as *const std::ffi::c_void,
@@ -165,7 +196,7 @@ impl GamePass {
     pub fn draw(&self, quad: &Quad) {
         let src = match self.effect {
             ScreenEffect::Grid if !cfg!(feature = "brick") => {
-                whole_scale_source(self.src, self.fbo_scale)
+                whole_scale_source(self.src, self.fbo_scale, self.canvas)
             }
             _ => self.src,
         };
@@ -185,12 +216,18 @@ impl GamePass {
     }
 
     fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4]) {
-        let (x, y, w, h, bright) = if self.fills {
-            (0.0, 0.0, OUT_W as f32, OUT_H as f32, 1.0)
+        let (x, y, w, h) = self.placed();
+        let bright = if self.fills {
+            1.0
         } else {
-            let (x, y, w, h) = screen_rect(self.power);
-            (x, y, w, h, screen_brightness(self.power))
+            screen_brightness(self.power)
         };
+        // The footer covers the bottom of a full-frame picture. Keep the part that sat above
+        // it, so opening the scale does not squash the picture into the shorter rect.
+        let mut src = src;
+        if self.bottom > 0.0 {
+            src[3] *= (OUT_H as f32 - self.bottom) / OUT_H as f32;
+        }
         unsafe {
             gl::UseProgram(self.prog);
             gl::Uniform4f(self.u_rect, x, y, w, h);
@@ -216,9 +253,9 @@ impl GamePass {
     }
 }
 
-fn whole_scale_source(src: [f32; 4], fbo: [f32; 2]) -> [f32; 4] {
-    let (x, w) = whole_scale(src[0], src[2], SRC_W as f32, OUT_W as f32 * fbo[0]);
-    let (y, h) = whole_scale(src[1], src[3], SRC_H as f32, OUT_H as f32 * fbo[1]);
+fn whole_scale_source(src: [f32; 4], fbo: [f32; 2], canvas: (u32, u32)) -> [f32; 4] {
+    let (x, w) = whole_scale(src[0], src[2], canvas.0 as f32, OUT_W as f32 * fbo[0]);
+    let (y, h) = whole_scale(src[1], src[3], canvas.1 as f32, OUT_H as f32 * fbo[1]);
     [x, y, w, h]
 }
 

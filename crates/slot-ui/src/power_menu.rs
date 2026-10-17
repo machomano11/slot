@@ -17,25 +17,6 @@ impl PowerChoice {
     pub fn index(self) -> usize {
         Self::ALL.iter().position(|choice| *choice == self).unwrap()
     }
-
-    pub fn text(self) -> &'static str {
-        match self {
-            PowerChoice::Restart => {
-                if cfg!(feature = "brick") {
-                    "EXIT TO STOCK OS"
-                } else {
-                    "Restart"
-                }
-            }
-            PowerChoice::PowerOff => {
-                if cfg!(feature = "brick") {
-                    "SHUT DOWN DEVICE"
-                } else {
-                    "Power Off"
-                }
-            }
-        }
-    }
 }
 
 pub(crate) const MENU_PX: f32 = 30.0;

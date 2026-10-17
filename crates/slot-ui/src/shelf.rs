@@ -4,10 +4,11 @@ use std::sync::OnceLock;
 
 use crate::board::{board_in, Placed};
 use crate::cart::{
-    cart_box, gb_shell_of, is_clear, label_colour, label_rect, label_text, CART_H, CART_W,
+    cart_box, gb_shell_of, label_colour, label_rect, label_text, nes_famicom_of, shows_interior,
+    snes_shell_of, CART_H, CART_W,
 };
 use crate::hud::Millis;
-use crate::silhouette::GbShell;
+use crate::silhouette::{GbShell, NesShell, SnesShell};
 use crate::slot_chrome::{draw_empty_slot, MOUTH_H};
 
 const SIDE_SCALE: f32 = 0.78;
@@ -43,6 +44,23 @@ pub fn repeat_gap(fired: usize) -> Millis {
     REPEAT_MS[fired.min(REPEAT_MS.len() - 1)]
 }
 
+#[derive(Copy, Clone)]
+enum Backing {
+    Gba,
+    Gb(GbShell),
+    Nes(NesShell),
+    Snes(SnesShell),
+}
+
+fn backing(cart: &Cart) -> Backing {
+    match cart.platform {
+        Platform::Nes if nes_famicom_of(cart) => Backing::Nes(NesShell::Famicom),
+        Platform::Nes => Backing::Nes(NesShell::Nes),
+        Platform::Snes => Backing::Snes(snes_shell_of(cart).unwrap_or(SnesShell::Us)),
+        _ => gb_shell_of(cart).map_or(Backing::Gba, Backing::Gb),
+    }
+}
+
 pub struct Shelf {
     pub carts: Vec<Cart>,
     pub index: usize,
@@ -55,7 +73,12 @@ pub struct Shelf {
     backing: Option<TexId>,
     gb_backing: Option<TexId>,
     gbc_backing: Option<TexId>,
-    shells: Vec<OnceLock<Option<GbShell>>>,
+    nes_shadow: Option<TexId>,
+    famicom_shadow: Option<TexId>,
+    snes_shadow: Option<TexId>,
+    snes_pal_shadow: Option<TexId>,
+    /// Each cart's shape: reading it needs the ROM, so it is read once, on first use.
+    shells: Vec<OnceLock<Backing>>,
     clears: Vec<OnceLock<bool>>,
     starred: Vec<bool>,
     star: Option<(TexId, f32, f32)>,
@@ -82,24 +105,35 @@ impl Shelf {
             backing: None,
             gb_backing: None,
             gbc_backing: None,
+            nes_shadow: None,
+            famicom_shadow: None,
+            snes_shadow: None,
+            snes_pal_shadow: None,
             ride: 0.0,
             vel: 0.0,
             held: None,
         }
     }
 
-    fn shell(&self, i: usize) -> Option<GbShell> {
+    fn kind(&self, i: usize) -> Option<Backing> {
         let (Some(cell), Some(cart)) = (self.shells.get(i), self.carts.get(i)) else {
             return None;
         };
-        *cell.get_or_init(|| gb_shell_of(cart))
+        Some(*cell.get_or_init(|| backing(cart)))
+    }
+
+    fn shell(&self, i: usize) -> Option<GbShell> {
+        match self.kind(i)? {
+            Backing::Gb(shell) => Some(shell),
+            _ => None,
+        }
     }
 
     fn clear(&self, i: usize) -> bool {
         let (Some(cell), Some(cart)) = (self.clears.get(i), self.carts.get(i)) else {
             return false;
         };
-        *cell.get_or_init(|| is_clear(cart))
+        *cell.get_or_init(|| shows_interior(cart))
     }
 
     pub fn restock(&mut self, carts: Vec<Cart>) -> Vec<TexId> {
@@ -146,6 +180,20 @@ impl Shelf {
         }
     }
 
+    pub fn set_nes_shadow(&mut self, shell: NesShell, face: TexId) {
+        match shell {
+            NesShell::Nes => self.nes_shadow = Some(face),
+            NesShell::Famicom => self.famicom_shadow = Some(face),
+        }
+    }
+
+    pub fn set_snes_shadow(&mut self, shell: SnesShell, face: TexId) {
+        match shell {
+            SnesShell::Us => self.snes_shadow = Some(face),
+            SnesShell::Pal => self.snes_pal_shadow = Some(face),
+        }
+    }
+
     pub fn set_backing(&mut self, face: TexId) {
         self.backing = Some(face);
     }
@@ -178,6 +226,19 @@ impl Shelf {
 
     pub fn take_interior(&mut self, i: usize) -> Option<TexId> {
         self.interiors.get_mut(i).and_then(Option::take)
+    }
+
+    /// Puts cart `i` in another plastic or shape; its face, now out of date, is handed back.
+    pub fn set_shell(&mut self, i: usize, shell: Option<slot_store::ShellChoice>) -> Option<TexId> {
+        let cart = self.carts.get_mut(i)?;
+        cart.shell = shell;
+        if let Some(s) = self.shells.get_mut(i) {
+            *s = OnceLock::new();
+        }
+        if let Some(c) = self.clears.get_mut(i) {
+            *c = OnceLock::new();
+        }
+        self.take_face(i)
     }
 
     pub fn take_face(&mut self, i: usize) -> Option<TexId> {
@@ -456,10 +517,14 @@ impl Shelf {
             let x = x + shake;
             let y = foot_y(ch as f32) - h;
             if alpha < 1.0 {
-                let backing = match self.shell(i) {
-                    None => self.shadow,
-                    Some(GbShell::Notched) => self.gb_shadow,
-                    Some(GbShell::Rounded) => self.gbc_shadow,
+                let backing = match self.kind(i) {
+                    Some(Backing::Gb(GbShell::Notched)) => self.gb_shadow,
+                    Some(Backing::Gb(GbShell::Rounded)) => self.gbc_shadow,
+                    Some(Backing::Nes(NesShell::Nes)) => self.nes_shadow,
+                    Some(Backing::Nes(NesShell::Famicom)) => self.famicom_shadow,
+                    Some(Backing::Snes(SnesShell::Us)) => self.snes_shadow,
+                    Some(Backing::Snes(SnesShell::Pal)) => self.snes_pal_shadow,
+                    Some(Backing::Gba) | None => self.shadow,
                 };
                 if let Some(tex) = backing {
                     out.push(Draw::Tex {

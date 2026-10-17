@@ -642,6 +642,7 @@ fn cartridges() -> [(&'static str, Cart); 2] {
                 code: String::new(),
                 shell: None,
                 title: "POKEMON EMER".into(),
+                famicom_label: None,
             },
         ),
         (
@@ -654,6 +655,7 @@ fn cartridges() -> [(&'static str, Cart); 2] {
                 code: String::new(),
                 shell: None,
                 title: "TETRIS".into(),
+                famicom_label: None,
             },
         ),
     ]

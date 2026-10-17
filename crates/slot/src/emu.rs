@@ -6,9 +6,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::cable::{self, Cable};
-use slot_retro::{
-    ButtonMask, CoreError, Link, LinkChannel, RetroCore, Rumble, GBA_H, GBA_W, NETPACKET_RELIABLE,
-};
+use slot_retro::{ButtonMask, CoreError, Link, LinkChannel, RetroCore, Rumble, NETPACKET_RELIABLE};
 use slot_store::RUN_AHEAD_MAX;
 
 use crate::audio::Ring;
@@ -98,6 +96,8 @@ struct Shared {
     rewind: AtomicBool,
     rewind_fill: AtomicU8,
     turbo: AtomicBool,
+    /// X and Y are the game's own buttons (SNES), never slot's turbo A and B.
+    native_xy: AtomicBool,
     recording: AtomicBool,
     stop: AtomicBool,
     volume: AtomicU8,
@@ -157,7 +157,8 @@ impl EmuHandle {
     ) -> Self {
         let rumble = core.rumble();
         let link = core.net();
-        let frames = Frames::new((GBA_W * GBA_H * 4) as usize);
+        let (cw, ch) = core.canvas();
+        let frames = Frames::new((cw * ch * 4) as usize);
         let shared = Arc::new(Shared {
             input: AtomicU16::new(0),
             speed: AtomicU8::new(Speed::Paused as u8),
@@ -166,6 +167,7 @@ impl EmuHandle {
             rewind: AtomicBool::new(false),
             rewind_fill: AtomicU8::new(0),
             turbo: AtomicBool::new(true),
+            native_xy: AtomicBool::new(false),
             recording: AtomicBool::new(true),
             stop: AtomicBool::new(false),
             cheevos_login: Mutex::new(None),
@@ -408,6 +410,11 @@ impl EmuHandle {
 
     pub fn set_turbo(&self, on: bool) {
         self.shared.turbo.store(on, Ordering::Relaxed);
+    }
+
+    /// For a console with X and Y of its own (SNES): pass them through untouched.
+    pub fn set_native_xy(&self, on: bool) {
+        self.shared.native_xy.store(on, Ordering::Relaxed);
     }
 
     pub fn set_rewind_recording(&self, on: bool) {
@@ -793,9 +800,12 @@ impl Worker {
                 loop {
                     ran += 1;
                     let last = ran >= ceiling || cost.last(began.elapsed(), budget);
-                    let input = match self.shared.turbo.load(Ordering::Relaxed) {
-                        true => input.turbo(turbo_frame),
-                        false => input.without_turbo(),
+                    let input = if self.shared.native_xy.load(Ordering::Relaxed) {
+                        input
+                    } else if self.shared.turbo.load(Ordering::Relaxed) {
+                        input.turbo(turbo_frame)
+                    } else {
+                        input.without_turbo()
                     };
                     turbo_frame = turbo_frame.wrapping_add(1);
                     core.set_frame_skip(!last);
@@ -1079,7 +1089,7 @@ impl Worker {
                 let _ = reply.send(core.save_ram());
             }
             Cmd::Thumb(reply) => {
-                let _ = reply.send(crate::thumb::png(core.video_xrgb8888()));
+                let _ = reply.send(crate::thumb::png(core.video_xrgb8888(), core.canvas()));
             }
             Cmd::BeginLink(client_id, t) => {
                 self.shared.link_lost.store(false, Ordering::Relaxed);

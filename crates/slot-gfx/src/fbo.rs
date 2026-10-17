@@ -132,6 +132,11 @@ impl Compositor {
         Ok(())
     }
 
+    /// The emulator's frame canvas (Platform::canvas); GBA-sized until set.
+    pub fn set_game_canvas(&mut self, w: u32, h: u32) {
+        self.game.set_canvas(w, h);
+    }
+
     pub fn upload_game(&mut self, xrgb8888: &[u8]) {
         self.game.upload(xrgb8888);
     }
@@ -265,6 +270,10 @@ impl Compositor {
     pub fn set_screen_power(&mut self, t: f32) {
         self.screen = t;
         self.game.set_power(t);
+    }
+
+    pub fn set_screen_footer(&mut self, px: f32) {
+        self.game.set_bottom(px);
     }
 
     pub fn set_game_fills_frame(&mut self, on: bool) {

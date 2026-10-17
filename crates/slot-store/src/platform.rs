@@ -6,16 +6,26 @@ pub enum Platform {
     Gba,
     Gb,
     Gbc,
+    Nes,
+    Snes,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 3] = [Platform::Gba, Platform::Gb, Platform::Gbc];
+    pub const ALL: [Platform; 5] = [
+        Platform::Gba,
+        Platform::Gb,
+        Platform::Gbc,
+        Platform::Nes,
+        Platform::Snes,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             Platform::Gba => "Game Boy Advance",
             Platform::Gb => "Game Boy",
             Platform::Gbc => "Game Boy Color",
+            Platform::Nes => "Nintendo Entertainment System",
+            Platform::Snes => "Super Nintendo Entertainment System",
         }
     }
 
@@ -24,6 +34,8 @@ impl Platform {
             Platform::Gba => "GBA",
             Platform::Gb => "GB",
             Platform::Gbc => "GBC",
+            Platform::Nes => "NES",
+            Platform::Snes => "SNES",
         }
     }
 
@@ -31,6 +43,8 @@ impl Platform {
         match self {
             Platform::Gba => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
+            Platform::Nes => &["nes"],
+            Platform::Snes => &["sfc", "smc"],
         }
     }
 
@@ -38,6 +52,18 @@ impl Platform {
         match self {
             Platform::Gba => (240, 160),
             Platform::Gb | Platform::Gbc => (160, 144),
+            // With FCEUmm's and snes9x's 8-line overscan crop top and bottom.
+            Platform::Nes | Platform::Snes => (256, 224),
+        }
+    }
+
+    /// The frame canvas a core draws into, its picture centred: GBA-sized for the Game
+    /// Boys, the full 256x240 (overscan included) for the NES and SNES. A SNES hi-res frame
+    /// (512 wide, or 448 lines interlaced) is halved into it as it arrives.
+    pub fn canvas(self) -> (u32, u32) {
+        match self {
+            Platform::Gba | Platform::Gb | Platform::Gbc => (240, 160),
+            Platform::Nes | Platform::Snes => (256, 240),
         }
     }
 

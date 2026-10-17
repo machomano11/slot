@@ -130,7 +130,7 @@ fn let_it_hop(app: &mut App) {
 }
 
 #[test]
-fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
+fn start_opens_the_cart_menu_on_every_cart_and_the_picker_only_from_a_gba_one() {
     let Some((_g, _s, mut c)) = compositor() else {
         eprintln!("no GL on this host, skipping");
         return;
@@ -145,14 +145,18 @@ fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
     let_it_hop(&mut untouched);
     let plain = shot(&untouched, &mut c, "gb-plain");
     let after = shot(&pressed, &mut c, "gb-after-start");
+    assert!(
+        pressed.cart_menu().is_some(),
+        "START opened no cart menu on a Game Boy cart"
+    );
     assert_eq!(
         pressed.core_picker(),
         None,
         "a Game Boy cart opened the GBA picker"
     );
     assert!(
-        after == plain,
-        "START put something on screen over a Game Boy cart"
+        after != plain,
+        "the cart menu opened and the panel showed the same shelf"
     );
 
     let d = common::tmp_root_with_carts(&["Emerald", "Zzz"]);
@@ -160,6 +164,10 @@ fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
     let mut pressed = shelf(&d, &mut c);
     let mut untouched = shelf(&twin, &mut c);
     pressed.apply(Action::GbaDown(Btn::Start));
+    while !matches!(pressed.cart_menu(), Some((slot_ui::CartRow::Emulator, _))) {
+        pressed.apply(Action::GbaDown(Btn::Down));
+    }
+    pressed.apply(Action::GbaDown(Btn::A));
     let_it_hop(&mut pressed);
     let_it_hop(&mut untouched);
     let plain = shot(&untouched, &mut c, "gba-plain");
@@ -167,7 +175,7 @@ fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
     assert_eq!(
         pressed.core_picker(),
         Some(Core::Mgba),
-        "START stopped opening the picker"
+        "EMULATOR stopped opening the picker"
     );
     assert!(
         after != plain,

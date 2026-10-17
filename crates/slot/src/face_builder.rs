@@ -7,6 +7,8 @@ use slot_ui::{board_face, cart_face, cart_interior, gb_shell_of, padded, CartFac
 pub struct BuiltFaces {
     pub stem: String,
     pub interior: CartFace,
+    /// The cart's stem and the shell it wore, as the frontend keys its request.
+    pub key: String,
     pub board: CartFace,
     pub lid: CartFace,
 }
@@ -27,6 +29,8 @@ impl FaceBuilder {
                     while let Ok(newer) = inbox.try_recv() {
                         cart = newer;
                     }
+                    // As the shelf does: a GBA cart's plastic comes from its game code.
+                    cart.read_header();
                     let faces = BuiltFaces {
                         stem: cart.stem.clone(),
                         interior: if gb_shell_of(&cart).is_none() {
@@ -38,6 +42,7 @@ impl FaceBuilder {
                                 h: 1,
                             }
                         },
+                        key: format!("{}\n{:?}", cart.stem, cart.shell),
                         board: board_face(&cart),
                         lid: padded(&cart_face(&cart), TURN_PAD),
                     };

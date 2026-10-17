@@ -11,6 +11,7 @@ fn carts(stems: &[&str]) -> Vec<Cart> {
             stem: (*stem).to_string(),
             rom: format!("Games/GBA/{stem}.gba").into(),
             label: None,
+            famicom_label: None,
             code: String::new(),
             shell: None,
             title: stem.to_uppercase(),

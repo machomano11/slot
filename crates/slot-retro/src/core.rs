@@ -83,6 +83,10 @@ pub trait RetroCore: Send {
     }
     fn set_option(&mut self, _key: &str, _value: &str) {}
     fn set_frame_skip(&mut self, _skip: bool) {}
+    /// The frame canvas `video_xrgb8888` fills, smaller pictures centred in it.
+    fn canvas(&self) -> (u32, u32) {
+        (GBA_W, GBA_H)
+    }
     fn video_xrgb8888(&self) -> &[u8];
     fn take_audio(&mut self) -> Vec<i16>;
     fn serialize(&mut self) -> Result<Vec<u8>, CoreError>;

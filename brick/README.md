@@ -1,7 +1,7 @@
 # Slot. for TrimUI Brick — v0.23
 
 An unofficial port of **Slot.**, Brandon T. Kowalski's GB/GBC/GBA frontend for the Anbernic RG SP,
-to the **original TrimUI Brick** on stock firmware. Port by **LordNordyx**.
+to the **original TrimUI Brick** on stock firmware, with NES and SNES added. Port by **LordNordyx**.
 
 > **Note:** Report problems at <https://github.com/LordNordyx/slot-brick>, not to the upstream project.
 
@@ -40,10 +40,10 @@ doesn't flash anything to the device.
 | Button           | Action                                  |
 | ---------------- | --------------------------------------- |
 | `Left` / `Right` | Browse games                            |
-| `L1` / `R1`      | Switch between GB, GBC and GBA shelves  |
+| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES) |
 | Tap `A`          | Resume from the last save state         |
 | Hold `A`         | Start the game fresh                    |
-| `START`          | Choose the emulator core                |
+| `START`          | Cart colour and finish (GBA: and core)   |
 | `HOME`           | Menu (settings, Wi-Fi, About)           |
 
 ### In game
@@ -57,12 +57,12 @@ doesn't flash anything to the device.
 | `SELECT + R1`               | Save state                                          |
 | `SELECT + L1`               | Load the latest save state                          |
 | `SELECT + A` / `B`          | Next / previous shader                              |
-| `SELECT + X`                | GBA: 3:2 or 4:3 full screen (saved per game)        |
-| `SELECT + Y`                | Colour correction on / off                          |
+| `SELECT + X`                | GBA/SNES: original or full screen (saved per game)  |
+| `SELECT + Y`                | Colour correction on / off (GB, GBC, GBA)           |
 | `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
 | `SELECT + Left` / `Right`   | Blue light filter                                   |
-| `L1` / `R1`                 | GB/GBC: stretched / original picture                |
+| `L1` / `R1`                 | GB/GBC/NES: stretched / original picture            |
 | Hold `L2`                   | Rewind                                              |
 | Hold `R2`                   | Fast-forward (double-tap to lock it on)             |
 
@@ -74,6 +74,48 @@ doesn't flash anything to the device.
 | `Fn` slider        | Mute / unmute                          |
 | Press `Power`      | Sleep / wake                           |
 | Hold `Power`       | Shut down, or exit to the stock OS     |
+
+**Cart colour:** press `START` on a game on the shelf to change its cartridge: any colour and a
+solid, see-through or glitter finish for Game Boy and GBA carts, and the shape: original or Color
+for Game Boy carts, NES or Famicom for NES carts, US or Europe / Japan for SNES carts. NES and
+SNES carts are always their system's grey, like the real ones; a NES game on the Famicom cart
+can have any colour, as Famicom carts came in many. On a GBA cart `START` opens the core picker: `Left` / `Right` swap the core, `Up` changes the colour
+and `Down` the finish. The cart changes as you go; `A` saves, `B` puts it back. Choices are kept
+in `Slot/Labels/cart_shell.ini`.
+
+**NES:** put `.nes` ROMs in `Slot/Games/NES`; they get their own shelf of NES cartridges and run
+on FCEUmm. No BIOS is needed. NES carts are grey; a ROM named as a Japanese release, such as
+`Rockman (Japan).nes`, or on a chip only Famicom carts used, gets the small, landscape Famicom
+cart instead, in a colour picked from its name (change it under `START` → Colour). NES ROMs don't say where they were
+sold, so for other Japanese games choose Famicom under `START` → Shape. Cart Art fetches NES labels too (see below), or put your own picture in
+`Slot/Labels/NES`. The picture is the TV's 256 x 224, padded to 4:3 at actual size or
+stretched to fill the screen with `L1` / `R1`. RetroAchievements work for NES too.
+
+**SNES:** put `.sfc` or `.smc` ROMs in `Slot/Games/SNES`; they get a shelf of SNES cartridges and
+run on Snes9x. No BIOS is needed. European and Japanese games get the rounder PAL / Super Famicom
+cart; Slot reads where a game was sold from the ROM, so a ripped `Terranigma.sfc` works too. `L1` / `R1` and `X` / `Y` are the SNES's own buttons (no turbo
+on SNES), so `SELECT + X` switches the picture between original and full screen. Cart Art fetches
+SNES labels too, and RetroAchievements work.
+
+**Cart art:** connect to Wi-Fi, then open **HOME → Cart Art**.
+**GET CART ART** gives every game with no label a scan of its real cartridge label; labels you
+already have are never replaced. The scans come from the slot art set behind
+[Cart Studio](https://studio.slot-cfw.fyi) (scans from ScreenScraper), downloaded over HTTPS.
+A game is found by the ROM's checksum, or for a trimmed or patched ROM by its file name
+(helped by the GBA game code in its header). ROM hacks and homebrew keep the label with their
+file name, so they never look like the game they are based on. Each ROM is read once and its
+checksum kept in `Slot/System/Cache/crc32.txt`.
+
+NES and SNES labels come from the [LaunchBox Games Database](https://gamesdb.launchbox-app.com)'s
+pictures of the cartridges: Slot finds the game by its ROM's file name (No-Intro names work best,
+for example `Mega Man 2 (USA).nes`) and cuts the label out of a picture of the standard US cart.
+Games on the Famicom cart get a Famicom cart's label (from the Japanese release), kept apart in
+`Slot/Labels/NES/Famicom` so a NES game can have both: swapping its shape swaps the label. While
+a game has only one, both carts show it. Carts of another shape (Tengen, gold Zelda, PAL SNES, unlicensed)
+keep their file-name label, as do games LaunchBox has no cart picture of (many SNES games).
+
+`Slot/Logs/cart-art.txt` lists each game and what it got. Below GET CART ART, every game with a
+label is listed: press A twice on one to delete its label, then GET CART ART fetches a new one.
 
 **Auto-sleep:** the Brick sleeps after 5 minutes idle in menus or 15 minutes in a game.
 To turn this off, create an empty file named `Slot/DISABLE_AUTO_SLEEP`.
