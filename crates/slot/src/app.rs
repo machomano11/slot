@@ -961,6 +961,9 @@ impl App {
                 .or(Some(QuickValue::Unavailable));
         }
 
+        if let Some(platform) = row.console_shader() {
+            return Some(shader_value(self.state.shader(platform)));
+        }
         match row {
             QuickRow::Shader if !self.playing_platform().game_boy_family() => {
                 Some(shader_value(self.screen_shader()))
@@ -1037,7 +1040,31 @@ impl App {
             | QuickRow::GbBezel
             | QuickRow::GbcBezel
             | QuickRow::GbaBezel
-            | QuickRow::Bezel => None,
+            | QuickRow::Bezel
+            | QuickRow::ScreenNes
+            | QuickRow::ScreenSnes
+            | QuickRow::ScreenGg
+            | QuickRow::ScreenSms
+            | QuickRow::ScreenMd
+            | QuickRow::ScreenScd
+            | QuickRow::ScreenS32x
+            | QuickRow::ScreenNgp
+            | QuickRow::ScreenNgpc
+            | QuickRow::ScreenWs
+            | QuickRow::ScreenWsc
+            | QuickRow::ScreenPs
+            | QuickRow::NesShader
+            | QuickRow::SnesShader
+            | QuickRow::GgShader
+            | QuickRow::SmsShader
+            | QuickRow::MdShader
+            | QuickRow::ScdShader
+            | QuickRow::S32xShader
+            | QuickRow::NgpShader
+            | QuickRow::NgpcShader
+            | QuickRow::WsShader
+            | QuickRow::WscShader
+            | QuickRow::PsShader => None,
         }
     }
 
@@ -2406,7 +2433,19 @@ impl App {
             | QuickRow::Lights
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
-            | QuickRow::ScreenGb => {
+            | QuickRow::ScreenGb
+            | QuickRow::ScreenNes
+            | QuickRow::ScreenSnes
+            | QuickRow::ScreenGg
+            | QuickRow::ScreenSms
+            | QuickRow::ScreenMd
+            | QuickRow::ScreenScd
+            | QuickRow::ScreenS32x
+            | QuickRow::ScreenNgp
+            | QuickRow::ScreenNgpc
+            | QuickRow::ScreenWs
+            | QuickRow::ScreenWsc
+            | QuickRow::ScreenPs => {
                 if let Some(row) = row.child() {
                     let row = row.shown(self.hidden_rows())[0];
                     self.phase = Phase::QuickMenu { row };
@@ -2449,13 +2488,28 @@ impl App {
             | QuickRow::GbBezel
             | QuickRow::GbcBezel
             | QuickRow::GbaBezel
-            | QuickRow::Bezel => {}
+            | QuickRow::Bezel
+            | QuickRow::NesShader
+            | QuickRow::SnesShader
+            | QuickRow::GgShader
+            | QuickRow::SmsShader
+            | QuickRow::MdShader
+            | QuickRow::ScdShader
+            | QuickRow::S32xShader
+            | QuickRow::NgpShader
+            | QuickRow::NgpcShader
+            | QuickRow::WsShader
+            | QuickRow::WscShader
+            | QuickRow::PsShader => {}
         }
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
-        if row == QuickRow::Shader {
-            let platform = self.playing_platform();
+        let console = match row {
+            QuickRow::Shader => Some(self.playing_platform()),
+            row => row.console_shader(),
+        };
+        if let Some(platform) = console {
             if !platform.game_boy_family() {
                 let shader = self.state.shader(platform);
                 let to = shader.step(platform.shaders(), right);
@@ -2601,7 +2655,31 @@ impl App {
             | QuickRow::GbBezel
             | QuickRow::GbcBezel
             | QuickRow::GbaBezel
-            | QuickRow::Bezel => return,
+            | QuickRow::Bezel
+            | QuickRow::ScreenNes
+            | QuickRow::ScreenSnes
+            | QuickRow::ScreenGg
+            | QuickRow::ScreenSms
+            | QuickRow::ScreenMd
+            | QuickRow::ScreenScd
+            | QuickRow::ScreenS32x
+            | QuickRow::ScreenNgp
+            | QuickRow::ScreenNgpc
+            | QuickRow::ScreenWs
+            | QuickRow::ScreenWsc
+            | QuickRow::ScreenPs
+            | QuickRow::NesShader
+            | QuickRow::SnesShader
+            | QuickRow::GgShader
+            | QuickRow::SmsShader
+            | QuickRow::MdShader
+            | QuickRow::ScdShader
+            | QuickRow::S32xShader
+            | QuickRow::NgpShader
+            | QuickRow::NgpcShader
+            | QuickRow::WsShader
+            | QuickRow::WscShader
+            | QuickRow::PsShader => return,
         }
         self.persist();
     }

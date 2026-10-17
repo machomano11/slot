@@ -123,7 +123,23 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
-        ["Game Boy Advance", "Game Boy Color", "Game Boy"]
+        [
+            "Game Boy Advance",
+            "Game Boy Color",
+            "Game Boy",
+            "NES",
+            "Super NES",
+            "Game Gear",
+            "Master System",
+            "Mega Drive",
+            "Sega CD",
+            "Sega 32X",
+            "Neo Geo Pocket",
+            "Neo Geo Pocket Color",
+            "WonderSwan",
+            "WonderSwan Color",
+            "PlayStation"
+        ]
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
@@ -169,7 +185,20 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenGba,
             QuickRow::ScreenGbc,
             QuickRow::ScreenGb,
-            QuickRow::Achievements
+            QuickRow::Achievements,
+            QuickRow::CartArt,
+            QuickRow::ScreenNes,
+            QuickRow::ScreenSnes,
+            QuickRow::ScreenGg,
+            QuickRow::ScreenSms,
+            QuickRow::ScreenMd,
+            QuickRow::ScreenScd,
+            QuickRow::ScreenS32x,
+            QuickRow::ScreenNgp,
+            QuickRow::ScreenNgpc,
+            QuickRow::ScreenWs,
+            QuickRow::ScreenWsc,
+            QuickRow::ScreenPs
         ]
     );
     for page in [
@@ -433,8 +462,60 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
             assert_eq!(row.parent(), Some(console), "{row:?}");
         }
     }
+    for (_, console, shader) in QuickRow::CONSOLES {
+        assert_eq!(console.parent(), Some(QuickRow::Screen));
+        assert_eq!(console.child(), Some(shader));
+        assert_eq!(shader.page(), &[shader]);
+        assert_eq!(shader.parent(), Some(console), "{shader:?}");
+        assert_eq!(shader.label(), "Shader");
+        assert!(console.opens() && !shader.opens());
+    }
     assert!(QuickRow::ScreenGb.centred());
+    assert!(QuickRow::ScreenPs.centred());
     assert!(!QuickRow::GbShader.centred());
+    assert!(!QuickRow::PsShader.centred());
+}
+
+#[test]
+fn every_console_has_its_screen_row() {
+    for platform in slot_store::Platform::ALL {
+        let row = match platform {
+            slot_store::Platform::Gba => Some(QuickRow::ScreenGba),
+            slot_store::Platform::Gbc => Some(QuickRow::ScreenGbc),
+            slot_store::Platform::Gb => Some(QuickRow::ScreenGb),
+            p => QuickRow::CONSOLES.iter().find(|c| c.0 == p).map(|c| c.1),
+        };
+        let row = row.unwrap_or_else(|| panic!("{platform:?} has no Screen row"));
+        assert!(QuickRow::SCREEN.contains(&row), "{row:?}");
+    }
+}
+
+#[test]
+fn a_long_page_scrolls_to_keep_the_pointer_on_screen() {
+    use slot_ui::{quick_row_top_at, quick_window, QUICK_ROWS_SHOWN};
+    assert!(QuickRow::SCREEN.len() > QUICK_ROWS_SHOWN);
+    assert_eq!(
+        quick_window(QuickRow::ScreenGba, &[]),
+        (0, QUICK_ROWS_SHOWN)
+    );
+    let last = *QuickRow::SCREEN.last().unwrap();
+    assert_eq!(
+        quick_window(last, &[]),
+        (QuickRow::SCREEN.len() - QUICK_ROWS_SHOWN, QUICK_ROWS_SHOWN)
+    );
+    for &row in &QuickRow::SCREEN {
+        let (first, count) = quick_window(row, &[]);
+        let at = row.position(&[]);
+        assert!(at >= first && at < first + count, "{row:?}");
+        let top = quick_row_top_at(row, row, &[]);
+        assert!(top >= 0.0, "{row:?} at {top}");
+        assert!(top + slot_ui::QUICK_PITCH <= 427.0, "{row:?} at {top}");
+    }
+    // A short page does not move.
+    assert_eq!(
+        quick_window(QuickRow::Rumble, &[]),
+        (0, QuickRow::GAME.len())
+    );
 }
 
 #[test]
