@@ -282,6 +282,12 @@ impl Session {
                 None => eprintln!("slot: link: a transport arrived with no core to run it"),
             }
         }
+        if let Some(emu) = &self.emu {
+            self.app.set_discs(emu.discs());
+            if let Some(index) = self.app.take_disc_change() {
+                emu.insert_disc(index);
+            }
+        }
         let mut recoloured = false;
         if let Some(p) = self.app.take_gb_palette() {
             if let Some(emu) = &self.emu {
@@ -508,6 +514,12 @@ impl Session {
         else {
             return;
         };
+        if let Some(names) = platform.missing_bios(&crate::root::bios_dir(&self.root)) {
+            // No core is started, so the cart comes back out with this said.
+            self.app
+                .show_message("BIOS missing", format!("Put {names} in Slot/BIOS"));
+            return;
+        }
         if let Some(cloud) = self.cloud.as_mut() {
             cloud.game_started(stem, platform);
         }

@@ -43,6 +43,8 @@ struct Host {
     options_dirty: bool,
     declared: std::collections::HashMap<String, Vec<String>>,
     memory_maps: MemoryMaps,
+    /// The disc tray, for a core that has one (a CD system's).
+    disks: Option<DiskControl>,
 }
 
 /// The core's own description of its address space, copied out of
@@ -244,6 +246,29 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             }
             let cb = std::ptr::read(data as *const AudioBufferStatusCallback);
             with_host(|h| h.audio_status = cb.callback).is_some()
+        }
+        GET_DISK_CONTROL_INTERFACE_VERSION => {
+            if data.is_null() {
+                return false;
+            }
+            *(data as *mut c_uint) = 1;
+            true
+        }
+        SET_DISK_CONTROL_INTERFACE | SET_DISK_CONTROL_EXT_INTERFACE => {
+            if data.is_null() {
+                return false;
+            }
+            let mut disks = DiskControl::default();
+            let calls = match cmd {
+                SET_DISK_CONTROL_EXT_INTERFACE => std::mem::size_of::<DiskControl>(),
+                _ => DISK_CONTROL_BASIC * std::mem::size_of::<usize>(),
+            };
+            ptr::copy_nonoverlapping(
+                data as *const u8,
+                &mut disks as *mut DiskControl as *mut u8,
+                calls,
+            );
+            with_host(|h| h.disks = Some(disks)).is_some()
         }
         SET_MEMORY_MAPS => {
             if data.is_null() {
@@ -576,6 +601,7 @@ impl LibretroCore {
             options_dirty: false,
             declared: std::collections::HashMap::new(),
             memory_maps: MemoryMaps::default(),
+            disks: None,
         });
         unsafe {
             let _a = Active::bind(&mut host);
@@ -661,14 +687,27 @@ impl RetroCore for LibretroCore {
     fn load(&mut self, rom: &Path) -> Result<(), CoreError> {
         self.unload();
         self.state_size = None;
-        self.rom = std::fs::read(rom)?;
+        let mut system = SystemInfo::default();
+        unsafe { (self.api.get_system_info)(&mut system) };
+        // A core that reads the file itself (a CD image can be most of a gigabyte) gets only
+        // the path; the rest get the whole ROM in memory as well.
+        self.rom = match system.need_fullpath {
+            true => {
+                std::fs::metadata(rom)?;
+                Vec::new()
+            }
+            false => std::fs::read(rom)?,
+        };
         self.rom_path = Some(
             CString::new(rom.as_os_str().as_encoded_bytes())
                 .map_err(|_| CoreError::Load("rom path contains a nul".into()))?,
         );
         let info = GameInfo {
             path: self.rom_path.as_ref().map_or(ptr::null(), |p| p.as_ptr()),
-            data: self.rom.as_ptr() as *const c_void,
+            data: match self.rom.is_empty() {
+                true => ptr::null(),
+                false => self.rom.as_ptr() as *const c_void,
+            },
             size: self.rom.len(),
             meta: ptr::null(),
         };
@@ -733,6 +772,24 @@ impl RetroCore for LibretroCore {
 
     fn frame_size(&self) -> (u32, u32) {
         self.host.frame
+    }
+
+    fn discs(&self) -> Option<(u32, u32)> {
+        let d = self.host.disks?;
+        let (index, count) = unsafe { (d.get_image_index?(), d.get_num_images?()) };
+        (self.loaded && count > 0).then_some((index, count))
+    }
+
+    fn insert_disc(&mut self, index: u32) -> bool {
+        let Some(d) = self.host.disks.filter(|_| self.loaded) else {
+            return false;
+        };
+        let (Some(eject), Some(set)) = (d.set_eject_state, d.set_image_index) else {
+            return false;
+        };
+        let _a = Active::bind(&mut self.host);
+        // Open the tray, change the disc, close it: what a player did on the console.
+        unsafe { eject(true) && set(index) && eject(false) }
     }
 
     fn video_xrgb8888(&self) -> &[u8] {
@@ -845,6 +902,7 @@ mod tests {
             options_dirty,
             declared: HashMap::new(),
             memory_maps: MemoryMaps::default(),
+            disks: None,
         })
     }
 

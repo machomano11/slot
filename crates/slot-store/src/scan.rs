@@ -107,12 +107,34 @@ pub fn scan(root: &Path) -> Result<Vec<Cart>, StoreError> {
         } else {
             HashMap::new()
         };
-        for entry in entries {
-            let Ok(entry) = entry else {
+        let mut files: Vec<PathBuf> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if is_hidden(&path) {
                 continue;
-            };
-            let rom = entry.path();
-            if is_hidden(&rom) || !platform.accepts(&rom) || !is_file(&entry) {
+            }
+            if is_file(&entry) {
+                files.push(path);
+            } else if platform.discs() && path.is_dir() {
+                // A disc game often comes as a folder of its own: its tracks, cue sheet
+                // and playlist together.
+                if let Ok(inner) = std::fs::read_dir(&path) {
+                    files.extend(
+                        inner
+                            .flatten()
+                            .filter(is_file)
+                            .map(|e| e.path())
+                            .filter(|p| !is_hidden(p)),
+                    );
+                }
+            }
+        }
+        let in_playlists = match platform.discs() {
+            true => playlisted(&files),
+            false => Vec::new(),
+        };
+        for rom in files {
+            if !platform.accepts(&rom) || in_playlists.contains(&rom) {
                 continue;
             }
             let Some(stem) = rom.file_stem().and_then(|s| s.to_str()) else {
@@ -140,6 +162,35 @@ pub fn scan(root: &Path) -> Result<Vec<Cart>, StoreError> {
         (a.platform as u8, sort_key(&a.stem)).cmp(&(b.platform as u8, sort_key(&b.stem)))
     });
     Ok(carts)
+}
+
+/// The discs the .m3u playlists among `files` name, which are played through their playlist.
+fn playlisted(files: &[PathBuf]) -> Vec<PathBuf> {
+    let mut named = Vec::new();
+    for m3u in files
+        .iter()
+        .filter(|f| f.extension().is_some_and(|e| e.eq_ignore_ascii_case("m3u")))
+    {
+        let Ok(text) = std::fs::read_to_string(m3u) else {
+            continue;
+        };
+        let dir = m3u.parent().unwrap_or(Path::new(""));
+        for line in text.lines().map(str::trim) {
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let disc = dir.join(line);
+            // Names on a FAT card are matched as the player typed them, case aside.
+            if let Some(found) = files.iter().find(|f| {
+                f.parent() == disc.parent()
+                    && f.file_name().map(|n| n.to_ascii_lowercase())
+                        == disc.file_name().map(|n| n.to_ascii_lowercase())
+            }) {
+                named.push(found.clone());
+            }
+        }
+    }
+    named
 }
 
 pub fn listing(dir: &Path) -> HashMap<String, String> {
@@ -188,4 +239,37 @@ pub fn is_hidden(p: &Path) -> bool {
     p.file_name()
         .and_then(|n| n.to_str())
         .is_some_and(|n| n.starts_with('.'))
+}
+
+#[cfg(test)]
+mod playlist_tests {
+    use super::*;
+
+    #[test]
+    fn the_discs_a_playlist_names_are_its_and_the_rest_are_games() {
+        let d = tempfile::tempdir().unwrap();
+        let game = d.path().join("Final Fantasy VII");
+        std::fs::create_dir(&game).unwrap();
+        for name in ["FF7 (Disc 1).chd", "FF7 (Disc 2).CHD", "FF7.m3u"] {
+            std::fs::write(game.join(name), b"").unwrap();
+        }
+        std::fs::write(
+            game.join("FF7.m3u"),
+            "#EXTM3U\nFF7 (Disc 1).chd\r\nff7 (disc 2).chd\n\nmissing.chd\n",
+        )
+        .unwrap();
+        std::fs::write(d.path().join("Crash.chd"), b"").unwrap();
+        let files: Vec<PathBuf> = [
+            game.join("FF7 (Disc 1).chd"),
+            game.join("FF7 (Disc 2).CHD"),
+            game.join("FF7.m3u"),
+            d.path().join("Crash.chd"),
+        ]
+        .into();
+        let named = playlisted(&files);
+        assert_eq!(
+            named,
+            vec![game.join("FF7 (Disc 1).chd"), game.join("FF7 (Disc 2).CHD")]
+        );
+    }
 }

@@ -1,6 +1,11 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Groundwork for disc systems: a core that reads its own files is handed only the image's path
+  (no more loading a whole CD into memory), games of several discs swap with `SELECT + L2` / `R2`
+  through their `.m3u`, a disc game can sit in a folder of its own, a console that needs a BIOS
+  says which file to put in `Slot/BIOS` instead of starting to a black screen, and
+  RetroAchievements can identify CD images.
 - WonderSwan and WonderSwan Color: `.ws` and `.wsc` ROMs in `Slot/Games/WS` and `Slot/Games/WSC`
   get shelves of near-black Bandai cartridges and run on Beetle Cygne, with save states, rewind,
   fast-forward and RetroAchievements. A game made to be played upright is shown upright (read
