@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "rc_client.h"
+#include "rc_hash.h"
 #include "rc_consoles.h"
 #include "rc_libretro.h"
 #include "rc_version.h"
@@ -156,6 +157,77 @@ static void event_handler(const rc_client_event_t* e, rc_client_t* client) {
   }
 }
 
+/* Disc images: rcheevos reads .cue/.bin and .iso itself; slot reads .chd (src/chd.rs). */
+void* slot_chd_open_track(const char* path, uint32_t track);
+size_t slot_chd_read_sector(void* handle, uint32_t sector, void* buffer, size_t bytes);
+uint32_t slot_chd_first_track_sector(void* handle);
+void slot_chd_close_track(void* handle);
+
+static rc_hash_cdreader_t plain_reader;
+
+typedef struct {
+  int chd;
+  void* handle;
+} disc_track;
+
+static int is_chd(const char* path) {
+  size_t n = strlen(path);
+  return n > 4 && path[n - 4] == '.' && (path[n - 3] | 0x20) == 'c' && (path[n - 2] | 0x20) == 'h' &&
+         (path[n - 1] | 0x20) == 'd';
+}
+
+static void* disc_open(const char* path, uint32_t track, const rc_hash_iterator_t* iterator) {
+  disc_track* t;
+  int chd = is_chd(path);
+  void* handle = chd ? slot_chd_open_track(path, track) : plain_reader.open_track_iterator(path, track, iterator);
+  if (!handle)
+    return NULL;
+  t = (disc_track*)malloc(sizeof(disc_track));
+  if (!t) {
+    if (chd)
+      slot_chd_close_track(handle);
+    else
+      plain_reader.close_track(handle);
+    return NULL;
+  }
+  t->chd = chd;
+  t->handle = handle;
+  return t;
+}
+
+static size_t disc_read(void* track, uint32_t sector, void* buffer, size_t bytes) {
+  disc_track* t = (disc_track*)track;
+  return t->chd ? slot_chd_read_sector(t->handle, sector, buffer, bytes)
+                : plain_reader.read_sector(t->handle, sector, buffer, bytes);
+}
+
+static uint32_t disc_first_sector(void* track) {
+  disc_track* t = (disc_track*)track;
+  return t->chd ? slot_chd_first_track_sector(t->handle) : plain_reader.first_track_sector(t->handle);
+}
+
+static void disc_close(void* track) {
+  disc_track* t = (disc_track*)track;
+  if (t->chd)
+    slot_chd_close_track(t->handle);
+  else
+    plain_reader.close_track(t->handle);
+  free(t);
+}
+
+static void use_disc_reader(void) {
+  rc_hash_cdreader_t reader;
+  if (plain_reader.open_track_iterator)
+    return;
+  rc_hash_get_default_cdreader(&plain_reader);
+  memset(&reader, 0, sizeof(reader));
+  reader.open_track_iterator = disc_open;
+  reader.read_sector = disc_read;
+  reader.first_track_sector = disc_first_sector;
+  reader.close_track = disc_close;
+  rc_hash_init_custom_cdreader(&reader);
+}
+
 slot_cheevos* slot_cheevos_new(void* host, slot_http_fn http, slot_event_fn event, slot_done_fn done,
                                slot_memory_fn memory) {
   slot_cheevos* s = (slot_cheevos*)calloc(1, sizeof(slot_cheevos));
@@ -166,6 +238,7 @@ slot_cheevos* slot_cheevos_new(void* host, slot_http_fn http, slot_event_fn even
   s->event = event;
   s->done = done;
   s->memory = memory;
+  use_disc_reader();
   s->client = rc_client_create(read_memory, server_call);
   if (!s->client) {
     free(s);
