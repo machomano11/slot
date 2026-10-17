@@ -14,16 +14,18 @@ pub enum Core {
     Snes9x,
     Picodrive,
     MednafenNgp,
+    MednafenWswan,
 }
 
 impl Core {
-    pub const ALL: [Core; 6] = [
+    pub const ALL: [Core; 7] = [
         Core::Mgba,
         Core::Gpsp,
         Core::Fceumm,
         Core::Snes9x,
         Core::Picodrive,
         Core::MednafenNgp,
+        Core::MednafenWswan,
     ];
     /// The GBA's choice of cores, the picker board's two sockets (in Core::index order).
     pub const PICKER: [Core; 2] = [Core::Mgba, Core::Gpsp];
@@ -36,6 +38,7 @@ impl Core {
             Core::Snes9x => "snes9x",
             Core::Picodrive => "picodrive",
             Core::MednafenNgp => "mednafen_ngp",
+            Core::MednafenWswan => "mednafen_wswan",
         }
     }
 
@@ -51,6 +54,7 @@ impl Core {
             Core::Snes9x => "Snes9x",
             Core::Picodrive => "PicoDrive",
             Core::MednafenNgp => "Beetle NeoPop",
+            Core::MednafenWswan => "Beetle Cygne",
         }
     }
 
@@ -62,6 +66,7 @@ impl Core {
             "snes9x" => Some(Core::Snes9x),
             "picodrive" => Some(Core::Picodrive),
             "mednafen_ngp" => Some(Core::MednafenNgp),
+            "mednafen_wswan" => Some(Core::MednafenWswan),
             _ => None,
         }
     }
@@ -74,6 +79,7 @@ impl Core {
             Core::Snes9x => platform == Platform::Snes,
             Core::Picodrive => matches!(platform, Platform::Gg | Platform::Sms | Platform::Md),
             Core::MednafenNgp => matches!(platform, Platform::Ngp | Platform::Ngpc),
+            Core::MednafenWswan => matches!(platform, Platform::Ws | Platform::Wsc),
         }
     }
 
@@ -84,6 +90,7 @@ impl Core {
             Platform::Snes => Core::Snes9x,
             Platform::Gg | Platform::Sms | Platform::Md => Core::Picodrive,
             Platform::Ngp | Platform::Ngpc => Core::MednafenNgp,
+            Platform::Ws | Platform::Wsc => Core::MednafenWswan,
         }
     }
 }

@@ -13,10 +13,12 @@ pub enum Platform {
     Md,
     Ngp,
     Ngpc,
+    Ws,
+    Wsc,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 10] = [
+    pub const ALL: [Platform; 12] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -27,6 +29,8 @@ impl Platform {
         Platform::Md,
         Platform::Ngp,
         Platform::Ngpc,
+        Platform::Ws,
+        Platform::Wsc,
     ];
 
     pub fn name(self) -> &'static str {
@@ -41,6 +45,8 @@ impl Platform {
             Platform::Md => "Sega Mega Drive",
             Platform::Ngp => "Neo Geo Pocket",
             Platform::Ngpc => "Neo Geo Pocket Color",
+            Platform::Ws => "WonderSwan",
+            Platform::Wsc => "WonderSwan Color",
         }
     }
 
@@ -56,6 +62,8 @@ impl Platform {
             Platform::Md => "MD",
             Platform::Ngp => "NGP",
             Platform::Ngpc => "NGPC",
+            Platform::Ws => "WS",
+            Platform::Wsc => "WSC",
         }
     }
 
@@ -69,6 +77,7 @@ impl Platform {
             Platform::Sms => &["sms"],
             Platform::Md => &["md", "gen", "smd", "bin"],
             Platform::Ngp | Platform::Ngpc => &["ngp", "ngc", "ngpc"],
+            Platform::Ws | Platform::Wsc => &["ws", "wsc"],
         }
     }
 
@@ -80,6 +89,8 @@ impl Platform {
             // H40 mode; the H32 games' 256 columns sit in its middle.
             Platform::Md => (320, 224),
             Platform::Ngp | Platform::Ngpc => (160, 152),
+            // Held flat; a game played upright draws 144x224 (App::picture follows it).
+            Platform::Ws | Platform::Wsc => (224, 144),
             // With FCEUmm's and snes9x's 8-line overscan crop top and bottom.
             Platform::Nes | Platform::Snes => (256, 224),
         }
@@ -100,6 +111,9 @@ impl Platform {
             | Platform::Ngpc => (240, 160),
             Platform::Nes | Platform::Snes | Platform::Sms => (256, 240),
             Platform::Md => (320, 240),
+            // 4:3 and room for the screen held either way (224x144 or 144x224), so it keeps
+            // its shape on a 4:3 screen whichever way the game is played.
+            Platform::Ws | Platform::Wsc => (300, 225),
         }
     }
 
@@ -108,16 +122,25 @@ impl Platform {
     pub fn shaders(self) -> &'static [crate::Shader] {
         match self {
             Platform::Gba => &crate::Shader::GBA,
-            Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp | Platform::Ngpc => {
-                &crate::Shader::GB
-            }
+            Platform::Gb
+            | Platform::Gbc
+            | Platform::Gg
+            | Platform::Ngp
+            | Platform::Ngpc
+            | Platform::Ws
+            | Platform::Wsc => &crate::Shader::GB,
             Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => &crate::Shader::NES,
         }
     }
 
     pub fn default_shader(self) -> crate::Shader {
         match self {
-            Platform::Gba | Platform::Gg | Platform::Ngp | Platform::Ngpc => crate::Shader::Grid,
+            Platform::Gba
+            | Platform::Gg
+            | Platform::Ngp
+            | Platform::Ngpc
+            | Platform::Ws
+            | Platform::Wsc => crate::Shader::Grid,
             Platform::Gb | Platform::Gbc => crate::Shader::Simpletex,
             Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => crate::Shader::Off,
         }
@@ -136,6 +159,12 @@ impl Platform {
     /// other consoles drew on a TV, or (the Game Gear) have no such options in their core.
     pub fn game_boy_family(self) -> bool {
         matches!(self, Platform::Gba | Platform::Gb | Platform::Gbc)
+    }
+
+    /// A console whose games may turn the screen upright, so its picture follows the frames
+    /// the core draws rather than one fixed size.
+    pub fn turns(self) -> bool {
+        matches!(self, Platform::Ws | Platform::Wsc)
     }
 
     pub fn accepts(self, path: &Path) -> bool {

@@ -163,6 +163,20 @@ fn report_missing(core: Core, paths: &[PathBuf]) {
     );
 }
 
+/// How a WonderSwan game is held, for Beetle Cygne's display option: the footer's flags byte
+/// (four from the end) has bit 0 set for a game played upright.
+pub fn wonderswan_held(rom: &Path) -> &'static str {
+    let upright = std::fs::read(rom)
+        .ok()
+        .and_then(|data| data.len().checked_sub(4).map(|i| data[i] & 1 == 1))
+        .unwrap_or(false);
+    if upright {
+        "portrait"
+    } else {
+        "landscape"
+    }
+}
+
 pub fn colour_option(
     which: Core,
     platform: Platform,
@@ -231,6 +245,16 @@ pub fn apply_core_options(
             ("picodrive_ggghost", "off"),
             ("picodrive_region", "Auto"),
             ("picodrive_smstype", "Auto"),
+        ] {
+            core.set_option(key, value);
+        }
+    }
+    if which == Core::MednafenWswan {
+        // Software rotation (Slot turns no frames itself), the pad turned with the screen.
+        for (key, value) in [
+            ("wswan_rotate_display", "landscape"),
+            ("wswan_rotate_keymap", "auto"),
+            ("wswan_60hz_mode", "enabled"),
         ] {
             core.set_option(key, value);
         }

@@ -87,6 +87,11 @@ pub trait RetroCore: Send {
     fn canvas(&self) -> (u32, u32) {
         (GBA_W, GBA_H)
     }
+    /// The size of the last frame as drawn on the canvas: a WonderSwan's turns from 224x144
+    /// to 144x224 when a game is held upright.
+    fn frame_size(&self) -> (u32, u32) {
+        self.canvas()
+    }
     fn video_xrgb8888(&self) -> &[u8];
     fn take_audio(&mut self) -> Vec<i16>;
     fn serialize(&mut self) -> Result<Vec<u8>, CoreError>;

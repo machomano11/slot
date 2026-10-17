@@ -94,7 +94,7 @@ pub use shell::{
     famicom_shell, gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
     lookup_order_is_exact_then_family_then_default, nes_shell_for, shell_for, shell_presets,
     snes_pal, table_keys, Finish, Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, FAMICOM_SHELLS,
-    GB_CLEAR_SHELL, NES_SHELL, NGP_SHELL, SEGA_SHELL, SNES_PAL_SHELL, SNES_SHELL,
+    GB_CLEAR_SHELL, NES_SHELL, NGP_SHELL, SEGA_SHELL, SNES_PAL_SHELL, SNES_SHELL, WS_SHELL,
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell, NesShell, PlainCart, SnesShell};
 pub use slot_chrome::{

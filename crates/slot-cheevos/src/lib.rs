@@ -54,6 +54,7 @@ extern "C" {
     fn slot_cheevos_console_sms() -> c_uint;
     fn slot_cheevos_console_md() -> c_uint;
     fn slot_cheevos_console_ngp() -> c_uint;
+    fn slot_cheevos_console_ws() -> c_uint;
 }
 
 /// rcheevos' version, for the User-Agent RetroAchievements asks clients to send.
@@ -75,6 +76,8 @@ pub enum Console {
     Md,
     /// Both Neo Geo Pockets: RetroAchievements files them as one console.
     Ngp,
+    /// Both WonderSwans, also one console there.
+    Ws,
 }
 
 impl Console {
@@ -90,6 +93,7 @@ impl Console {
                 Console::Sms => slot_cheevos_console_sms(),
                 Console::Md => slot_cheevos_console_md(),
                 Console::Ngp => slot_cheevos_console_ngp(),
+                Console::Ws => slot_cheevos_console_ws(),
             }
         }
     }

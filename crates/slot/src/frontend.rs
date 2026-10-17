@@ -662,6 +662,9 @@ impl Frontend {
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
         compositor.set_blue_light(self.session.app().blue_light());
+        if let Some(size) = self.session.frame_size() {
+            self.session.app_mut().set_frame_size(size);
+        }
         compositor.set_picture(self.session.app().picture_rect());
         compositor.set_screen_effect(match self.session.app().screen_shader() {
             slot_store::Shader::Off => ScreenEffect::None,
