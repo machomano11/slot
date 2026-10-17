@@ -507,6 +507,8 @@ pub struct App {
     #[cfg(feature = "brick")]
     brick_leds: Option<crate::brick_led::BrickLeds>,
     #[cfg(feature = "brick")]
+    brick_led_failed: bool,
+    #[cfg(feature = "brick")]
     brick_mute: Option<bool>,
     #[cfg(feature = "brick")]
     brick_switch_at: Millis,
@@ -741,6 +743,8 @@ impl App {
             last_led: None,
             #[cfg(feature = "brick")]
             brick_leds: None,
+            #[cfg(feature = "brick")]
+            brick_led_failed: false,
             #[cfg(feature = "brick")]
             brick_mute: None,
             #[cfg(feature = "brick")]
@@ -4676,15 +4680,22 @@ impl App {
         if self.shutting_down() && state != LedState::Off {
             return;
         }
+        #[cfg(feature = "brick")]
+        if self.last_led != Some(state) || self.brick_led_failed {
+            if let Some(leds) = &mut self.brick_leds {
+                match leds.set_power_state(state) {
+                    Ok(()) => self.brick_led_failed = false,
+                    Err(e) => {
+                        if !self.brick_led_failed {
+                            eprintln!("slot: battery LEDs: {e}");
+                        }
+                        self.brick_led_failed = true;
+                    }
+                }
+            }
+        }
         if self.last_led == Some(state) {
             return;
-        }
-        #[cfg(feature = "brick")]
-        if let Some(leds) = &mut self.brick_leds {
-            if let Err(e) = leds.set_power_state(state) {
-                eprintln!("slot: battery LEDs: {e}");
-                return;
-            }
         }
         self.last_led = Some(state);
         if let Some(power) = self.power.as_mut() {
