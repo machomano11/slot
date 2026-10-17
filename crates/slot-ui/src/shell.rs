@@ -63,6 +63,8 @@ pub const SNES_SHELL: Shell = shell([0x95, 0x94, 0x9a], Finish::Solid);
 /// The PAL and Super Famicom cart's lighter, warmer grey.
 /// Sega's black: the Game Gear and Master System carts.
 pub const SEGA_SHELL: Shell = shell([0x2b, 0x2b, 0x2e], Finish::Solid);
+/// SNK's carts, mono and colour alike, were a dark slate grey.
+pub const NGP_SHELL: Shell = shell([0x3b, 0x3d, 0x44], Finish::Solid);
 
 pub const SNES_PAL_SHELL: Shell = shell([0xab, 0xab, 0xa7], Finish::Solid);
 
@@ -113,6 +115,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
         },
         Platform::Nes => NES_SHELL,
         Platform::Gg | Platform::Sms | Platform::Md => SEGA_SHELL,
+        Platform::Ngp | Platform::Ngpc => NGP_SHELL,
         Platform::Snes => match crate::cart::snes_shell_of(cart) {
             Some(crate::SnesShell::Pal) => SNES_PAL_SHELL,
             _ => SNES_SHELL,

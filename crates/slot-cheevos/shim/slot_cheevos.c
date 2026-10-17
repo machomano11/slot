@@ -278,3 +278,4 @@ unsigned slot_cheevos_console_snes(void) { return RC_CONSOLE_SUPER_NINTENDO; }
 unsigned slot_cheevos_console_gg(void) { return RC_CONSOLE_GAME_GEAR; }
 unsigned slot_cheevos_console_sms(void) { return RC_CONSOLE_MASTER_SYSTEM; }
 unsigned slot_cheevos_console_md(void) { return RC_CONSOLE_MEGA_DRIVE; }
+unsigned slot_cheevos_console_ngp(void) { return RC_CONSOLE_NEOGEO_POCKET; }

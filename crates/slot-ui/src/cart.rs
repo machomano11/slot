@@ -149,6 +149,8 @@ const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
         PlainCart::MasterSystem => (264, SMS_SEATED_H, [75, 40, 925, 660]),
         // md_cart.svg: the label below the grip, x 20..220, y 52..250 of 240x288.
         PlainCart::MegaDrive => (280, MD_SEATED_H, [83, 181, 917, 868]),
+        // ngp_cart.svg: the label below the grip, x 22..218, y 44..206 of 240x228.
+        PlainCart::NeoGeoPocket => (240, NGP_SEATED_H, [92, 193, 908, 904]),
     }
 }
 
@@ -218,12 +220,6 @@ enum Shape {
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba
-        | Platform::Nes
-        | Platform::Snes
-        | Platform::Gg
-        | Platform::Sms
-        | Platform::Md => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -232,6 +228,7 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
                 Class::Original | Class::DualMode => GbShell::Notched,
             },
         }),
+        _ => None,
     }
 }
 
@@ -304,6 +301,7 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Gg => Some(PlainCart::GameGear),
         Platform::Sms => Some(PlainCart::MasterSystem),
         Platform::Md => Some(PlainCart::MegaDrive),
+        Platform::Ngp | Platform::Ngpc => Some(PlainCart::NeoGeoPocket),
         Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
     }
 }
@@ -451,28 +449,30 @@ const GG_SEATED_H: u32 = 192;
 const SMS_SEATED_H: u32 = 300;
 /// A Mega Drive cart is about 5:6, its connector inside the shell.
 const MD_SEATED_H: u32 = 288;
+/// A Neo Geo Pocket cart is a little taller than wide.
+const NGP_SEATED_H: u32 = 228;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
+    if let Some(plain) = plain_cart_for(platform) {
+        return (SEATED_W, plain_geometry(plain).1);
+    }
     match platform {
         Platform::Gba => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         Platform::Nes => (SEATED_W, NES_SEATED_H),
         Platform::Snes => (SEATED_W, SNES_SEATED_H),
-        Platform::Gg => (SEATED_W, GG_SEATED_H),
-        Platform::Sms => (SEATED_W, SMS_SEATED_H),
-        Platform::Md => (SEATED_W, MD_SEATED_H),
+        _ => unreachable!("every other console has a plain cart"),
     }
 }
 
 pub fn cart_box(platform: Platform) -> (u32, u32) {
-    let s = spec(match platform {
-        Platform::Gba => Shape::Gba,
-        Platform::Gb | Platform::Gbc => Shape::Gb(GbShell::Notched),
-        Platform::Nes => Shape::Nes(NesShell::Nes),
-        Platform::Snes => Shape::Snes(SnesShell::Us),
-        Platform::Gg => Shape::Plain(PlainCart::GameGear),
-        Platform::Sms => Shape::Plain(PlainCart::MasterSystem),
-        Platform::Md => Shape::Plain(PlainCart::MegaDrive),
+    let s = spec(match (platform, plain_cart_for(platform)) {
+        (_, Some(plain)) => Shape::Plain(plain),
+        (Platform::Gba, None) => Shape::Gba,
+        (Platform::Gb | Platform::Gbc, None) => Shape::Gb(GbShell::Notched),
+        (Platform::Nes, None) => Shape::Nes(NesShell::Nes),
+        (Platform::Snes, None) => Shape::Snes(SnesShell::Us),
+        _ => unreachable!("every other console has a plain cart"),
     });
     (s.w, s.h)
 }

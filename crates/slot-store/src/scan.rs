@@ -56,7 +56,7 @@ impl Cart {
             }
             // The file name is the title: an iNES header names no game, and a SNES header's
             // sits at one of several places a copier header can shift.
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => {}
+            _ => {}
         }
     }
 }

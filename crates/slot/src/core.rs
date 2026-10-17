@@ -106,8 +106,8 @@ fn open_named(
                 let console = match core {
                     Core::Fceumm => Some(Platform::Nes),
                     Core::Snes9x => Some(Platform::Snes),
-                    Core::Picodrive => Some(platform),
                     Core::Mgba | Core::Gpsp => None,
+                    _ => Some(platform),
                 };
                 if let Some((w, h)) = console.map(Platform::canvas) {
                     opened.set_canvas(w, h);
@@ -183,9 +183,9 @@ pub fn colour_option(
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
         )),
-        // A NES, SNES or Master System drew on a TV, with no LCD to correct for; PicoDrive
-        // has no correction for the Game Gear's.
-        Core::Fceumm | Core::Snes9x | Core::Picodrive => None,
+        // A TV console has no LCD to correct for, and the other handhelds' cores have no
+        // correction of their own.
+        _ => None,
     }
 }
 
@@ -234,6 +234,9 @@ pub fn apply_core_options(
         ] {
             core.set_option(key, value);
         }
+    }
+    if which == Core::MednafenNgp {
+        core.set_option("ngp_language", "english");
     }
     if which == Core::Fceumm {
         // 8 lines off the top and bottom, as a TV hid them: the 256x224 Platform::Nes draws.

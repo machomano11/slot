@@ -1083,7 +1083,7 @@ impl App {
             Platform::Gba => Some(&mut self.state.bezel_gba),
             Platform::Gb => Some(&mut self.state.bezel_gb),
             Platform::Gbc => Some(&mut self.state.bezel_gbc),
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => None,
+            _ => None,
         }
     }
 
@@ -1092,9 +1092,7 @@ impl App {
             Platform::Gba => &self.state.bezel_gba,
             Platform::Gb => &self.state.bezel_gb,
             Platform::Gbc => &self.state.bezel_gbc,
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => {
-                return BezelPick::None
-            }
+            _ => return BezelPick::None,
         };
         match self.bezel_choices(platform).contains(pick) {
             true => pick.clone(),
@@ -1558,7 +1556,13 @@ impl App {
         matches!(self.phase, Phase::Playing { .. })
             && matches!(
                 self.platform,
-                Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Gg | Platform::Sms
+                Platform::Gb
+                    | Platform::Gbc
+                    | Platform::Nes
+                    | Platform::Gg
+                    | Platform::Sms
+                    | Platform::Ngp
+                    | Platform::Ngpc
             )
     }
 
@@ -1834,7 +1838,7 @@ impl App {
             Platform::Gba => self.state.colour_correction_gba,
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
-            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => false,
+            _ => false,
         }
     }
 
@@ -2568,9 +2572,9 @@ impl App {
                 Platform::Gba => QuickRow::GbaColourCorrection,
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
-                // A NES, SNES or Master System drew on a TV: there is no LCD colour to
-                // correct. PicoDrive has none for the Game Gear's.
-                Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => {
+                // A TV console has no LCD colour to correct, and the other handhelds' cores
+                // have no correction of their own.
+                _ => {
                     self.refuse();
                     return true;
                 }
@@ -5432,7 +5436,7 @@ fn bezel_slot(platform: Platform) -> Option<usize> {
         Platform::Gba => Some(0),
         Platform::Gb => Some(1),
         Platform::Gbc => Some(2),
-        Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms | Platform::Md => None,
+        _ => None,
     }
 }
 
@@ -5531,8 +5535,6 @@ impl CartMenu {
         };
         let rows = match cart.platform {
             Platform::Nes | Platform::Snes => vec![CartRow::Shape, CartRow::Reset],
-            // A Sega cart has one shape and colour: its menu never opens.
-            Platform::Gg | Platform::Sms | Platform::Md => vec![CartRow::Reset],
             Platform::Gb | Platform::Gbc => vec![
                 CartRow::Colour,
                 CartRow::Finish,
@@ -5540,6 +5542,8 @@ impl CartMenu {
                 CartRow::Reset,
             ],
             Platform::Gba => vec![CartRow::Colour, CartRow::Finish, CartRow::Reset],
+            // A plain cart has one shape and colour: its menu never opens.
+            _ => vec![CartRow::Reset],
         };
         let mut menu = CartMenu {
             stem: cart.stem.clone(),
