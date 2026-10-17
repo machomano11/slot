@@ -3,6 +3,8 @@
 //! The host supplies HTTP (`Http`), the core's memory (`set_memory`) and calls `frame`
 //! once per emulated frame. What happens comes back from `take` as `Notice`s.
 //! Softcore only: slot is not an approved hardcore emulator.
+mod chd;
+
 use std::cell::RefCell;
 use std::ffi::{c_char, c_int, c_uint, c_void, CStr, CString};
 use std::path::Path;

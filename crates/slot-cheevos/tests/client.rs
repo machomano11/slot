@@ -309,3 +309,44 @@ fn a_sega_cd_image_is_hashed_by_its_disc_header() {
         "{seen:?}"
     );
 }
+
+/// The hash rcheevos asked the server about for `disc`.
+fn disc_hash(disc: &std::path::Path, console: Console) -> String {
+    let fake = Arc::new(Fake::default());
+    let c = Cheevos::new(fake.clone()).unwrap();
+    c.login("Benni", "t0k3n");
+    wait(&c, |n| matches!(n, Notice::LoggedIn(_)));
+    c.load_game(disc, console);
+    wait(&c, |n| matches!(n, Notice::GameLoaded(_)));
+    let seen = fake.seen.lock().unwrap();
+    seen.iter()
+        .flat_map(|p| p.split('&'))
+        .find_map(|kv| kv.strip_prefix("m=").filter(|m| m.len() == 32))
+        .unwrap_or_else(|| panic!("no hash asked for; saw {seen:?}"))
+        .to_string()
+}
+
+fn fixture(name: &str) -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(name)
+}
+
+#[test]
+fn a_playstation_chd_is_hashed_by_its_boot_program() {
+    // The hash of the same disc as a .cue/.bin (tests/fixtures/make-discs.py): the name and
+    // contents of the program SYSTEM.CNF boots.
+    assert_eq!(
+        disc_hash(&fixture("ps1.chd"), Console::Ps),
+        "7e63ae30c9290b9627764d81986c8075"
+    );
+}
+
+#[test]
+fn a_sega_cd_chd_is_hashed_by_its_disc_header() {
+    // As the .iso above, and as the same disc as a .cue/.bin.
+    assert_eq!(
+        disc_hash(&fixture("segacd.chd"), Console::Scd),
+        "f449ada9ab4280081643362f4760286e"
+    );
+}

@@ -1,6 +1,8 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- RetroAchievements now recognise PlayStation and Sega CD games kept as `.chd`, read the same
+  way as their `.cue`/`.bin`, so they unlock achievements instead of failing to identify.
 - PlayStation: `.cue`, `.chd`, `.pbp`, `.iso` and `.m3u` images in `Slot/Games/PS` get a shelf of
   jewel cases and run on PCSX ReARMed with its ARM64 recompiler, save states and
   RetroAchievements. The BIOS is optional (`scph5501.bin` and friends in `Slot/BIOS`; a built-in

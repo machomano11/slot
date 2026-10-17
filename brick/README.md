@@ -120,7 +120,7 @@ English. No BIOS is needed. `B` and `A` are the console's A and B, `START` is Op
 from an `.m3u` listing them, and `SELECT + L2` / `R2` changes disc. It needs the BIOS of the
 game's region in `Slot/BIOS`: `bios_CD_U.bin` (US), `bios_CD_E.bin` (Europe) or `bios_CD_J.bin`
 (Japan); without one Slot says which file is missing. Controls are the Mega Drive's.
-RetroAchievements work for `.cue` and `.iso` images, not yet `.chd`.
+RetroAchievements work for `.cue`, `.iso` and `.chd` images.
 
 **Sega 32X:** put `.32x` ROMs in `Slot/Games/32X`. No BIOS is needed and the controls are the
 Mega Drive's. Most games run at full speed; a few of the heaviest (Virtua Racing Deluxe) may not.
@@ -132,7 +132,7 @@ recompiler. A BIOS is optional: with `scph5501.bin` (US), `scph5502.bin` (Europe
 built-in BIOS runs them. `L2` / `R2` are the pad's own L2 and R2, so fast-forward is
 `HOME + R2` (on or off) and there is no rewind. A game of several discs plays from an `.m3u`
 and `SELECT + L2` / `R2` changes disc. `SELECT + X` switches between the original and
-full-screen picture. RetroAchievements work for `.cue` and `.iso` images, not yet `.chd` or `.pbp`.
+full-screen picture. RetroAchievements work for `.cue`, `.iso` and `.chd` images, not yet `.pbp`.
 
 **WonderSwan and Color:** put `.ws` ROMs in `Slot/Games/WS` and `.wsc` ROMs in `Slot/Games/WSC`;
 they run on Beetle Cygne. No BIOS is needed. Held flat, the D-pad is the X pad, `A` / `B` are A

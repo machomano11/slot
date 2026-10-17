@@ -8,6 +8,7 @@ publish = false
 links = "rcheevos"
 
 [dependencies]
+chd = { version = "0.4", default-features = false, features = ["std", "want_raw_data_sector"] }
 
 [build-dependencies]
 cc = { workspace = true }
