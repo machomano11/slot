@@ -51,3 +51,29 @@ fn the_game_list_sends_a_save_and_says_so() {
             .contains("Saves/GBA/Advance.sav")
     );
 }
+
+#[test]
+fn games_that_arrive_join_the_game_list_without_moving_it() {
+    let d = common::tmp_root_with_carts(&["Advance", "Mario"]);
+    let root = d.path();
+    let (mut session, _motor) = common::session_with_platform(root);
+    let app = session.app_mut();
+    assert!(matches!(app.phase(), Phase::Shelf));
+    let before = app.selected_stem().map(str::to_string);
+    let stems = |app: &slot::app::App| {
+        let mut s: Vec<String> = app.carts().map(|c| c.stem.clone()).collect();
+        s.sort();
+        s
+    };
+    assert_eq!(stems(app), ["Advance", "Mario"]);
+
+    std::fs::copy(
+        root.join("Games/GBA/Advance.gba"),
+        root.join("Games/GBA/Boktai.gba"),
+    )
+    .unwrap();
+    let waiting = app.take_in_synced(&["Games/GBA/Boktai.gba".to_string()]);
+    assert!(!waiting, "on the game list it is read straight away");
+    assert_eq!(stems(app), ["Advance", "Boktai", "Mario"]);
+    assert_eq!(app.selected_stem().map(str::to_string), before);
+}

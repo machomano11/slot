@@ -1,8 +1,10 @@
-//! Cloud sync: keeps `Saves` and `States` in step with a WebDAV folder named
-//! in [`ACCOUNT_FILE`]. It runs in the background: at start-up, as soon as a
-//! game is closed, and every few minutes. While a game runs, its own save and
-//! states are only ever sent, never replaced; the next run after it closes
-//! brings in anything newer from the server.
+//! Cloud sync: keeps `Saves` and `States`, and the ROMs in `Games` and their
+//! art in `Labels`, in step with a WebDAV folder named in [`ACCOUNT_FILE`].
+//! It runs in the background: at start-up, as soon as a game is closed, and
+//! every few minutes. While a game runs, its own save and states are only ever
+//! sent, never replaced, and the ROMs and art wait; the next run after it
+//! closes brings in anything newer from the server. Games that arrive join the
+//! game list without a restart.
 //!
 //! Nothing happens without that file, so a card without it behaves exactly
 //! as before.
@@ -18,7 +20,8 @@ use slot_store::{ini, Platform};
 
 use crate::app::App;
 
-/// `url` of the WebDAV folder, plus `username` and `password`.
+/// `url` of the WebDAV folder, plus `username` and `password`; `roms=0` and
+/// `art=0` leave those out.
 pub const ACCOUNT_FILE: &str = "Config/cloudsync.ini";
 const MANIFEST: &str = "Config/cloudsync.manifest";
 const EVERY: Duration = Duration::from_secs(10 * 60);
@@ -33,6 +36,10 @@ pub struct CloudSync {
     /// The running game: its stem and platform folder.
     game: Option<(String, &'static str)>,
     failing: bool,
+    /// Games came down and the game list hasn't been read again yet.
+    rescan: bool,
+    /// How many files the last run had no room for, so a full card is said once.
+    no_room: usize,
 }
 
 struct Job {
@@ -53,6 +60,8 @@ impl CloudSync {
             next: None,
             game: None,
             failing: false,
+            rescan: false,
+            no_room: 0,
         })
     }
 
@@ -76,6 +85,9 @@ impl CloudSync {
             self.next = None;
         }
         self.poll(app);
+        if self.rescan && !playing {
+            self.rescan = !app.rescan();
+        }
         if self.job.is_none() && self.next.is_none_or(|t| Instant::now() >= t) {
             self.start();
         }
@@ -89,6 +101,7 @@ impl CloudSync {
         let stop = cancel.clone();
         let held = self.game.clone();
         let game = held.clone();
+        let folders = self.account.folders(held.is_some());
         let spawned = std::thread::Builder::new()
             .name("slot-cloud".into())
             .spawn(move || {
@@ -97,8 +110,14 @@ impl CloudSync {
                         .is_some_and(|(stem, dir)| slot_cloud::belongs_to(rel, dir, stem))
                 };
                 let manifest = root.join(MANIFEST);
-                let result =
-                    slot_cloud::sync_holding(&root, &manifest, &mut remote, &stop, &holding);
+                let result = slot_cloud::sync_holding(
+                    &root,
+                    &manifest,
+                    &mut remote,
+                    &folders,
+                    &stop,
+                    &holding,
+                );
                 let _ = tx.send(result);
             });
         match spawned {
@@ -121,10 +140,18 @@ impl CloudSync {
         };
         self.job = None;
         match result {
-            Ok(report) => {
+            Ok(mut report) => {
                 self.failing = false;
                 // A run cut short by a game goes again as soon as it ends.
                 self.next = (!report.cancelled).then(|| Instant::now() + EVERY);
+                if app.take_in_synced(&report.received) {
+                    self.rescan = true;
+                }
+                if std::mem::replace(&mut self.no_room, report.no_room.len())
+                    == report.no_room.len()
+                {
+                    report.no_room.clear();
+                }
                 if let Some((title, detail)) = summary(&report) {
                     app.show_message(title, detail);
                 }
@@ -161,6 +188,13 @@ fn summary(r: &Report) -> Option<(String, String)> {
         r.conflicts.len(),
         if r.cancelled { ", cut short" } else { "" }
     );
+    if !r.no_room.is_empty() {
+        let detail = match r.no_room.len() {
+            1 => "The card is full: 1 file wasn't received".to_string(),
+            n => format!("The card is full: {n} files weren't received"),
+        };
+        return Some((TITLE.into(), detail));
+    }
     if let Some(first) = r.conflicts.first() {
         let name = first.rsplit('/').next().unwrap_or(first);
         let detail = match r.conflicts.len() {

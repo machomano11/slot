@@ -1,9 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::{Read, Write};
 use std::path::Path;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use slot_cloud::{belongs_to, sync, sync_holding, Error, Listed, Remote, Report};
+use slot_cloud::{
+    belongs_to, sync, sync_holding, Error, Listed, Remote, Report, FOLDERS, PROGRESS,
+};
 
 #[derive(Default)]
 struct Memory {
@@ -11,6 +15,12 @@ struct Memory {
     dirs: BTreeSet<String>,
     version: u64,
     clock: u64,
+    /// Files fetched, in order.
+    gets: Vec<String>,
+    /// Set as an upload starts, as a game starting would.
+    cancel_on_put: Option<Arc<AtomicBool>>,
+    /// Refuses MOVE, as a few servers do.
+    no_move: bool,
 }
 
 impl Memory {
@@ -69,20 +79,42 @@ impl Remote for Memory {
         Ok(self.listed(rel))
     }
 
-    fn get(&mut self, rel: &str) -> Result<Vec<u8>, Error> {
-        self.bytes(rel)
+    fn get(&mut self, rel: &str, out: &mut dyn Write) -> Result<(), Error> {
+        self.gets.push(rel.into());
+        let bytes = self
+            .bytes(rel)
             .map(<[u8]>::to_vec)
-            .ok_or(Error::new(format!("404 {rel}")))
+            .ok_or(Error::new(format!("404 {rel}")))?;
+        out.write_all(&bytes).map_err(|e| Error::new(e.to_string()))
     }
 
-    fn put(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error> {
+    fn put(&mut self, rel: &str, body: &mut dyn Read, len: u64) -> Result<(), Error> {
         let parent = rel.rsplit_once('/').map(|p| p.0).unwrap_or("");
         if !parent.is_empty() && !self.dirs.contains(parent) {
             return Err(Error::new(format!("409 no folder for {rel}")));
         }
+        if let Some(cancel) = &self.cancel_on_put {
+            cancel.store(true, Ordering::Relaxed);
+        }
+        let mut bytes = Vec::new();
+        body.read_to_end(&mut bytes)
+            .map_err(|e| Error::new(e.to_string()))?;
+        assert_eq!(bytes.len() as u64, len);
         self.clock += 1;
         let now = self.clock;
-        self.store(rel, bytes, now);
+        self.store(rel, &bytes, now);
+        Ok(())
+    }
+
+    fn rename(&mut self, from: &str, to: &str) -> Result<(), Error> {
+        if self.no_move {
+            return Err(Error::new("405 Method Not Allowed"));
+        }
+        let (bytes, _, modified) = self
+            .files
+            .remove(from)
+            .ok_or(Error::new(format!("404 {from}")))?;
+        self.store(to, &bytes, modified);
         Ok(())
     }
 
@@ -306,6 +338,7 @@ fn a_running_game_s_files_are_sent_but_never_replaced() {
             root,
             &root.join("Config/cloudsync.manifest"),
             remote,
+            &FOLDERS,
             &AtomicBool::new(false),
             &zelda,
         )
@@ -354,4 +387,162 @@ fn a_game_s_files_are_its_save_and_its_states() {
     assert!(!z("Saves/GB/Zelda.sav"));
     assert!(!z("States/GBA/mgba/Zelda II/resume.state"));
     assert!(!z("Saves/GBA/Zelda"));
+}
+
+fn hidden_on_server(remote: &Memory) -> Vec<&String> {
+    remote
+        .files
+        .keys()
+        .filter(|k| k.rsplit('/').next().unwrap().starts_with('.'))
+        .collect()
+}
+
+#[test]
+fn games_and_their_art_sync_and_never_vanish() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(
+        root,
+        "Games/PS/Vagrant Story (USA).chd",
+        &[7; 300_000],
+        HOUR,
+    );
+    write_aged(root, "Labels/PS/Vagrant Story (USA).png", b"png", HOUR);
+    write_aged(root, "Labels/cart_shell.ini", b"[shell]", HOUR);
+    let mut remote = Memory::default();
+    remote.store("Games/GBA/Advance.gba", b"rom", secs_now() - HOUR);
+
+    let r = run(root, &mut remote);
+    assert_eq!((r.uploaded, r.downloaded), (3, 1), "{r:?}");
+    assert_eq!(r.received, ["Games/GBA/Advance.gba"]);
+    assert_eq!(
+        remote
+            .bytes("Games/PS/Vagrant Story (USA).chd")
+            .map(<[u8]>::len),
+        Some(300_000)
+    );
+    assert!(
+        hidden_on_server(&remote).is_empty(),
+        "no upload left half-named"
+    );
+    assert_eq!(
+        read(root, "Games/GBA/Advance.gba").as_deref(),
+        Some(&b"rom"[..])
+    );
+
+    // Gone from the card, or from the server: it comes back rather than being deleted.
+    std::fs::remove_file(root.join("Games/PS/Vagrant Story (USA).chd")).unwrap();
+    remote.delete("Labels/PS/Vagrant Story (USA).png").unwrap();
+    let r = run(root, &mut remote);
+    assert_eq!((r.uploaded, r.downloaded, r.deleted), (1, 1, 0), "{r:?}");
+    assert!(read(root, "Games/PS/Vagrant Story (USA).chd").is_some());
+}
+
+#[test]
+fn a_game_already_on_both_sides_is_not_fetched_to_compare() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/GBA/a.gba", b"rom!", HOUR);
+    write_aged(root, "Saves/GBA/a.sav", b"save", HOUR);
+    let mut remote = Memory::default();
+    remote.store("Games/GBA/a.gba", b"rom!", secs_now());
+    remote.store("Saves/GBA/a.sav", b"save", secs_now());
+    let r = run(root, &mut remote);
+    assert_eq!(r, Report::default());
+    assert_eq!(remote.gets, ["Saves/GBA/a.sav"], "saves are still compared");
+}
+
+#[test]
+fn a_run_of_some_folders_leaves_the_rest_and_what_it_knows_of_them() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/GBA/a.gba", b"rom", 2 * HOUR);
+    write_aged(root, "Saves/GBA/a.sav", b"v1", 2 * HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+
+    write_aged(root, "Games/GBA/b.gba", b"new rom", HOUR);
+    write_aged(root, "Saves/GBA/a.sav", b"v2", HOUR);
+    let r = sync_holding(
+        root,
+        &root.join("Config/cloudsync.manifest"),
+        &mut remote,
+        &PROGRESS,
+        &AtomicBool::new(false),
+        &|_| false,
+    )
+    .unwrap();
+    assert_eq!(r.uploaded, 1, "only the save: {r:?}");
+    assert!(remote.bytes("Games/GBA/b.gba").is_none());
+
+    let r = run(root, &mut remote);
+    assert_eq!(
+        (r.uploaded, r.downloaded),
+        (1, 0),
+        "just the new game: {r:?}"
+    );
+}
+
+#[test]
+fn a_run_stopped_mid_upload_leaves_no_file_behind() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/PS/big.chd", &[1; 200_000], HOUR);
+    let cancel = Arc::new(AtomicBool::new(false));
+    let mut remote = Memory {
+        cancel_on_put: Some(cancel.clone()),
+        ..Memory::default()
+    };
+    let manifest = root.join("Config/cloudsync.manifest");
+    let r = sync(root, &manifest, &mut remote, &cancel).unwrap();
+    assert!(r.cancelled);
+    assert_eq!(r.uploaded, 0);
+    assert!(remote.bytes("Games/PS/big.chd").is_none());
+
+    remote.cancel_on_put = None;
+    let r = run(root, &mut remote);
+    assert_eq!(r.uploaded, 1, "sent whole next time: {r:?}");
+    assert_eq!(
+        remote.bytes("Games/PS/big.chd").map(<[u8]>::len),
+        Some(200_000)
+    );
+}
+
+#[test]
+fn a_server_that_cannot_rename_still_gets_the_file() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/a.sav", b"save", HOUR);
+    let mut remote = Memory {
+        no_move: true,
+        ..Memory::default()
+    };
+    let r = run(root, &mut remote);
+    assert_eq!(r.uploaded, 1);
+    assert_eq!(remote.bytes("Saves/GBA/a.sav"), Some(&b"save"[..]));
+    assert!(hidden_on_server(&remote).is_empty());
+    assert_eq!(run(root, &mut remote), Report::default());
+}
+
+#[test]
+fn a_conflict_on_a_big_file_streams_and_keeps_both() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/PS/a.srm", &[1; 100_000], 3 * HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+    write_aged(root, "Saves/PS/a.srm", &[2; 100_000], 2 * HOUR);
+    remote.store("Saves/PS/a.srm", &[3; 100_000], secs_now() - HOUR);
+    let r = run(root, &mut remote);
+    assert_eq!(r.conflicts, ["Saves/PS/a.srm"]);
+    assert_eq!(read(root, "Saves/PS/a.srm").unwrap(), vec![3; 100_000]);
+    let names: Vec<String> = std::fs::read_dir(root.join("Saves/PS"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(
+        names.len(),
+        2,
+        "the card's copy is kept beside it: {names:?}"
+    );
 }
