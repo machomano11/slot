@@ -146,7 +146,8 @@ const S32X_PHOTO: CartPhoto = CartPhoto {
     sub: "",
     aspect: (0.58, 0.7),
     label: [0.18, 0.1, 0.82, 0.71],
-    art: [0.3, 0.2, 0.7, 0.6],
+    // The label's coloured 32X band down its left: its art is often as dark as the shell.
+    art: [0.2, 0.3, 0.23, 0.6],
     side: [0.03, 0.8, 0.12, 0.9],
     plain: &[[0.25, 0.8, 0.75, 0.9], [0.88, 0.3, 0.95, 0.7]],
     disc: false,
