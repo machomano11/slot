@@ -215,8 +215,9 @@ pub struct SlotState {
     pub shader_gbc: Shader,
     pub shader_nes: Shader,
     pub shader_snes: Shader,
-    pub shader_gg: Shader,
-    pub shader_sms: Shader,
+    /// The shader of each console added after the SNES, as chosen; a console not listed
+    /// has its default (see `shader`).
+    pub other_shaders: Vec<(Platform, Shader)>,
     pub eject_save: bool,
     pub turbo: bool,
     pub rewind: bool,
@@ -237,7 +238,49 @@ pub struct SlotState {
     pub shelf_cart: Option<Recent>,
 }
 
+fn ring_index(platform: Platform) -> usize {
+    Platform::ALL
+        .iter()
+        .position(|p| *p == platform)
+        .unwrap_or(0)
+}
+
 impl SlotState {
+    /// The picture shader chosen for a console.
+    pub fn shader(&self, platform: Platform) -> Shader {
+        match platform {
+            Platform::Gba => self.shader_gba,
+            Platform::Gb => self.shader_gb,
+            Platform::Gbc => self.shader_gbc,
+            Platform::Nes => self.shader_nes,
+            Platform::Snes => self.shader_snes,
+            _ => self
+                .other_shaders
+                .iter()
+                .find(|(p, _)| *p == platform)
+                .map_or(platform.default_shader(), |(_, s)| *s),
+        }
+    }
+
+    pub fn set_shader(&mut self, platform: Platform, shader: Shader) {
+        match platform {
+            Platform::Gba => self.shader_gba = shader,
+            Platform::Gb => self.shader_gb = shader,
+            Platform::Gbc => self.shader_gbc = shader,
+            Platform::Nes => self.shader_nes = shader,
+            Platform::Snes => self.shader_snes = shader,
+            _ => {
+                self.other_shaders.retain(|(p, _)| *p != platform);
+                // Only a choice away from the default is kept, in Platform::ALL's order, so
+                // a state read back from its file is equal to the one written.
+                if shader != platform.default_shader() {
+                    self.other_shaders.push((platform, shader));
+                    self.other_shaders.sort_by_key(|(p, _)| ring_index(*p));
+                }
+            }
+        }
+    }
+
     pub fn played(&mut self, platform: Platform, stem: &str) {
         self.recents
             .retain(|r| !(r.platform == platform && r.stem == stem));
@@ -343,8 +386,7 @@ impl Default for SlotState {
             shader_gbc: Shader::Simpletex,
             shader_nes: Shader::Off,
             shader_snes: Shader::Off,
-            shader_gg: Shader::Grid,
-            shader_sms: Shader::Off,
+            other_shaders: Vec::new(),
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -449,8 +491,13 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_gbc={}\n", s.shader_gbc.name()));
     text.push_str(&format!("shader_nes={}\n", s.shader_nes.name()));
     text.push_str(&format!("shader_snes={}\n", s.shader_snes.name()));
-    text.push_str(&format!("shader_gg={}\n", s.shader_gg.name()));
-    text.push_str(&format!("shader_sms={}\n", s.shader_sms.name()));
+    for platform in Platform::ALL.iter().filter(|p| !p.has_own_shader_field()) {
+        text.push_str(&format!(
+            "shader_{}={}\n",
+            platform_key(*platform),
+            s.shader(*platform).name()
+        ));
+    }
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
@@ -494,8 +541,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_gbc = None;
     let mut shader_nes = None;
     let mut shader_snes = None;
-    let mut shader_gg = None;
-    let mut shader_sms = None;
+    let mut other_shaders = Vec::new();
     let mut eject_save = None;
     let mut turbo = None;
     let mut rewind = None;
@@ -555,12 +601,27 @@ fn parse(text: &str) -> Option<SlotState> {
             "shader_gbc" => shader_gbc = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_nes" => shader_nes = Shader::parse(value).filter(|s| Shader::NES.contains(s)),
             "shader_snes" => shader_snes = Shader::parse(value).filter(|s| Shader::NES.contains(s)),
-            "shader_gg" => shader_gg = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
-            "shader_sms" => shader_sms = Shader::parse(value).filter(|s| Shader::NES.contains(s)),
-            _ => {}
+            _ => {
+                let console = key.strip_prefix("shader_").and_then(|k| {
+                    Platform::ALL
+                        .into_iter()
+                        .find(|p| !p.has_own_shader_field() && platform_key(*p) == k)
+                });
+                if let Some(platform) = console {
+                    if let Some(shader) =
+                        Shader::parse(value).filter(|s| platform.shaders().contains(s))
+                    {
+                        other_shaders.retain(|(p, _)| *p != platform);
+                        if shader != platform.default_shader() {
+                            other_shaders.push((platform, shader));
+                        }
+                    }
+                }
+            }
         }
     }
     let cart = cart?;
+    other_shaders.sort_by_key(|(p, _)| ring_index(*p));
     let fallback = SlotState::default();
     Some(SlotState {
         cart: (!cart.is_empty()).then_some(cart),
@@ -591,8 +652,7 @@ fn parse(text: &str) -> Option<SlotState> {
         shader_gbc: shader_gbc.or(shader_gb).unwrap_or(fallback.shader_gbc),
         shader_nes: shader_nes.unwrap_or(fallback.shader_nes),
         shader_snes: shader_snes.unwrap_or(fallback.shader_snes),
-        shader_gg: shader_gg.unwrap_or(fallback.shader_gg),
-        shader_sms: shader_sms.unwrap_or(fallback.shader_sms),
+        other_shaders,
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
         rewind: rewind.unwrap_or(fallback.rewind),

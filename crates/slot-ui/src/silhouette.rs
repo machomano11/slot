@@ -18,6 +18,8 @@ const GG_CART_SVG: &str = include_str!("../assets/gg_cart.svg");
 const GG_DETAIL_SVG: &str = include_str!("../assets/gg_cart_detail.svg");
 const SMS_CART_SVG: &str = include_str!("../assets/sms_cart.svg");
 const SMS_DETAIL_SVG: &str = include_str!("../assets/sms_cart_detail.svg");
+const MD_CART_SVG: &str = include_str!("../assets/md_cart.svg");
+const MD_DETAIL_SVG: &str = include_str!("../assets/md_cart_detail.svg");
 
 /// A cart of one fixed shape, drawn from its SVG outline and moulding: the consoles whose
 /// carts have no regional or colour variants to choose between.
@@ -25,15 +27,21 @@ const SMS_DETAIL_SVG: &str = include_str!("../assets/sms_cart_detail.svg");
 pub enum PlainCart {
     GameGear,
     MasterSystem,
+    MegaDrive,
 }
 
 impl PlainCart {
-    pub const ALL: [PlainCart; 2] = [PlainCart::GameGear, PlainCart::MasterSystem];
+    pub const ALL: [PlainCart; 3] = [
+        PlainCart::GameGear,
+        PlainCart::MasterSystem,
+        PlainCart::MegaDrive,
+    ];
 
     fn svgs(self) -> (&'static str, &'static str) {
         match self {
             PlainCart::GameGear => (GG_CART_SVG, GG_DETAIL_SVG),
             PlainCart::MasterSystem => (SMS_CART_SVG, SMS_DETAIL_SVG),
+            PlainCart::MegaDrive => (MD_CART_SVG, MD_DETAIL_SVG),
         }
     }
 }
@@ -179,7 +187,8 @@ pub(crate) fn snes_detail_mask(shell: SnesShell) -> &'static Detail {
 }
 
 pub(crate) fn plain_cart_mask(cart: PlainCart) -> &'static [u8] {
-    static MASKS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    static MASKS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] =
+        [const { OnceLock::new() }; PlainCart::ALL.len()];
     MASKS[cart as usize].get_or_init(|| {
         let (w, h) = plain_cart_box(cart);
         rasterise_svg(cart.svgs().0, w, h).unwrap_or_else(|| vec![255; (w * h) as usize])
@@ -187,7 +196,8 @@ pub(crate) fn plain_cart_mask(cart: PlainCart) -> &'static [u8] {
 }
 
 pub(crate) fn plain_cart_depth(cart: PlainCart) -> &'static [u8] {
-    static DEPTHS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    static DEPTHS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] =
+        [const { OnceLock::new() }; PlainCart::ALL.len()];
     DEPTHS[cart as usize].get_or_init(|| {
         let (w, h) = plain_cart_box(cart);
         depth_map(plain_cart_mask(cart), w as usize, h as usize)
@@ -196,7 +206,8 @@ pub(crate) fn plain_cart_depth(cart: PlainCart) -> &'static [u8] {
 
 /// The grip ridges and the seam above the connector; the label recess is cut by the cart face.
 pub(crate) fn plain_detail_mask(cart: PlainCart) -> &'static Detail {
-    static DETAILS: [OnceLock<Detail>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    static DETAILS: [OnceLock<Detail>; PlainCart::ALL.len()] =
+        [const { OnceLock::new() }; PlainCart::ALL.len()];
     DETAILS[cart as usize].get_or_init(|| {
         let (w, h) = plain_cart_box(cart);
         rasterise_detail(cart.svgs().1, w, h).unwrap_or_else(|| Detail::blank(w, h))

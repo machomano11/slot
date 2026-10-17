@@ -40,7 +40,7 @@ doesn't flash anything to the device.
 | Button           | Action                                  |
 | ---------------- | --------------------------------------- |
 | `Left` / `Right` | Browse games                            |
-| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS) |
+| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS, MD) |
 | Tap `A`          | Resume from the last save state         |
 | Hold `A`         | Start the game fresh                    |
 | `START`          | Cart colour and finish (GBA: and core)   |
@@ -57,7 +57,7 @@ doesn't flash anything to the device.
 | `SELECT + R1`               | Save state                                          |
 | `SELECT + L1`               | Load the latest save state                          |
 | `SELECT + A` / `B`          | Next / previous shader                              |
-| `SELECT + X`                | GBA/SNES: original or full screen (saved per game)  |
+| `SELECT + X`                | GBA/SNES/MD: original or full screen (per game)     |
 | `SELECT + Y`                | Colour correction on / off (GB, GBC, GBA)           |
 | `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
@@ -103,6 +103,12 @@ needed. Button 1 is `B`, button 2 is `A`, and `START` is Start (Pause on the Mas
 `L1` / `R1` switch between the original and stretched picture. RetroAchievements work for both.
 Cart Art has no labels for them yet, so put your own pictures in `Slot/Labels/GG` and
 `Slot/Labels/SMS` if you want them. PicoDrive is free for non-commercial use only.
+
+**Mega Drive:** put `.md`, `.gen`, `.smd` or `.bin` ROMs in `Slot/Games/MD`; they get a shelf of
+black Mega Drive cartridges and run on PicoDrive. No BIOS is needed. The pad is the six-button
+one: `Y`, `B`, `A` are A, B, C, and `X`, `L1`, `R1` are Y, X, Z. As on the SNES, `SELECT + X`
+switches between the original and full-screen picture. RetroAchievements work; labels go in
+`Slot/Labels/MD`.
 
 **Cart art:** connect to Wi-Fi, then open **HOME → Cart Art**.
 **GET CART ART** gives every game with no label a scan of its real cartridge label; labels you

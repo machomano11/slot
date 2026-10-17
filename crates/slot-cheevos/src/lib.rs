@@ -52,6 +52,7 @@ extern "C" {
     fn slot_cheevos_console_snes() -> c_uint;
     fn slot_cheevos_console_gg() -> c_uint;
     fn slot_cheevos_console_sms() -> c_uint;
+    fn slot_cheevos_console_md() -> c_uint;
 }
 
 /// rcheevos' version, for the User-Agent RetroAchievements asks clients to send.
@@ -70,6 +71,7 @@ pub enum Console {
     Snes,
     Gg,
     Sms,
+    Md,
 }
 
 impl Console {
@@ -83,6 +85,7 @@ impl Console {
                 Console::Snes => slot_cheevos_console_snes(),
                 Console::Gg => slot_cheevos_console_gg(),
                 Console::Sms => slot_cheevos_console_sms(),
+                Console::Md => slot_cheevos_console_md(),
             }
         }
     }

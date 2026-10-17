@@ -10,10 +10,11 @@ pub enum Platform {
     Snes,
     Gg,
     Sms,
+    Md,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 7] = [
+    pub const ALL: [Platform; 8] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -21,6 +22,7 @@ impl Platform {
         Platform::Snes,
         Platform::Gg,
         Platform::Sms,
+        Platform::Md,
     ];
 
     pub fn name(self) -> &'static str {
@@ -32,6 +34,7 @@ impl Platform {
             Platform::Snes => "Super Nintendo Entertainment System",
             Platform::Gg => "Sega Game Gear",
             Platform::Sms => "Sega Master System",
+            Platform::Md => "Sega Mega Drive",
         }
     }
 
@@ -44,6 +47,7 @@ impl Platform {
             Platform::Snes => "SNES",
             Platform::Gg => "GG",
             Platform::Sms => "SMS",
+            Platform::Md => "MD",
         }
     }
 
@@ -55,6 +59,7 @@ impl Platform {
             Platform::Snes => &["sfc", "smc"],
             Platform::Gg => &["gg"],
             Platform::Sms => &["sms"],
+            Platform::Md => &["md", "gen", "smd", "bin"],
         }
     }
 
@@ -63,6 +68,8 @@ impl Platform {
             Platform::Gba => (240, 160),
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Sms => (256, 192),
+            // H40 mode; the H32 games' 256 columns sit in its middle.
+            Platform::Md => (320, 224),
             // With FCEUmm's and snes9x's 8-line overscan crop top and bottom.
             Platform::Nes | Platform::Snes => (256, 224),
         }
@@ -71,12 +78,41 @@ impl Platform {
     /// The frame canvas a core draws into, its picture centred: GBA-sized for the Game
     /// Boys and the Game Gear, the full 256x240 (overscan included) for the NES and SNES,
     /// and the Master System, whose 192 lines (224 in a few games) sit in its middle. A SNES
-    /// hi-res frame (512 wide, or 448 lines interlaced) is halved into it as it arrives.
+    /// hi-res frame (512 wide, or 448 lines interlaced) is halved into it as it arrives. The
+    /// Mega Drive's is 320x240, room for a PAL game's 240 lines.
     pub fn canvas(self) -> (u32, u32) {
         match self {
             Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Gg => (240, 160),
             Platform::Nes | Platform::Snes | Platform::Sms => (256, 240),
+            Platform::Md => (320, 240),
         }
+    }
+
+    /// The picture shaders a console offers: the LCD ones for a handheld's screen, at most a
+    /// pixel grid for a TV's.
+    pub fn shaders(self) -> &'static [crate::Shader] {
+        match self {
+            Platform::Gba => &crate::Shader::GBA,
+            Platform::Gb | Platform::Gbc | Platform::Gg => &crate::Shader::GB,
+            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => &crate::Shader::NES,
+        }
+    }
+
+    pub fn default_shader(self) -> crate::Shader {
+        match self {
+            Platform::Gba | Platform::Gg => crate::Shader::Grid,
+            Platform::Gb | Platform::Gbc => crate::Shader::Simpletex,
+            Platform::Nes | Platform::Snes | Platform::Sms | Platform::Md => crate::Shader::Off,
+        }
+    }
+
+    /// The consoles whose shader has its own field in SlotState (and line in the state file
+    /// since before the others came).
+    pub fn has_own_shader_field(self) -> bool {
+        matches!(
+            self,
+            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes
+        )
     }
 
     /// Drew on a Game Boy's LCD: has Slot's colour correction, palettes and bezels. The

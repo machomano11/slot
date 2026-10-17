@@ -1,6 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Mega Drive: `.md`, `.gen`, `.smd` and `.bin` ROMs in `Slot/Games/MD` get a shelf of black
+  Mega Drive cartridges and run on PicoDrive with a six-button pad, save states, rewind,
+  fast-forward and RetroAchievements. `Y`, `B`, `A` are the pad's A, B, C and `X`, `L1`, `R1`
+  its Y, X, Z, so `SELECT + X` switches between the original and full-screen picture.
 - Game Gear and Master System: `.gg` ROMs in `Slot/Games/GG` and `.sms` ROMs in
   `Slot/Games/SMS` get their own shelves of black Sega cartridges and run on PicoDrive, with
   save states, rewind, fast-forward and RetroAchievements. L1/R1 switch the picture, as on the
