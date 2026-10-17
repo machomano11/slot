@@ -1,12 +1,15 @@
 //! Fetches real cartridge labels for games with no label, over HTTPS. A label the user
 //! made is never replaced: only carts without one are looked up. Slot is built around
-//! the cartridge, so no other kind of art is fetched.
+//! the cartridge, so only art for its label is fetched.
 //!
 //! - GB, GBC, GBA: label scans from the slot art set behind Cart Studio (art.slot-cfw.fyi,
 //!   scans from ScreenScraper), found by the ROM's CRC32.
 //! - NES, SNES: the set has none, so the label is cut out of a LaunchBox Games Database
 //!   "Cart - Front" picture (images.launchbox-app.com), found by the ROM's file name. Only
 //!   pictures of the standard US cart are used, whose label always sits in the same place.
+//! - Every console, where the above finds nothing: the game's front cover from libretro's
+//!   thumbnails (raw.githubusercontent.com/libretro-thumbnails), found by the ROM's file name.
+//!   A cart's label showed the cover's art, so the cover stands in for it.
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -20,6 +23,10 @@ use slot_store::{atomic_write, best_match, same_title_match, scan, Cart, Platfor
 /// Origins: `https://host`, or `http://host:port` for the tests' local server.
 const SLOT_ART: &str = "https://art.slot-cfw.fyi";
 const PHOTOS: &str = "https://images.launchbox-app.com";
+const COVERS: &str = "https://raw.githubusercontent.com";
+/// The cover names of each console (`<dir name>.txt`), built by brick/make-boxart-names.py
+/// and shipped on the card, so no listing is asked of GitHub.
+const COVER_NAMES: &str = "System/Boxarts";
 /// Pictures tried per game before giving up: the first may be a gold or odd cart.
 const PHOTO_TRIES: usize = 3;
 /// A cut label's longer side at most: the shelf draws it a few hundred pixels across, and
@@ -145,6 +152,7 @@ impl ArtJob {
             Servers {
                 labels: SLOT_ART.into(),
                 photos: PHOTOS.into(),
+                covers: COVERS.into(),
             },
         )
     }
@@ -176,10 +184,11 @@ impl Drop for ArtJob {
     }
 }
 
-/// The label scans' origin and the cart pictures'.
+/// The label scans' origin, the cart pictures' and the covers'.
 struct Servers {
     labels: String,
     photos: String,
+    covers: String,
 }
 
 /// Everything fetched or computed once per run.
@@ -187,11 +196,13 @@ struct Sources<'a> {
     root: &'a Path,
     server: &'a str,
     photo_server: &'a str,
+    cover_server: &'a str,
     labels: Option<HashMap<u32, String>>,
     crcs: Crcs,
     games: Games,
     /// Each picture list (by its file), read when its first cart needs it.
     photos: HashMap<&'static str, PhotoIndex>,
+    covers: HashMap<Platform, CoverIndex>,
 }
 
 fn run(
@@ -211,10 +222,12 @@ fn run(
         root,
         server: &servers.labels,
         photo_server: &servers.photos,
+        cover_server: &servers.covers,
         labels: None,
         crcs: Crcs::load(root),
         games: Games::load(root),
         photos: HashMap::new(),
+        covers: HashMap::new(),
     };
     let result = (|| {
         for (at, cart) in carts.iter().enumerate() {
@@ -226,9 +239,9 @@ fn run(
                 total: carts.len(),
                 name: cart.stem.clone(),
             });
-            // No label scan (homebrew, most hacks): the shelf's file-name label stays.
             let outcome = match photo_specs(cart) {
-                [] => fetch_label(cart, &mut src)?,
+                [] if has_label_scans(cart.platform) => fetch_label(cart, &mut src)?,
+                [] => Outcome::NoMatch,
                 specs => {
                     let mut outcome = Outcome::NoMatch;
                     for spec in specs {
@@ -239,6 +252,16 @@ fn run(
                     }
                     outcome
                 }
+            };
+            // No label or cart picture: the cover, else (homebrew, most hacks) the shelf's
+            // file-name label stays. The first source's reason is kept when there is no cover.
+            let outcome = match outcome {
+                Outcome::NoMatch | Outcome::Unusable(_) => match fetch_cover_label(cart, &mut src)?
+                {
+                    Outcome::NoMatch => outcome,
+                    cover => cover,
+                },
+                outcome => outcome,
             };
             let place = format!("{}/{}", cart.platform.dir_name(), cart.stem);
             match outcome {
@@ -309,6 +332,11 @@ fn platforms_for(platform: Platform) -> &'static [Platform] {
         Platform::S32x => &[Platform::S32x],
         Platform::Ps => &[Platform::Ps],
     }
+}
+
+/// Consoles the slot art set has label scans of.
+fn has_label_scans(platform: Platform) -> bool {
+    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gba)
 }
 
 /// A real label scan. Found by the ROM's CRC32, or failing that (a trimmed or patched
@@ -446,6 +474,126 @@ fn fetch_photo_label(cart: &Cart, spec: &CartPhoto, src: &mut Sources) -> Result
     Ok(Outcome::Unusable(format!("{name}: {}", why.join("; "))))
 }
 
+/// libretro-thumbnails' repository of each console's covers.
+fn cover_repo(platform: Platform) -> &'static str {
+    match platform {
+        Platform::Gb => "Nintendo_-_Game_Boy",
+        Platform::Gbc => "Nintendo_-_Game_Boy_Color",
+        Platform::Gba => "Nintendo_-_Game_Boy_Advance",
+        Platform::Nes => "Nintendo_-_Nintendo_Entertainment_System",
+        Platform::Snes => "Nintendo_-_Super_Nintendo_Entertainment_System",
+        Platform::Gg => "Sega_-_Game_Gear",
+        Platform::Sms => "Sega_-_Master_System_-_Mark_III",
+        Platform::Md => "Sega_-_Mega_Drive_-_Genesis",
+        Platform::Scd => "Sega_-_Mega-CD_-_Sega_CD",
+        Platform::S32x => "Sega_-_32X",
+        Platform::Ngp => "SNK_-_Neo_Geo_Pocket",
+        Platform::Ngpc => "SNK_-_Neo_Geo_Pocket_Color",
+        Platform::Ws => "Bandai_-_WonderSwan",
+        Platform::Wsc => "Bandai_-_WonderSwan_Color",
+        Platform::Ps => "Sony_-_PlayStation",
+    }
+}
+
+/// A console's cover names, as the name matching scores them, and each one's file name.
+#[derive(Default)]
+struct CoverIndex {
+    names: Vec<String>,
+    files: HashMap<String, String>,
+}
+
+impl CoverIndex {
+    fn load(root: &Path, platform: Platform) -> Self {
+        let file = root
+            .join(COVER_NAMES)
+            .join(format!("{}.txt", platform.dir_name()));
+        let text = std::fs::read_to_string(file).unwrap_or_default();
+        let mut index = CoverIndex::default();
+        for file in text
+            .lines()
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        {
+            // libretro writes & as _, which would keep "Sonic & Knuckles" from its cover.
+            let name = file.replace(" _ ", " & ");
+            if index.files.insert(name.clone(), file.to_string()).is_none() {
+                index.names.push(name);
+            }
+        }
+        index
+    }
+}
+
+/// Every byte but the unreserved ones as %XX, so a name can only ever be one path segment.
+fn percent_encode(name: &str) -> String {
+    name.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            b => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
+/// The game's front cover as its label, found by the ROM's name (or a longer name starting
+/// with it, as these lists are official releases). Err stops the run, as for cart pictures.
+fn fetch_cover_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> {
+    let root = src.root;
+    for &platform in platforms_for(cart.platform) {
+        let index = src
+            .covers
+            .entry(platform)
+            .or_insert_with(|| CoverIndex::load(root, platform));
+        let Some(name) = best_match(&cart.stem, &index.names) else {
+            continue;
+        };
+        let file = index.files[name].clone();
+        let path = format!(
+            "/libretro-thumbnails/{}/HEAD/Named_Boxarts/{}.png",
+            cover_repo(platform),
+            percent_encode(&file)
+        );
+        let png = match get(src.cover_server, &path, IMAGE_MAX) {
+            Ok(Some(png)) => png,
+            Ok(None) => return Ok(Outcome::Unusable(format!("cover {file}: gone"))),
+            Err(e) if crate::net::unreachable(&e) => {
+                return Err(format!("Can't reach the cover server: {e}"))
+            }
+            Err(e) => return Ok(Outcome::Failed(format!("cover {file}: {e}"))),
+        };
+        let label = match cover_label(&png) {
+            Ok(label) => label,
+            Err(e) => return Ok(Outcome::Unusable(format!("cover {file}: {e}"))),
+        };
+        // A NES game on the Famicom cart keeps its label apart, as with cart pictures.
+        let sub = if slot_ui::nes_famicom_of(cart) {
+            slot_store::FAMICOM_LABELS
+        } else {
+            ""
+        };
+        return Ok(save_label(root, cart, sub, &label, format!("cover {file}")));
+    }
+    Ok(Outcome::NoMatch)
+}
+
+/// A cover, scaled down for the card.
+fn cover_label(png: &[u8]) -> Result<Vec<u8>, &'static str> {
+    let (rgba, w, h) = decode_rgba(png).ok_or("not a readable PNG")?;
+    let (rgba, w, h) = shrink(rgba, w, h, LABEL_MAX);
+    encode_png(&rgba, w, h)
+}
+
+fn encode_png(rgba: &[u8], w: u32, h: u32) -> Result<Vec<u8>, &'static str> {
+    let mut bytes = Vec::new();
+    let mut e = png::Encoder::new(&mut bytes, w, h);
+    e.set_color(png::ColorType::Rgba);
+    e.set_depth(png::BitDepth::Eight);
+    e.write_header()
+        .and_then(|mut w| w.write_image_data(rgba))
+        .map_err(|_| "cannot encode the label")?;
+    Ok(bytes)
+}
+
 /// Cuts the label out of a front picture of a cart, as a PNG. Only the standard cart (the
 /// spec's shape, plain plastic where it should be) is used; others (Tengen, Famicom, PAL,
 /// a box) put the label elsewhere and are refused.
@@ -509,14 +657,7 @@ fn label_from_photo(png: &[u8], spec: &CartPhoto) -> Result<Vec<u8>, &'static st
         out.extend_from_slice(&rgba[i..i + (lw * 4) as usize]);
     }
     let (out, lw, lh) = shrink(out, lw, lh, LABEL_MAX);
-    let mut bytes = Vec::new();
-    let mut e = png::Encoder::new(&mut bytes, lw, lh);
-    e.set_color(png::ColorType::Rgba);
-    e.set_depth(png::BitDepth::Eight);
-    e.write_header()
-        .and_then(|mut w| w.write_image_data(&out))
-        .map_err(|_| "cannot encode the label")?;
-    Ok(bytes)
+    encode_png(&out, lw, lh)
 }
 
 /// `rgba` (w x h) scaled down so its longer side is at most `max`, each pixel the average of
@@ -1297,6 +1438,7 @@ mod tests {
         Servers {
             labels: labels.into(),
             photos: "http://127.0.0.1:1".into(),
+            covers: "http://127.0.0.1:1".into(),
         }
     }
 
@@ -1438,6 +1580,7 @@ mod tests {
         let down = Servers {
             labels: "http://127.0.0.1:1".into(),
             photos: "http://127.0.0.1:1".into(),
+            covers: "http://127.0.0.1:1".into(),
         };
         let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), down));
         assert!(done
@@ -1456,6 +1599,7 @@ mod tests {
             Servers {
                 labels: "http://127.0.0.1:1".into(),
                 photos: nes,
+                covers: "http://127.0.0.1:1".into(),
             },
         ));
         assert_eq!(
@@ -1493,6 +1637,7 @@ mod tests {
             Servers {
                 labels: "http://127.0.0.1:1".into(),
                 photos: nes,
+                covers: "http://127.0.0.1:1".into(),
             },
         ));
         assert_eq!(
@@ -1571,6 +1716,7 @@ mod tests {
             Servers {
                 labels: "http://127.0.0.1:1".into(),
                 photos,
+                covers: "http://127.0.0.1:1".into(),
             },
         ));
         assert_eq!(
@@ -1634,6 +1780,7 @@ mod tests {
         let servers = Servers {
             labels: "http://127.0.0.1:1".into(),
             photos: nes,
+            covers: "http://127.0.0.1:1".into(),
         };
         let (got, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers));
         assert_eq!(
@@ -1698,6 +1845,7 @@ mod tests {
         let servers = Servers {
             labels: "http://127.0.0.1:1".into(),
             photos,
+            covers: "http://127.0.0.1:1".into(),
         };
         let (_, done) = drain(&ArtJob::start_at(root.to_path_buf(), servers));
         assert_eq!(
@@ -1914,5 +2062,174 @@ mod tests {
     fn a_web_page_is_not_saved_as_a_label() {
         assert!(!is_png(b"<html>not found</html>"));
         assert!(is_png(&png_bytes()));
+    }
+
+    /// A plain picture of `w` x `h`, as a cover.
+    fn cover_png(w: u32, h: u32) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut e = png::Encoder::new(&mut out, w, h);
+        e.set_color(png::ColorType::Rgb);
+        e.set_depth(png::BitDepth::Eight);
+        e.write_header()
+            .unwrap()
+            .write_image_data(&vec![90; (w * h * 3) as usize])
+            .unwrap();
+        out
+    }
+
+    fn covers(root: &Path, console: &str, names: &str) {
+        std::fs::create_dir_all(root.join(COVER_NAMES)).unwrap();
+        std::fs::create_dir_all(root.join("Logs")).unwrap();
+        std::fs::write(
+            root.join(COVER_NAMES).join(format!("{console}.txt")),
+            format!("# list\n{names}"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_cover_name_is_asked_for_as_one_path_segment() {
+        assert_eq!(
+            percent_encode("Sonic _ Knuckles (World)"),
+            "Sonic%20_%20Knuckles%20%28World%29"
+        );
+        assert_eq!(percent_encode("a/../b?c#d"), "a%2F..%2Fb%3Fc%23d");
+    }
+
+    #[test]
+    fn a_console_with_no_label_scans_gets_the_cover_scaled_down() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        rom(root, "MD/Sonic & Knuckles (World).md");
+        rom(root, "MD/Not A Real Game.md");
+        covers(
+            root,
+            "MD",
+            "Sonic _ Knuckles (World)\nSonic _ Knuckles + Sonic The Hedgehog 3 (USA)\n",
+        );
+        let server = serve(vec![(
+            "/libretro-thumbnails/Sega_-_Mega_Drive_-_Genesis/HEAD/Named_Boxarts/Sonic%20_%20Knuckles%20%28World%29.png".into(),
+            200,
+            cover_png(1024, 1400),
+        )]);
+        let (got, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos: "http://127.0.0.1:1".into(),
+                covers: server,
+            },
+        ));
+        assert_eq!(
+            done,
+            Ok(Summary {
+                found: 1,
+                missing: 1,
+                failed: 0
+            })
+        );
+        let label = root.join("Labels/MD/Sonic & Knuckles (World).png");
+        assert_eq!(got[0].label.as_deref(), Some(label.as_path()));
+        let (_, w, h) = decode_rgba(&std::fs::read(&label).unwrap()).unwrap();
+        assert_eq!((w, h), (374, 512));
+        let report = std::fs::read_to_string(root.join(REPORT)).unwrap();
+        assert!(
+            report.contains(
+                "found     MD/Sonic & Knuckles (World) <- cover Sonic _ Knuckles (World)"
+            ),
+            "{report}"
+        );
+        assert!(report.contains("no match  MD/Not A Real Game"), "{report}");
+    }
+
+    #[test]
+    fn a_nes_game_whose_cart_pictures_are_odd_gets_its_cover() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        rom(root, "NES/Hard Drivin' (USA).nes");
+        covers(root, "NES", "Hard Drivin' (USA)\n");
+        std::fs::write(
+            root.join(NES_PHOTO.index),
+            "Hard Drivin' (USA)\ttengen.png\n",
+        )
+        .unwrap();
+        let photos = serve(vec![(
+            "/tengen.png".into(),
+            200,
+            cart_png(280, 318, [20, 20, 20], RED, [0.15, 0.3, 0.85, 0.9]),
+        )]);
+        let server = serve(vec![(
+            "/libretro-thumbnails/Nintendo_-_Nintendo_Entertainment_System/HEAD/Named_Boxarts/Hard%20Drivin%27%20%28USA%29.png".into(),
+            200,
+            cover_png(300, 400),
+        )]);
+        let (_, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            Servers {
+                labels: "http://127.0.0.1:1".into(),
+                photos,
+                covers: server,
+            },
+        ));
+        assert_eq!(done.unwrap().found, 1);
+        assert!(root.join("Labels/NES/Hard Drivin' (USA).png").exists());
+    }
+
+    #[test]
+    fn an_unreachable_cover_server_stops_the_run() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        rom(root, "PS/Crash Bandicoot (USA).chd");
+        covers(root, "PS", "Crash Bandicoot (USA)\n");
+        let (_, done) = drain(&ArtJob::start_at(
+            root.to_path_buf(),
+            servers("http://127.0.0.1:1"),
+        ));
+        assert!(done
+            .unwrap_err()
+            .starts_with("Can't reach the cover server"));
+    }
+
+    #[test]
+    #[ignore = "needs internet"]
+    fn live_covers() {
+        if std::env::var_os("SLOT_LIVE_ART").is_none() {
+            return;
+        }
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        std::fs::create_dir_all(root.join("Logs")).unwrap();
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../brick/card/Slot");
+        std::fs::create_dir_all(root.join(COVER_NAMES)).unwrap();
+        for g in [
+            "MD/Sonic & Knuckles + Sonic The Hedgehog 3 (USA) (Lock-on Combination).md",
+            "GG/Ristar (World).gg",
+            "SMS/Phantasy Star (World) (En) (Sega Ages).sms",
+            "NGP/Samurai Shodown.ngp",
+            "WSC/Dragon Ball (Japan).wsc",
+            "32X/Knuckles' Chaotix (Japan, USA) (En).32x",
+            "SEGACD/Sonic CD (USA).chd",
+            "PS/Dragon Warrior VII (USA) (Disc 1).chd",
+        ] {
+            let console = g.split('/').next().unwrap();
+            let names = format!("{}.txt", console);
+            let _ = std::fs::copy(
+                shipped.join(COVER_NAMES).join(&names),
+                root.join(COVER_NAMES).join(&names),
+            );
+            rom(root, g);
+        }
+        // Samurai Shodown is looked for in the NGPC list too.
+        std::fs::copy(
+            shipped.join(COVER_NAMES).join("NGPC.txt"),
+            root.join(COVER_NAMES).join("NGPC.txt"),
+        )
+        .unwrap();
+        let (_, done) = drain(&ArtJob::start(root.to_path_buf()));
+        eprintln!(
+            "{}",
+            std::fs::read_to_string(root.join(REPORT)).unwrap_or_default()
+        );
+        assert_eq!(done.unwrap().found, 8);
     }
 }

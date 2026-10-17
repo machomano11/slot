@@ -101,8 +101,8 @@ SNES labels too, and RetroAchievements work.
 `Slot/Games/SMS`; each gets a shelf of black Sega cartridges and runs on PicoDrive. No BIOS is
 needed. Button 1 is `B`, button 2 is `A`, and `START` is Start (Pause on the Master System).
 `L1` / `R1` switch between the original and stretched picture. RetroAchievements work for both.
-Cart Art has no labels for them yet, so put your own pictures in `Slot/Labels/GG` and
-`Slot/Labels/SMS` if you want them. PicoDrive is free for non-commercial use only.
+Cart Art gives them the game's cover as a label (see below), or put your own pictures in
+`Slot/Labels/GG` and `Slot/Labels/SMS`. PicoDrive is free for non-commercial use only.
 
 **Mega Drive:** put `.md`, `.gen`, `.smd` or `.bin` ROMs in `Slot/Games/MD`; they get a shelf of
 black Mega Drive cartridges and run on PicoDrive. No BIOS is needed. The pad is the six-button
@@ -155,7 +155,13 @@ for example `Mega Man 2 (USA).nes`) and cuts the label out of a picture of the s
 Games on the Famicom cart get a Famicom cart's label (from the Japanese release), kept apart in
 `Slot/Labels/NES/Famicom` so a NES game can have both: swapping its shape swaps the label. While
 a game has only one, both carts show it. Carts of another shape (Tengen, gold Zelda, PAL SNES, unlicensed)
-keep their file-name label, as do games LaunchBox has no cart picture of (many SNES games).
+get the game's cover instead, as do games LaunchBox has no cart picture of (many SNES games).
+
+Every other console (Game Gear, Master System, Mega Drive, 32X, Sega CD, Neo Geo Pocket,
+WonderSwan, PlayStation), and any game the above finds nothing for, gets the game's front cover
+as its label, from [libretro's thumbnails](https://github.com/libretro-thumbnails) on GitHub: the
+cart's label showed the same art. The game is found by its file name, so No-Intro and Redump
+names work best. The names of every cover are kept on the card in `Slot/System/Boxarts`.
 
 `Slot/Logs/cart-art.txt` lists each game and what it got. Below GET CART ART, every game with a
 label is listed: press A twice on one to delete its label, then GET CART ART fetches a new one.

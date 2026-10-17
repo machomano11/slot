@@ -1,6 +1,10 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Cart Art covers every console: a game with no label scan or cart picture (all Game Gear,
+  Master System, Mega Drive, 32X, Sega CD, Neo Geo Pocket, WonderSwan and PlayStation games, and
+  the many NES and SNES games LaunchBox has no cart of) gets its front cover as a label, from
+  libretro's thumbnails on GitHub, found by the ROM's file name.
 - RetroAchievements now recognise PlayStation and Sega CD games kept as `.chd`, read the same
   way as their `.cue`/`.bin`, so they unlock achievements instead of failing to identify.
 - PlayStation: `.cue`, `.chd`, `.pbp`, `.iso` and `.m3u` images in `Slot/Games/PS` get a shelf of
