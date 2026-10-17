@@ -1,14 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 135">
   <defs>
+    <!-- The ridges under the label strip, and the seam above the connector. -->
     <g id="grip">
-      <rect x="34" y="214.0" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="222.5" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="231.0" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="239.5" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="248.0" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="256.5" width="172" height="2.4" rx="0.6"/>
-      <rect x="34" y="265.0" width="172" height="2.4" rx="0.6"/>
-      <rect x="0" y="282" width="240" height="1.6"/>
+      <rect x="3" y="44" width="234" height="1.8" rx="0.6"/>
+      <rect x="3" y="48" width="234" height="1.8" rx="0.6"/>
+      <rect x="3" y="52" width="234" height="1.8" rx="0.6"/>
+      <rect x="3" y="56" width="234" height="1.8" rx="0.6"/>
+      <rect x="0" y="130" width="240" height="1.2"/>
     </g>
   </defs>
   <g fill="#fff">

@@ -372,6 +372,8 @@ impl Frontend {
                 .iter()
                 .chain(&slot_ui::SNES_SHAPES)
                 .chain(&slot_ui::NES_SHAPES)
+                .chain(&slot_ui::MD_SHAPES)
+                .chain(&slot_ui::SMS_SHAPES)
                 .copied()
                 .collect(),
         );

@@ -4548,8 +4548,9 @@ impl App {
         let Some(cart) = self.shelf().carts.get(index).cloned() else {
             return;
         };
-        if slot_ui::plain_cart_for(cart.platform).is_some() {
-            // One shape, one colour: a Sega cart has nothing to choose.
+        let regional = matches!(cart.platform, Platform::Md | Platform::Sms);
+        if !regional && slot_ui::plain_cart_for(cart.platform).is_some() {
+            // One shape, one colour: these carts have nothing to choose.
             self.refuse();
             return;
         }
@@ -4626,7 +4627,7 @@ impl App {
             .and_then(|i| self.shelf().face(i))
             .zip(cart)
             .map(|(tex, cart)| {
-                let (w, h) = slot_ui::cart_box(cart.platform);
+                let (w, h) = slot_ui::cart_box_of(cart);
                 (tex, w, h)
             });
         slot_ui::CartMenuView {
@@ -4634,11 +4635,23 @@ impl App {
             row: menu.row,
             colour: menu.colour,
             finish: menu.finish,
-            // The SNES shape names follow the Game Boy ones, the NES ones follow those.
+            // The SNES shape names follow the Game Boy ones, then the NES, Mega Drive and
+            // Master System ones.
             shape: menu.shape
                 + match cart.map(|c| c.platform) {
                     Some(Platform::Snes) => slot_ui::SHAPES.len(),
                     Some(Platform::Nes) => slot_ui::SHAPES.len() + slot_ui::SNES_SHAPES.len(),
+                    Some(Platform::Md) => {
+                        slot_ui::SHAPES.len()
+                            + slot_ui::SNES_SHAPES.len()
+                            + slot_ui::NES_SHAPES.len()
+                    }
+                    Some(Platform::Sms) => {
+                        slot_ui::SHAPES.len()
+                            + slot_ui::SNES_SHAPES.len()
+                            + slot_ui::NES_SHAPES.len()
+                            + slot_ui::MD_SHAPES.len()
+                    }
                     _ => 0,
                 },
             cart: face,
@@ -5641,15 +5654,18 @@ impl CartMenu {
                 )
             }
         };
-        // NES and SNES carts came in their system's grey: only their shape changes, and a
-        // colour an older Slot saved for one is dropped. A Famicom cart's colour is its own.
+        // NES, SNES and Sega carts came in their system's plastic: only their shape (or a Mega
+        // Drive's label) changes, and a colour an older Slot saved for one is dropped. A Famicom cart's
+        // colour is its own.
         let (colour, finish) = match cart.platform {
-            Platform::Snes => (0, finish_at(own.finish)),
+            Platform::Snes | Platform::Md | Platform::Sms => (0, finish_at(own.finish)),
             Platform::Nes => (colour, finish_at(slot_ui::Finish::Solid)),
             _ => (colour, finish),
         };
         let rows = match cart.platform {
-            Platform::Nes | Platform::Snes => vec![CartRow::Shape, CartRow::Reset],
+            Platform::Nes | Platform::Snes | Platform::Md | Platform::Sms => {
+                vec![CartRow::Shape, CartRow::Reset]
+            }
             Platform::Gb | Platform::Gbc => vec![
                 CartRow::Colour,
                 CartRow::Finish,
@@ -5657,7 +5673,7 @@ impl CartMenu {
                 CartRow::Reset,
             ],
             Platform::Gba => vec![CartRow::Colour, CartRow::Finish, CartRow::Reset],
-            // A plain cart has one shape and colour: its menu never opens.
+            // Any other plain cart has one shape and colour: its menu never opens.
             _ => vec![CartRow::Reset],
         };
         let mut menu = CartMenu {

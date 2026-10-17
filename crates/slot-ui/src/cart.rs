@@ -143,21 +143,25 @@ const FAMICOM_LABEL: (u32, u32, u32, u32) = {
 /// the Master System's tall one about as wide as a NES cart, the Mega Drive's a little wider.
 const fn plain_geometry(cart: PlainCart) -> (u32, u32, [u32; 4]) {
     match cart {
-        // gg_cart.svg: the label below the grip, x 20..220, y 36..166 of 240x192.
-        PlainCart::GameGear => (300, GG_SEATED_H, [83, 188, 917, 865]),
-        // sms_cart.svg: the label over the top, x 18..222, y 12..198 of 240x300.
-        PlainCart::MasterSystem => (264, SMS_SEATED_H, [75, 40, 925, 660]),
-        // md_cart.svg: the label below the grip, x 20..220, y 52..250 of 240x288.
-        PlainCart::MegaDrive => (280, MD_SEATED_H, [83, 181, 917, 868]),
-        // ngp_cart.svg: the label below the grip, x 22..218, y 44..206 of 240x228.
-        PlainCart::NeoGeoPocket => (240, NGP_SEATED_H, [92, 193, 908, 904]),
-        // ws_cart.svg: the label above the grip, x 18..222, y 14..160 of 240x200.
-        PlainCart::WonderSwan => (270, WS_SEATED_H, [75, 70, 925, 800]),
+        // gg_cart.svg: the label in its recess, x 23..217, y 48..187 of 240x245.
+        PlainCart::GameGear => (290, GG_SEATED_H, [96, 198, 904, 763]),
+        // sms_cart.svg: the title strip along the top, x 4..236, y 2..40 of 240x135.
+        PlainCart::MasterSystem => (360, SMS_SEATED_H, [17, 15, 983, 296]),
+        // mark3_cart.svg: the picture label over the top, x 14..226, y 3..188 of 240x312.
+        PlainCart::MarkIII => (250, MARK3_SEATED_H, [58, 10, 942, 603]),
+        // md_cart.svg: the label from the top edge between the grips, x 30..210, y 0..140
+        // of 240x159.
+        PlainCart::MegaDrive => (340, MD_SEATED_H, [125, 0, 875, 881]),
+        // ngp_cart.svg: the label between the grip and the foot, x 25..216, y 50..151 of
+        // 240x215.
+        PlainCart::NeoGeoPocket => (270, NGP_SEATED_H, [105, 232, 898, 702]),
+        // ws_cart.svg: the label over the board, x 4..236, y 18.5..105 of 240x150.
+        PlainCart::WonderSwan => (320, WS_SEATED_H, [17, 123, 983, 700]),
         // disc.svg: the printed ring runs out to 117 of the disc's 120 radius; the hub and
         // rim are painted back over it (disc_hub).
         PlainCart::Disc => (290, DISC_SEATED_H, [13, 13, 987, 987]),
-        // s32x_cart.svg: the Mega Drive cart's label recess, under a taller ridged crown.
-        PlainCart::Sega32x => (280, S32X_SEATED_H, [83, 222, 917, 885]),
+        // s32x_cart.svg: the label on the raised middle, x 37..203, y 13..105.5 of 240x152.
+        PlainCart::Sega32x => (340, S32X_SEATED_H, [154, 86, 846, 694]),
     }
 }
 
@@ -316,8 +320,53 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
     }
 }
 
+/// The drawn cart a game sits in: its console's one shape, or for a Master System game the
+/// cart of the region it was sold in (notched is the Western cart, rounded the Japanese, as
+/// chosen in the cart menu).
+pub fn plain_cart_of(cart: &Cart) -> Option<PlainCart> {
+    if cart.platform != Platform::Sms {
+        return plain_cart_for(cart.platform);
+    }
+    Some(match cart.shell.map(|c| c.outline) {
+        Some(Outline::Notched) => PlainCart::MasterSystem,
+        Some(Outline::Rounded) => PlainCart::MarkIII,
+        _ if japanese(&cart.stem) => PlainCart::MarkIII,
+        _ => PlainCart::MasterSystem,
+    })
+}
+
+/// A Mega Drive game's label: the US Genesis one (the art over a black grid with the
+/// Genesis logo) or the European and Japanese Mega Drive one (over a blue band), as chosen in
+/// the cart menu (notched is the Genesis, rounded the Mega Drive), else by its region.
+pub fn genesis_label_of(cart: &Cart) -> bool {
+    cart.platform == Platform::Md
+        && match cart.shell.map(|c| c.outline) {
+            Some(Outline::Notched) => true,
+            Some(Outline::Rounded) => false,
+            _ => us_only(&cart.stem),
+        }
+}
+
+/// A release sold in North America and not in Europe or Japan: "(USA)", "(USA, Korea)",
+/// GoodTools "(U)". "(USA, Europe)" and "(World)" carts were mostly bought as PAL ones.
+fn us_only(stem: &str) -> bool {
+    let tags: Vec<&str> = stem
+        .split(['(', '['])
+        .skip(1)
+        .filter_map(|t| t.split([')', ']']).next())
+        .flat_map(|t| t.split(','))
+        .map(str::trim)
+        .collect();
+    let us = tags
+        .iter()
+        .any(|t| ["USA", "Canada", "U", "UE"].contains(t));
+    us && !tags
+        .iter()
+        .any(|t| crate::shell::snes_pal(&format!("({t})")) || *t == "World")
+}
+
 fn shape_of(cart: &Cart) -> Shape {
-    if let Some(plain) = plain_cart_for(cart.platform) {
+    if let Some(plain) = plain_cart_of(cart) {
         return Shape::Plain(plain);
     }
     match (cart.platform, gb_shell_of(cart)) {
@@ -453,20 +502,22 @@ const GB_SEATED_H: u32 = 259;
 const NES_SEATED_H: u32 = 288;
 /// A US SNES cart's face is about 3:2, wide and low like a GBA's.
 const SNES_SEATED_H: u32 = 157;
-/// A Game Gear cart is about 5:4, wide and low.
-const GG_SEATED_H: u32 = 192;
-/// A Master System cart is about 4:5, connector foot included.
-const SMS_SEATED_H: u32 = 300;
-/// A Mega Drive cart is about 5:6, its connector inside the shell.
-const MD_SEATED_H: u32 = 288;
-/// A Neo Geo Pocket cart is a little taller than wide.
-const NGP_SEATED_H: u32 = 228;
-/// A WonderSwan cart is wider than tall.
-const WS_SEATED_H: u32 = 200;
+/// A Game Gear cart is about as tall as wide.
+const GG_SEATED_H: u32 = 245;
+/// A Master System cart is wide and low, its title on a strip along the top.
+const SMS_SEATED_H: u32 = 135;
+/// The Japanese Master System cart is tall, its label a picture.
+const MARK3_SEATED_H: u32 = 312;
+/// A Mega Drive cart (the European and Japanese one) is about 3:2, wide and low.
+const MD_SEATED_H: u32 = 159;
+/// A Neo Geo Pocket cart is a little wider than tall.
+const NGP_SEATED_H: u32 = 215;
+/// A WonderSwan cart is wide and low, its board's contacts bare below the shell.
+const WS_SEATED_H: u32 = 150;
 /// A CD is round, in a square box.
 const DISC_SEATED_H: u32 = 240;
-/// A 32X cart is a Mega Drive one with a taller top.
-const S32X_SEATED_H: u32 = 312;
+/// A 32X cart is wider and lower than a Mega Drive one.
+const S32X_SEATED_H: u32 = 152;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     if let Some(plain) = plain_cart_for(platform) {
@@ -478,6 +529,22 @@ pub fn seated_box(platform: Platform) -> (u32, u32) {
         Platform::Nes => (SEATED_W, NES_SEATED_H),
         Platform::Snes => (SEATED_W, SNES_SEATED_H),
         _ => unreachable!("every other console has a plain cart"),
+    }
+}
+
+/// The size a game's cart is drawn at: its console's, or its own region's Master System cart.
+pub fn cart_box_of(cart: &Cart) -> (u32, u32) {
+    match plain_cart_of(cart) {
+        Some(plain) => plain_cart_box(plain),
+        None => cart_box(cart.platform),
+    }
+}
+
+/// The part of a game's cart above the slot once seated, as seated_box.
+pub fn seated_box_of(cart: &Cart) -> (u32, u32) {
+    match plain_cart_of(cart) {
+        Some(plain) => (SEATED_W, plain_geometry(plain).1),
+        None => seated_box(cart.platform),
     }
 }
 
@@ -603,12 +670,26 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
         Some(d) => drawn_shell_face(&s, d, &shell),
         None => shell_face(&s, &shell),
     };
-    let disc = plain_cart_for(cart.platform) == Some(PlainCart::Disc);
-    let label = match art {
+    let plain = plain_cart_of(cart);
+    let disc = plain == Some(PlainCart::Disc);
+    if plain == Some(PlainCart::WonderSwan) {
+        ws_contacts(&mut face);
+    }
+    let mut label = match art {
+        // A Master System cart's label is its title on Sega's red grid, never a picture.
+        _ if plain == Some(PlainCart::MasterSystem) => sms_grid_label(&s, &label_text(cart)),
         Some(rgba) => rgba,
         None if disc => generated_disc_label(&s, &label_text(cart)),
-        None => generated_label(&s, &label_text(cart)),
+        // A Mega Drive title sits above the band md_band paints over the label's foot.
+        None if cart.platform == Platform::Md => {
+            generated_label(&s, &label_text(cart), s.label.3 * MD_BAND_TOP / 100)
+        }
+        None => generated_label(&s, &label_text(cart), s.label.3),
     };
+    if cart.platform == Platform::Md {
+        let (_, _, lw, lh) = s.label;
+        md_band(&mut label, lw, lh, genesis_label_of(cart));
+    }
     if let Some(d) = &s.drawn {
         mould_detail(d, &mut face);
         if !disc {
@@ -617,7 +698,9 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
     }
     paste_label(&s, &mut face, &label);
     if disc {
-        disc_hub(&mut face, shell.colour);
+        // A PlayStation disc is printed nearer the hole, behind a thin black ring.
+        let ps = cart.platform == Platform::Ps;
+        disc_hub(&mut face, shell.colour, if ps { 15.0 } else { 20.0 }, ps);
     }
     clip_to_silhouette(&s, &mut face);
     face
@@ -1099,11 +1182,13 @@ fn recess_label(s: &Spec, face: &mut CartFace, shell: &Shell) {
     }
 }
 
-fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
-    let (_, _, lw, lh) = s.label;
+/// The title, centred in the label's top `text_h` rows.
+fn generated_label(s: &Spec, title: &str, text_h: u32) -> Vec<u8> {
+    let (_, _, lw, label_h) = s.label;
+    let lh = text_h.min(label_h);
     let bg = label_colour(title);
-    let mut rgba = Vec::with_capacity((lw * lh * 4) as usize);
-    for _ in 0..lw * lh {
+    let mut rgba = Vec::with_capacity((lw * label_h * 4) as usize);
+    for _ in 0..lw * label_h {
         rgba.extend_from_slice(&[bg[0], bg[1], bg[2], 255]);
     }
 
@@ -1116,6 +1201,7 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
                 (room / MAX_LINES as f32, room)
             }
         };
+        let max_h = max_h.min(lh.saturating_sub(2 * PAD) as f32);
         let layout = text::fit_box(
             font,
             title,
@@ -1125,7 +1211,8 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
             max_px,
             MIN_PX,
         );
-        text::draw_centred(&mut rgba, lw, lh, &layout, ink(bg));
+        let top = (lw * lh * 4) as usize;
+        text::draw_centred(&mut rgba[..top], lw, lh, &layout, ink(bg));
     }
     rgba
 }
@@ -1174,42 +1261,235 @@ fn generated_disc_label(s: &Spec, title: &str) -> Vec<u8> {
 }
 
 /// Paints a disc's unprinted parts over its label, by distance from the centre in the
-/// disc's millimetres: the clear hub to 16.5, the mirrored stacking ring to 23, and the
-/// bare edge past 58.5 in the disc's own colour (silver, or a PlayStation's black).
-fn disc_hub(face: &mut CartFace, edge: [u8; 3]) {
+/// disc's millimetres: clear plastic from the hole out to where the print starts (15 on a
+/// PlayStation disc, edged by a thin black ring; 20 on a Sega CD, with the moulded step at
+/// 16.5), and the bare edge past 58.5 in the disc's own colour (silver, or a PlayStation's
+/// black). The clear hub lets the shelf show through.
+fn disc_hub(face: &mut CartFace, edge: [u8; 3], print_mm: f32, ring: bool) {
     let (w, h) = (face.w as f32, face.h as f32);
     let per_mm = w / 120.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let clear = [0x9d, 0xa3, 0xab];
-    let mirror = [0xd8, 0xdb, 0xe0];
-    let mirror_dark = [0x9a, 0x9e, 0xa6];
+    let clear = [0xc4, 0xc8, 0xce];
     for y in 0..face.h {
         for x in 0..face.w {
             let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
             let r = (dx * dx + dy * dy).sqrt() / per_mm;
             // How far into each zone a pixel is, for soft edges a pixel wide.
             let soft = |edge_mm: f32| ((edge_mm - r) * per_mm + 0.5).clamp(0.0, 1.0);
-            let (colour, cover) = if r < 23.5 {
-                let c = if r < 16.5 {
+            let d = ((y * face.w + x) * 4) as usize;
+            let (colour, cover) = if r < print_mm + 0.6 {
+                let inside = soft(print_mm);
+                if inside > 0.0 {
                     // Clear plastic, a little darker at the moulded step around the hole.
-                    let t = ((r - 7.5) / 9.0).clamp(0.0, 1.0);
-                    lerp(clear.map(|c| c - 0x1c), clear, (t * 255.0) as u32, 255)
+                    let step = (r - 16.5).abs() < 0.35 && !ring;
+                    let tint = if step { clear.map(|c| c - 0x30) } else { clear };
+                    let alpha = if step { 200.0 } else { 90.0 };
+                    let a = face.rgba[d + 3] as f32;
+                    let keep = 1.0 - inside;
+                    face.rgba[d + 3] = (a * keep + alpha * inside) as u8;
+                    (tint, inside)
+                } else if ring {
+                    ([0x10, 0x10, 0x12], 1.0 - soft(print_mm + 0.6))
                 } else {
-                    // The stacking ring, lit from the top left.
-                    let lit = (-(dx + dy) / (r * per_mm * 1.42) + 1.0) / 2.0;
-                    lerp(mirror_dark, mirror, (lit * 255.0) as u32, 255)
-                };
-                (c, soft(23.0))
+                    continue;
+                }
             } else if r > 58.0 {
                 (edge, 1.0 - soft(58.5))
             } else {
                 continue;
             };
             let a = (cover * 255.0) as u32;
-            let d = ((y * face.w + x) * 4) as usize;
             for (px, c) in face.rgba[d..d + 3].iter_mut().zip(colour) {
                 *px = ((c as u32 * a + *px as u32 * (255 - a) + 127) / 255) as u8;
             }
+        }
+    }
+}
+
+/// The Master System's title strip: Sega's red grid, the title in white on the left and SEGA
+/// on the right.
+fn sms_grid_label(s: &Spec, title: &str) -> Vec<u8> {
+    let (_, _, lw, lh) = s.label;
+    let red = [0xa8, 0x1e, 0x26];
+    let line = [0x30, 0x08, 0x0c];
+    let cell = (lh as f32 / 4.5).max(3.0);
+    let mut rgba = Vec::with_capacity((lw * lh * 4) as usize);
+    for y in 0..lh {
+        for x in 0..lw {
+            let on = |v: u32| (v as f32 % cell) < 1.0;
+            let c = if on(x) || on(y) { line } else { red };
+            rgba.extend_from_slice(&[c[0], c[1], c[2], 255]);
+        }
+    }
+    if let Some(font) = text::label_font() {
+        let white = [0xf4, 0xf1, 0xea];
+        let sega = (lw as f32 * 0.16) as u32;
+        let px = lh as f32 * 0.42;
+        let layout = text::fit_box(
+            font,
+            title,
+            (lw - sega - 2 * PAD) as f32,
+            lh as f32,
+            1,
+            px,
+            MIN_PX,
+        );
+        // The title sits left, the logo right: drawn in boxes of their own then copied in.
+        let mut title_box = vec![0u8; ((lw - sega) * lh * 4) as usize];
+        text::draw_centred(&mut title_box, lw - sega, lh, &layout, white);
+        let mut logo = vec![0u8; (sega * lh * 4) as usize];
+        let mark = text::fit_box(
+            font,
+            "SEGA",
+            sega as f32 * 0.8,
+            lh as f32,
+            1,
+            px * 0.8,
+            MIN_PX,
+        );
+        text::draw_centred(&mut logo, sega, lh, &mark, white);
+        for y in 0..lh {
+            for (x0, w, src) in [(0, lw - sega, &title_box), (lw - sega, sega, &logo)] {
+                for x in 0..w {
+                    let i = ((y * w + x) * 4) as usize;
+                    if src[i + 3] > 0 {
+                        let d = ((y * lw + x0 + x) * 4) as usize;
+                        let a = src[i + 3] as u32;
+                        for c in 0..3 {
+                            rgba[d + c] =
+                                ((src[i + c] as u32 * a + rgba[d + c] as u32 * (255 - a) + 127)
+                                    / 255) as u8;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    rgba
+}
+
+/// Text in one line, centred in the box (x, y, w, h) of an RGBA picture `dst_w` across.
+fn text_in(
+    dst: &mut [u8],
+    dst_w: u32,
+    (x0, y0, w, h): (u32, u32, u32, u32),
+    text: &str,
+    colour: [u8; 3],
+) {
+    let Some(font) = text::label_font() else {
+        return;
+    };
+    if w == 0 || h == 0 {
+        return;
+    }
+    let layout = text::fit_box(font, text, w as f32, h as f32, 1, h as f32 * 0.8, 4.0);
+    let mut tile = vec![0u8; (w * h * 4) as usize];
+    text::draw_centred(&mut tile, w, h, &layout, colour);
+    for y in 0..h {
+        for x in 0..w {
+            let i = ((y * w + x) * 4) as usize;
+            let a = tile[i + 3] as u32;
+            if a == 0 {
+                continue;
+            }
+            let d = (((y0 + y) * dst_w + x0 + x) * 4) as usize;
+            for c in 0..3 {
+                dst[d + c] =
+                    ((tile[i + c] as u32 * a + dst[d + c] as u32 * (255 - a) + 127) / 255) as u8;
+            }
+        }
+    }
+}
+
+/// Where a Mega Drive label's band starts, in per cent of the label's height.
+const MD_BAND_TOP: u32 = 72;
+
+/// The bottom of a Mega Drive label, printed under the art: the Genesis' black grid with its
+/// silver logo plate, or the Mega Drive's blue band with the SEGA tab rising into the art.
+fn md_band(label: &mut [u8], lw: u32, lh: u32, genesis: bool) {
+    let top = lh * MD_BAND_TOP / 100;
+    let band = lh - top;
+    let mut fill = |x0: u32, y0: u32, x1: u32, y1: u32, at: &dyn Fn(u32, u32) -> [u8; 3]| {
+        for y in y0..y1.min(lh) {
+            for x in x0..x1.min(lw) {
+                let d = ((y * lw + x) * 4) as usize;
+                let c = at(x, y);
+                label[d..d + 3].copy_from_slice(&c);
+                label[d + 3] = 255;
+            }
+        }
+    };
+    if genesis {
+        let cell = (band / 5).max(3);
+        fill(0, top, lw, lh, &|x, y| {
+            if x.is_multiple_of(cell) || (y - top).is_multiple_of(cell) {
+                [0x3a, 0x3a, 0x40]
+            } else {
+                [0x12, 0x12, 0x14]
+            }
+        });
+        // The silver plate, its corners cut, with SEGA above it.
+        let (pw, ph) = (lw * 56 / 100, band * 44 / 100);
+        let (px, py) = ((lw - pw) / 2, top + band * 40 / 100);
+        let cut = ph / 3;
+        fill(px, py, px + pw, py + ph, &|x, y| {
+            let (dx, dy) = ((x - px).min(px + pw - 1 - x), (y - py).min(py + ph - 1 - y));
+            if dx + dy < cut {
+                [0x12, 0x12, 0x14]
+            } else {
+                [0xd6, 0xd8, 0xdc]
+            }
+        });
+        text_in(
+            label,
+            lw,
+            (px + cut, py, pw - 2 * cut, ph),
+            "GENESIS",
+            [0x14, 0x14, 0x18],
+        );
+        text_in(
+            label,
+            lw,
+            (px, top + band * 8 / 100, pw, band * 28 / 100),
+            "SEGA",
+            [0xe8, 0xe8, 0xec],
+        );
+    } else {
+        let blue = [0x1f, 0x4f, 0xa8];
+        fill(0, top, lw, lh, &|_, _| blue);
+        let (tw, th) = (lw * 30 / 100, band * 40 / 100);
+        let tx = (lw - tw) / 2;
+        fill(tx, top - th / 2, tx + tw, top + th / 2, &|_, _| blue);
+        text_in(
+            label,
+            lw,
+            (tx, top - th / 2, tw, th),
+            "SEGA",
+            [0xf4, 0xf4, 0xf8],
+        );
+        text_in(
+            label,
+            lw,
+            (lw / 10, top + band * 48 / 100, lw * 8 / 10, band * 40 / 100),
+            "MEGA DRIVE",
+            [0xf4, 0xf4, 0xf8],
+        );
+    }
+}
+
+/// A WonderSwan cart's bare board below the shell (ws_cart.svg's foot, y 113..150 of 150):
+/// pale board, then the gold contacts.
+fn ws_contacts(face: &mut CartFace) {
+    let (w, h) = (face.w as f32, face.h as f32);
+    let board = [0xa8, 0xbc, 0xa4];
+    for y in (h * 113.5 / 150.0) as u32..face.h {
+        for x in 0..face.w {
+            let (fx, fy) = (x as f32 / w * 240.0, y as f32 / h * 150.0);
+            let finger =
+                fy > 121.0 && fy < 148.0 && (fx - 10.0).rem_euclid(4.7) < 3.3 && fx < 230.0;
+            let c = if finger { GOLD } else { board };
+            let d = ((y * face.w + x) * 4) as usize;
+            face.rgba[d..d + 3].copy_from_slice(&c);
         }
     }
 }

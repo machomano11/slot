@@ -77,8 +77,9 @@ doesn't flash anything to the device.
 
 **Cart colour:** press `START` on a game on the shelf to change its cartridge: any colour and a
 solid, see-through or glitter finish for Game Boy and GBA carts, and the shape: original or Color
-for Game Boy carts, NES or Famicom for NES carts, US or Europe / Japan for SNES carts. NES and
-SNES carts are always their system's grey, like the real ones; a NES game on the Famicom cart
+for Game Boy carts, NES or Famicom for NES carts, US or Europe / Japan for SNES carts, Genesis or
+Mega Drive label for Mega Drive carts, Master System or Mark III for Master System carts. NES,
+SNES, Mega Drive and Master System carts are always their system's grey, like the real ones; a NES game on the Famicom cart
 can have any colour, as Famicom carts came in many. On a GBA cart `START` opens the core picker: `Left` / `Right` swap the core, `Up` changes the colour
 and `Down` the finish. The cart changes as you go; `A` saves, `B` puts it back. Choices are kept
 in `Slot/Labels/cart_shell.ini`.
@@ -101,14 +102,18 @@ SNES labels too, and RetroAchievements work.
 `Slot/Games/SMS`; each gets a shelf of black Sega cartridges and runs on PicoDrive. No BIOS is
 needed. Button 1 is `B`, button 2 is `A`, and `START` is Start (Pause on the Master System).
 `L1` / `R1` switch between the original and stretched picture. RetroAchievements work for both.
-Cart Art gives them the game's cover as a label (see below), or put your own pictures in
-`Slot/Labels/GG` and `Slot/Labels/SMS`. PicoDrive is free for non-commercial use only.
+Master System carts wear the game's title on Sega's red grid strip, like the European and US
+ones; a Japanese game (or any game with Mark III chosen under `START` → Shape) gets the tall
+Japanese cart with a picture label. Cart Art gives Game Gear and Japanese Master System games
+the game's cover as a label (see below), or put your own pictures in `Slot/Labels/GG` and
+`Slot/Labels/SMS`. PicoDrive is free for non-commercial use only.
 
 **Mega Drive:** put `.md`, `.gen`, `.smd` or `.bin` ROMs in `Slot/Games/MD`; they get a shelf of
 black Mega Drive cartridges and run on PicoDrive. No BIOS is needed. The pad is the six-button
 one: `Y`, `B`, `A` are A, B, C, and `X`, `L1`, `R1` are Y, X, Z. As on the SNES, `SELECT + X`
 switches between the original and full-screen picture. RetroAchievements work; labels go in
-`Slot/Labels/MD`.
+`Slot/Labels/MD`. US games get the Genesis label (the art over a black grid with the Genesis
+plate), others the Mega Drive one (over a blue band); choose either under `START` → Shape.
 
 **Neo Geo Pocket and Color:** put `.ngp` ROMs in `Slot/Games/NGP` and `.ngc` ROMs in
 `Slot/Games/NGPC` (either extension works in either folder); they run on Beetle NeoPop, set to
