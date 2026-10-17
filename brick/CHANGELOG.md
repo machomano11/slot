@@ -1,6 +1,11 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- PlayStation: `.cue`, `.chd`, `.pbp`, `.iso` and `.m3u` images in `Slot/Games/PS` get a shelf of
+  jewel cases and run on PCSX ReARMed with its ARM64 recompiler, save states and
+  RetroAchievements. The BIOS is optional (`scph5501.bin` and friends in `Slot/BIOS`; a built-in
+  one is used otherwise). `L2` / `R2` go to the game, so fast-forward moves to `HOME + R2` and
+  PlayStation games have no rewind. `SELECT + L2` / `R2` changes disc.
 - Sega 32X: `.32x` ROMs in `Slot/Games/32X` get a shelf of black 32X cartridges and run on
   PicoDrive with its SH2 recompiler, the Mega Drive's six-button pad, save states, rewind,
   fast-forward and RetroAchievements. A few heavy games may not hold full speed.

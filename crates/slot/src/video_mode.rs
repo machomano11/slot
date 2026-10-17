@@ -39,8 +39,13 @@ pub fn video_mode_for(root: &Path, stem: &str) -> VideoMode {
     video_mode_for_platform(root, stem, Platform::Gba)
 }
 
-pub fn default_for_platform(_platform: Platform) -> VideoMode {
-    VideoMode::Actual
+pub fn default_for_platform(platform: Platform) -> VideoMode {
+    match platform {
+        // A PlayStation's frames are 256 to 640 wide, all shown 4:3 on a TV: filling the
+        // 4:3 screen is the true shape.
+        Platform::Ps => VideoMode::Stretch,
+        _ => VideoMode::Actual,
+    }
 }
 
 pub fn video_mode_for_platform(root: &Path, stem: &str, platform: Platform) -> VideoMode {

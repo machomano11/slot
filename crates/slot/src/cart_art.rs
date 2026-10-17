@@ -307,6 +307,7 @@ fn platforms_for(platform: Platform) -> &'static [Platform] {
         Platform::Wsc => &[Platform::Wsc, Platform::Ws],
         Platform::Scd => &[Platform::Scd],
         Platform::S32x => &[Platform::S32x],
+        Platform::Ps => &[Platform::Ps],
     }
 }
 

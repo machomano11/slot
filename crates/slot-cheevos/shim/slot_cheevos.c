@@ -282,3 +282,4 @@ unsigned slot_cheevos_console_ngp(void) { return RC_CONSOLE_NEOGEO_POCKET; }
 unsigned slot_cheevos_console_ws(void) { return RC_CONSOLE_WONDERSWAN; }
 unsigned slot_cheevos_console_scd(void) { return RC_CONSOLE_SEGA_CD; }
 unsigned slot_cheevos_console_32x(void) { return RC_CONSOLE_SEGA_32X; }
+unsigned slot_cheevos_console_ps(void) { return RC_CONSOLE_PLAYSTATION; }

@@ -57,6 +57,7 @@ extern "C" {
     fn slot_cheevos_console_ws() -> c_uint;
     fn slot_cheevos_console_scd() -> c_uint;
     fn slot_cheevos_console_32x() -> c_uint;
+    fn slot_cheevos_console_ps() -> c_uint;
 }
 
 /// rcheevos' version, for the User-Agent RetroAchievements asks clients to send.
@@ -82,6 +83,7 @@ pub enum Console {
     Ws,
     Scd,
     S32x,
+    Ps,
 }
 
 impl Console {
@@ -100,6 +102,7 @@ impl Console {
                 Console::Ws => slot_cheevos_console_ws(),
                 Console::Scd => slot_cheevos_console_scd(),
                 Console::S32x => slot_cheevos_console_32x(),
+                Console::Ps => slot_cheevos_console_ps(),
             }
         }
     }

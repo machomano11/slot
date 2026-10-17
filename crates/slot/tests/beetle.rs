@@ -24,7 +24,7 @@ fn runs_centred(
     std::fs::write(&file, rom).unwrap();
     let mut opened =
         slot::core::open_core_for_palette(d.path(), core, platform, "auto", false, None, &[path]);
-    if platform.turns() {
+    if matches!(platform, Platform::Ws | Platform::Wsc) {
         opened.set_option("wswan_rotate_display", slot::core::wonderswan_held(&file));
     }
     opened.load(&file).expect("the core refused the cart");
