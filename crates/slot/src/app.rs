@@ -1627,7 +1627,12 @@ impl App {
         // Consoles whose L and R are the game's take this shortcut instead.
         if !matches!(
             self.platform,
-            Platform::Gba | Platform::Snes | Platform::Md | Platform::Ws | Platform::Wsc
+            Platform::Gba
+                | Platform::Snes
+                | Platform::Md
+                | Platform::Scd
+                | Platform::Ws
+                | Platform::Wsc
         ) {
             self.refuse();
             return;

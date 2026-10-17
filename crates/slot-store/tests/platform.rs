@@ -5,7 +5,10 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC"]
+        vec![
+            "GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC",
+            "SEGACD"
+        ]
     );
 }
 
@@ -25,7 +28,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Ngp,
             Platform::Ngpc,
             Platform::Ws,
-            Platform::Wsc
+            Platform::Wsc,
+            Platform::Scd
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -107,4 +111,26 @@ fn a_wonderswan_canvas_holds_its_screen_either_way_up() {
         assert!(w <= cw && h <= ch && h <= cw && w <= ch);
     }
     assert!(!Platform::Gba.turns());
+}
+
+#[test]
+fn a_sega_cd_game_is_a_disc_image_and_needs_a_bios() {
+    for name in [
+        "Sonic CD (USA).cue",
+        "Snatcher.chd",
+        "Lunar.m3u",
+        "Popful Mail.iso",
+    ] {
+        assert!(Platform::Scd.accepts(std::path::Path::new(name)), "{name}");
+    }
+    assert!(!Platform::Scd.accepts(std::path::Path::new("Sonic CD (USA) (Track 01).bin")));
+    assert!(Platform::Scd.discs() && !Platform::Md.discs());
+    let d = tempfile::tempdir().unwrap();
+    let missing = Platform::Scd
+        .missing_bios(d.path())
+        .expect("no BIOS, and none said");
+    assert!(missing.contains("bios_CD_U.bin"), "{missing}");
+    std::fs::write(d.path().join("bios_CD_E.bin"), b"").unwrap();
+    assert_eq!(Platform::Scd.missing_bios(d.path()), None);
+    assert_eq!(Platform::Md.missing_bios(&d.path().join("nowhere")), None);
 }

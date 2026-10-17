@@ -284,3 +284,26 @@ fn a_wonderswan_rom_is_hashed_whole_and_its_ram_mapped() {
     };
     assert!(mapped >= 0x4000, "{mapped}");
 }
+
+#[test]
+fn a_sega_cd_image_is_hashed_by_its_disc_header() {
+    let fake = Arc::new(Fake::default());
+    let c = Cheevos::new(fake.clone()).unwrap();
+    c.login("Benni", "t0k3n");
+    wait(&c, |n| matches!(n, Notice::LoggedIn(_)));
+    let d = tempfile::tempdir().unwrap();
+    // An .iso of 2048-byte sectors: the volume and ROM headers open sector 0.
+    let mut iso = vec![0u8; 2048 * 32];
+    iso[..16].copy_from_slice(b"SEGADISCSYSTEM  ");
+    iso[0x100..0x110].copy_from_slice(b"SEGA MEGA DRIVE ");
+    let rom = d.path().join("game.iso");
+    std::fs::write(&rom, iso).unwrap();
+    c.load_game(&rom, Console::Scd);
+    wait(&c, |n| matches!(n, Notice::GameLoaded(_)));
+    let seen = fake.seen.lock().unwrap();
+    assert!(
+        seen.iter()
+            .any(|p| p.contains("f449ada9ab4280081643362f4760286e")),
+        "{seen:?}"
+    );
+}

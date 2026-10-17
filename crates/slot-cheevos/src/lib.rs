@@ -55,6 +55,7 @@ extern "C" {
     fn slot_cheevos_console_md() -> c_uint;
     fn slot_cheevos_console_ngp() -> c_uint;
     fn slot_cheevos_console_ws() -> c_uint;
+    fn slot_cheevos_console_scd() -> c_uint;
 }
 
 /// rcheevos' version, for the User-Agent RetroAchievements asks clients to send.
@@ -78,6 +79,7 @@ pub enum Console {
     Ngp,
     /// Both WonderSwans, also one console there.
     Ws,
+    Scd,
 }
 
 impl Console {
@@ -94,6 +96,7 @@ impl Console {
                 Console::Md => slot_cheevos_console_md(),
                 Console::Ngp => slot_cheevos_console_ngp(),
                 Console::Ws => slot_cheevos_console_ws(),
+                Console::Scd => slot_cheevos_console_scd(),
             }
         }
     }

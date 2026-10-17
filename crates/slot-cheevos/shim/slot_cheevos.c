@@ -280,3 +280,4 @@ unsigned slot_cheevos_console_sms(void) { return RC_CONSOLE_MASTER_SYSTEM; }
 unsigned slot_cheevos_console_md(void) { return RC_CONSOLE_MEGA_DRIVE; }
 unsigned slot_cheevos_console_ngp(void) { return RC_CONSOLE_NEOGEO_POCKET; }
 unsigned slot_cheevos_console_ws(void) { return RC_CONSOLE_WONDERSWAN; }
+unsigned slot_cheevos_console_scd(void) { return RC_CONSOLE_SEGA_CD; }
