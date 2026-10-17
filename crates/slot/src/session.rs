@@ -580,6 +580,7 @@ impl Session {
                 Platform::Ngp | Platform::Ngpc => slot_cheevos::Console::Ngp,
                 Platform::Ws | Platform::Wsc => slot_cheevos::Console::Ws,
                 Platform::Scd => slot_cheevos::Console::Scd,
+                Platform::S32x => slot_cheevos::Console::S32x,
             };
             emu.achievements(&account.user, &account.token, console);
             self.ra.console = Some(console);

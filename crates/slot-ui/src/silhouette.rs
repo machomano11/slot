@@ -26,6 +26,8 @@ const WS_CART_SVG: &str = include_str!("../assets/ws_cart.svg");
 const WS_DETAIL_SVG: &str = include_str!("../assets/ws_cart_detail.svg");
 const DISC_CASE_SVG: &str = include_str!("../assets/disc_case.svg");
 const DISC_DETAIL_SVG: &str = include_str!("../assets/disc_case_detail.svg");
+const S32X_CART_SVG: &str = include_str!("../assets/s32x_cart.svg");
+const S32X_DETAIL_SVG: &str = include_str!("../assets/s32x_cart_detail.svg");
 
 /// A cart of one fixed shape, drawn from its SVG outline and moulding: the consoles whose
 /// carts have no regional or colour variants to choose between.
@@ -38,16 +40,18 @@ pub enum PlainCart {
     WonderSwan,
     /// A CD jewel case, for the disc systems.
     DiscCase,
+    Sega32x,
 }
 
 impl PlainCart {
-    pub const ALL: [PlainCart; 6] = [
+    pub const ALL: [PlainCart; 7] = [
         PlainCart::GameGear,
         PlainCart::MasterSystem,
         PlainCart::MegaDrive,
         PlainCart::NeoGeoPocket,
         PlainCart::WonderSwan,
         PlainCart::DiscCase,
+        PlainCart::Sega32x,
     ];
 
     fn svgs(self) -> (&'static str, &'static str) {
@@ -58,6 +62,7 @@ impl PlainCart {
             PlainCart::NeoGeoPocket => (NGP_CART_SVG, NGP_DETAIL_SVG),
             PlainCart::WonderSwan => (WS_CART_SVG, WS_DETAIL_SVG),
             PlainCart::DiscCase => (DISC_CASE_SVG, DISC_DETAIL_SVG),
+            PlainCart::Sega32x => (S32X_CART_SVG, S32X_DETAIL_SVG),
         }
     }
 }

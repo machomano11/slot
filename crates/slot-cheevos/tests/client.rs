@@ -199,16 +199,18 @@ fn dropping_with_a_request_in_flight_does_not_crash() {
 }
 
 #[test]
-fn a_mega_drive_rom_is_hashed_whole_and_its_64k_of_ram_mapped() {
+fn mega_drive_and_32x_roms_are_hashed_whole_and_their_64k_of_ram_mapped() {
     let fake = Arc::new(Fake::default());
     let c = Cheevos::new(fake.clone()).unwrap();
     c.login("Benni", "t0k3n");
     wait(&c, |n| matches!(n, Notice::LoggedIn(_)));
     let d = tempfile::tempdir().unwrap();
-    let rom = d.path().join("game.md");
-    std::fs::write(&rom, (0..=255u8).cycle().take(1024).collect::<Vec<_>>()).unwrap();
-    c.load_game(&rom, Console::Md);
-    wait(&c, |n| matches!(n, Notice::GameLoaded(_)));
+    for (name, console) in [("game.md", Console::Md), ("game.32x", Console::S32x)] {
+        let rom = d.path().join(name);
+        std::fs::write(&rom, (0..=255u8).cycle().take(1024).collect::<Vec<_>>()).unwrap();
+        c.load_game(&rom, console);
+        wait(&c, |n| matches!(n, Notice::GameLoaded(_)));
+    }
     let seen = fake.seen.lock().unwrap();
     assert!(
         seen.iter()

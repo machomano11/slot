@@ -1,6 +1,9 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Sega 32X: `.32x` ROMs in `Slot/Games/32X` get a shelf of black 32X cartridges and run on
+  PicoDrive with its SH2 recompiler, the Mega Drive's six-button pad, save states, rewind,
+  fast-forward and RetroAchievements. A few heavy games may not hold full speed.
 - Sega CD (Mega-CD): `.cue`, `.chd`, `.iso` and `.m3u` images in `Slot/Games/SEGACD` (a game may
   sit in a folder of its own) get a shelf of black jewel cases and run on PicoDrive, with the
   Mega Drive's six-button pad, save states, rewind, fast-forward and RetroAchievements (for

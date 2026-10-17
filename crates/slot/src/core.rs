@@ -241,6 +241,8 @@ pub fn apply_core_options(
         // the six-button pad: its X, Y and Z are the shoulders and the top face button.
         for (key, value) in [
             ("picodrive_input1", "6 button pad"),
+            // The 32X's two SH2s through the recompiler: the interpreter is far too slow.
+            ("picodrive_drc", "enabled"),
             ("picodrive_aspect", "PAR"),
             ("picodrive_ggghost", "off"),
             ("picodrive_region", "Auto"),

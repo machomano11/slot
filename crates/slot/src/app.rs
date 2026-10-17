@@ -1631,6 +1631,7 @@ impl App {
                 | Platform::Snes
                 | Platform::Md
                 | Platform::Scd
+                | Platform::S32x
                 | Platform::Ws
                 | Platform::Wsc
         ) {

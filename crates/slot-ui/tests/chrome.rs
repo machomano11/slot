@@ -78,7 +78,7 @@ fn plain(platform: Platform, stem: &str, rom: &str) -> Cart {
 }
 
 /// Every cart shape the slot takes.
-fn both() -> [(&'static str, Cart); 10] {
+fn both() -> [(&'static str, Cart); 11] {
     [
         ("the GBA cart", cart()),
         ("the Game Boy pak", pak()),
@@ -107,6 +107,10 @@ fn both() -> [(&'static str, Cart); 10] {
         (
             "the Sega CD case",
             plain(Platform::Scd, "Sonic CD", "Games/SEGACD/Sonic CD.cue"),
+        ),
+        (
+            "the 32X cart",
+            plain(Platform::S32x, "Chaotix", "Games/32X/Chaotix.32x"),
         ),
     ]
 }
