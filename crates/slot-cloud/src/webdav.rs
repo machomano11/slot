@@ -2,6 +2,8 @@
 //! and delete. Works against Nextcloud, ownCloud, Apache mod_dav, rclone
 //! serve webdav and most NAS servers.
 
+use std::io::{Read, Write};
+
 use slot_net::ureq;
 
 use crate::{Error, Listed, Remote};
@@ -42,7 +44,7 @@ impl WebDav {
     }
 
     fn request(&self, method: &str, rel: &str) -> ureq::Request {
-        let r = slot_net::agent().request(method, &self.url(rel));
+        let r = slot_net::transfer_agent().request(method, &self.url(rel));
         match &self.auth {
             Some(a) => r.set("Authorization", a),
             None => r,
@@ -90,22 +92,31 @@ impl Remote for WebDav {
             .map(|(_, l)| l))
     }
 
-    fn get(&mut self, rel: &str) -> Result<Vec<u8>, Error> {
+    fn get(&mut self, rel: &str, out: &mut dyn Write) -> Result<(), Error> {
         let r = self
             .request("GET", rel)
             .call()
             .map_err(|e| failed("downloading", rel, e))?;
-        let mut bytes = Vec::new();
-        std::io::Read::read_to_end(&mut r.into_reader(), &mut bytes)
-            .map_err(|e| Error::new(format!("downloading {rel}: {e}")))?;
-        Ok(bytes)
+        std::io::copy(&mut r.into_reader(), out)
+            .map_err(|e| Error::offline(format!("downloading {rel}: {e}")))?;
+        Ok(())
     }
 
-    fn put(&mut self, rel: &str, bytes: &[u8]) -> Result<(), Error> {
+    fn put(&mut self, rel: &str, body: &mut dyn Read, len: u64) -> Result<(), Error> {
         self.request("PUT", rel)
             .set("Content-Type", "application/octet-stream")
-            .send_bytes(bytes)
+            .set("Content-Length", &len.to_string())
+            .send(body)
             .map_err(|e| failed("uploading", rel, e))?;
+        Ok(())
+    }
+
+    fn rename(&mut self, from: &str, to: &str) -> Result<(), Error> {
+        self.request("MOVE", from)
+            .set("Destination", &self.url(to))
+            .set("Overwrite", "T")
+            .call()
+            .map_err(|e| failed("renaming", from, e))?;
         Ok(())
     }
 

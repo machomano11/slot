@@ -223,8 +223,9 @@ for lines starting with `slot: cheevos`.
 
 ## Cloud sync (experimental)
 
-Keeps `Slot/Saves` and `Slot/States` in step with a folder on any WebDAV server: Nextcloud,
-ownCloud, Koofr, a Synology or other NAS, or `rclone serve webdav` on a computer.
+Keeps `Slot/Saves` and `Slot/States`, your games in `Slot/Games` and their cartridge and disc
+art in `Slot/Labels`, in step with a folder on any WebDAV server: Nextcloud, ownCloud, Koofr, a
+Synology or other NAS, or `rclone serve webdav` on a computer.
 
 1. Connect the Brick to Wi-Fi.
 2. Create `Slot/Config/cloudsync.ini`:
@@ -250,6 +251,14 @@ to carry a game between them.
   missing on one side is copied back from the other.
 - With only one game on the card, Slot never leaves it, so saves from other devices only
   arrive after you close it.
+- Games and art only sync while you're on the game list; starting a game pauses them. Saves
+  and states always go first. Games that arrive appear on their shelf without a restart.
+- Games and art are never deleted by sync either: remove a game from both the card and the
+  server to get rid of it.
+- A game is only downloaded if the card keeps 64 MB free afterwards; otherwise a banner says
+  the card is full and it's tried again later.
+- The first sync of a big library can take a long time over Wi-Fi. Add `roms=0` to leave
+  games out, or `art=0` to leave art out.
 
 Add `enabled=0` to pause sync. Details are in `Slot/Logs/slot.log` on lines starting with
 `slot: cloud`.

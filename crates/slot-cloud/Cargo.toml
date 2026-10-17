@@ -7,6 +7,7 @@ license.workspace = true
 description = "Two-way sync of slot's saves and states with a WebDAV folder"
 
 [dependencies]
+libc = { workspace = true }
 slot-net = { path = "../slot-net" }
 
 [dev-dependencies]
