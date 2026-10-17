@@ -375,13 +375,13 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     open_at(&mut a, QuickRow::Screen);
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::ScreenGba));
-    for want in [
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
-        QuickRow::ScreenGba,
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
-    ] {
+    press(&mut a, Btn::Up);
+    assert_eq!(
+        a.quick_menu(),
+        Some(QuickRow::ScreenPs),
+        "the page did not wrap on itself"
+    );
+    for want in [QuickRow::ScreenGba, QuickRow::ScreenGbc, QuickRow::ScreenGb] {
         press(&mut a, Btn::Down);
         assert_eq!(
             a.quick_menu(),
@@ -410,6 +410,45 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     assert_eq!(a.quick_menu(), Some(QuickRow::Screen));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), None);
+}
+
+#[test]
+fn every_added_console_has_its_shader_on_the_screen_page() {
+    let (d, mut a, _) = on_carousel();
+    for (platform, console, shader) in QuickRow::CONSOLES {
+        open_at(&mut a, console);
+        press(&mut a, Btn::A);
+        assert_eq!(a.quick_menu(), Some(shader), "{platform:?}");
+        let from = platform.default_shader();
+        let to = from.step(platform.shaders(), true);
+        assert_ne!(from, to, "{platform:?} has one shader");
+        press(&mut a, Btn::Right);
+        assert_eq!(
+            read_slot_state(d.path()).shader(platform),
+            to,
+            "{platform:?} never reached the card"
+        );
+        assert_eq!(
+            a.quick_value(shader).map(QuickValue::text),
+            Some(match to {
+                Shader::Off => "Off",
+                Shader::Grid => "Grid",
+                Shader::Lcd3x => "LCD3x",
+                Shader::Dot => "Dot",
+                Shader::Simpletex => "Simpletex",
+            }),
+            "{platform:?}"
+        );
+        press(&mut a, Btn::B);
+        assert_eq!(a.quick_menu(), Some(console));
+        while a.quick_menu().is_some() {
+            press(&mut a, Btn::B);
+        }
+    }
+    let s = read_slot_state(d.path());
+    assert_eq!(s.shader(Platform::Gba), Shader::Grid);
+    assert_eq!(s.shader(Platform::Nes), Shader::Grid);
+    assert_eq!(s.shader(Platform::Gg), Shader::Simpletex);
 }
 
 #[test]
