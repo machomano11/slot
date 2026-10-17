@@ -33,6 +33,24 @@ fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// The whole picture squeezed to `w` x `h`: for a label strip whose ends must both show.
+pub fn stretch(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
+    let (src, sw, sh) = decode(path)?;
+    if sw == 0 || sh == 0 {
+        return None;
+    }
+    let (sx, sy) = (sw as f32 / w as f32, sh as f32 / h as f32);
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    for y in 0..h {
+        for x in 0..w {
+            let (x0, y0) = (x as f32 * sx, y as f32 * sy);
+            let px = box_average(&src, sw, sh, x0, y0, x0 + sx, y0 + sy);
+            out[((y * w + x) * 4) as usize..][..4].copy_from_slice(&px);
+        }
+    }
+    Some(out)
+}
+
 /// A Famicom cart label: filled like `cover`, unless the picture is the other way round (a
 /// tall NES label on the wide Famicom one), which would lose most of it. That one is shown whole, the
 /// sides filled with the colour round its edge.
@@ -46,9 +64,92 @@ pub fn label_fit(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
         return cover(path, w, h);
     }
     let scale = (w as f32 / sw as f32).min(h as f32 / sh as f32);
+    Some(placed(&src, sw, sh, w, h, scale))
+}
+
+/// A label for a cart of any other console: a picture near the label's shape (one cut from a
+/// photo of the cart) is squeezed to it, so nothing is cut; one of another shape (a cover) is
+/// scaled to lose at most a sixth of its length, the rest of the label filled with the colour
+/// round its edge.
+pub fn fit(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
+    let (src, sw, sh) = decode(path)?;
+    if sw == 0 || sh == 0 || w == 0 || h == 0 {
+        return None;
+    }
+    let (from, to) = (sw as f32 / sh as f32, w as f32 / h as f32);
+    let off = (from / to).max(to / from);
+    if off <= FIT_SQUEEZE {
+        return stretch(path, w, h);
+    }
+    let whole = (w as f32 / sw as f32).min(h as f32 / sh as f32);
+    let cover = (w as f32 / sw as f32).max(h as f32 / sh as f32);
+    let mut out = placed(&src, sw, sh, w, h, (whole * FIT_CROP).min(cover));
+    // Behind it, the picture itself filling the label, blurred and dimmed, as a sleeve does.
+    let mut back = cover_rgba(&src, sw, sh, w, h)?;
+    blur(&mut back, w, h, (w.max(h) / 24).max(1));
+    let (dw, dh) = (
+        sw as f32 * (whole * FIT_CROP).min(cover),
+        sh as f32 * (whole * FIT_CROP).min(cover),
+    );
+    let (dx, dy) = ((w as f32 - dw) / 2.0, (h as f32 - dh) / 2.0);
+    for y in 0..h {
+        for x in 0..w {
+            let (fx, fy) = (x as f32 + 0.5 - dx, y as f32 + 0.5 - dy);
+            if fx < 0.0 || fy < 0.0 || fx >= dw || fy >= dh {
+                let i = ((y * w + x) * 4) as usize;
+                for c in 0..3 {
+                    out[i + c] = (back[i + c] as u32 * 3 / 5) as u8;
+                }
+                out[i + 3] = back[i + 3];
+            }
+        }
+    }
+    Some(out)
+}
+
+/// A box blur of `radius`, across then down, three times over (near enough a Gaussian).
+fn blur(px: &mut [u8], w: u32, h: u32, radius: u32) {
+    let (w, h, r) = (w as usize, h as usize, radius as usize);
+    let mut line = Vec::new();
+    for _ in 0..3 {
+        for (len, step, lines, stride) in [(w, 4, h, w * 4), (h, w * 4, w, 4)] {
+            for l in 0..lines {
+                let base = l * stride;
+                line.clear();
+                line.extend((0..len).map(|i| {
+                    let j = base + i * step;
+                    [px[j], px[j + 1], px[j + 2], px[j + 3]]
+                }));
+                for i in 0..len {
+                    let (a, b) = (i.saturating_sub(r), (i + r + 1).min(len));
+                    let mut acc = [0u32; 4];
+                    for p in &line[a..b] {
+                        for c in 0..4 {
+                            acc[c] += p[c] as u32;
+                        }
+                    }
+                    let n = (b - a) as u32;
+                    let j = base + i * step;
+                    for c in 0..4 {
+                        px[j + c] = (acc[c] / n) as u8;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// How far a picture's shape may be from its label's and still be squeezed to fit.
+const FIT_SQUEEZE: f32 = 1.2;
+/// How much larger than whole a picture of another shape is shown, cutting its ends.
+const FIT_CROP: f32 = 1.2;
+
+/// `src` scaled by `scale` and centred in a `w` x `h` picture, filled round it with the colour
+/// of its edge (and cut where it overhangs).
+fn placed(src: &[u8], sw: u32, sh: u32, w: u32, h: u32, scale: f32) -> Vec<u8> {
     let (dw, dh) = (sw as f32 * scale, sh as f32 * scale);
     let (dx, dy) = ((w as f32 - dw) / 2.0, (h as f32 - dh) / 2.0);
-    let fill = edge_colour(&src, sw, sh);
+    let fill = edge_colour(src, sw, sh);
     let mut out = vec![0u8; (w * h * 4) as usize];
     for y in 0..h {
         for x in 0..w {
@@ -64,12 +165,12 @@ pub fn label_fit(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
                     ((x + 1) as f32 - dx).min(dw) / scale,
                     ((y + 1) as f32 - dy).min(dh) / scale,
                 );
-                box_average(&src, sw, sh, x0, y0, x1, y1)
+                box_average(src, sw, sh, x0, y0, x1, y1)
             };
             out[((y * w + x) * 4) as usize..][..4].copy_from_slice(&px);
         }
     }
-    Some(out)
+    out
 }
 
 /// How far apart a picture's shape and its label's may be before it is shown whole.

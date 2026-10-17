@@ -1,0 +1,141 @@
+# SNK Neo Geo Pocket Color cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+Baseball Stars (USA)	4a84898a-32c3-4540-a89c-03eba4497daa.png
+Baseball Stars Color: Pocket Sports Series (USA)	4a84898a-32c3-4540-a89c-03eba4497daa.png
+Big Bang Pro Wrestling (Japan)	f045d054-267b-4ccd-b0f8-51913fc092bd.png
+Big Tournament Golf (Europe)	f80383db-cabb-4d7e-b6eb-db980c6f1a77.png
+Big Tournament Golf (USA)	913dab36-e1b1-428c-8b06-ddb53cf72293.png
+Biomotor Unitron (Japan)	efc74a5a-66a8-4485-994f-c0c33fe423a7.png
+Biomotor Unitron (USA)	99faf454-a74c-4f5f-b89f-bd80ebef8281.png
+Bust-A-Move Pocket (Europe)	265408a2-692f-491c-985b-efd3e353738f.png
+Bust-A-Move Pocket (USA)	cd340557-d310-4f5a-aab1-72409f90096b.png
+Cool Boarders Pocket (Europe)	233879bb-25b0-4d71-bb28-e986037ed835.png
+Cool Boarders Pocket (Europe)	a5fdb6e3-d8d0-4dd3-9161-90187b5177c3.png
+Cool Boarders Pocket (Japan)	7921bfbe-1acc-4937-b0e6-f9d9bb1d392d.png
+Cool Cool Jam (Japan)	ed41cc4d-7fbe-4723-8aab-1973217d2663.png
+Cotton: Fantastic Night Dreams (Europe)	97604da8-bb8c-4067-99d8-978f622501f9.png
+Cotton: Fantastic Night Dreams (Japan)	r2_75e04b91-4d4e-457c-8405-6778fea513e9.png
+Crush Roller (USA)	355ca8b2-d3cf-462d-aeb2-9b8ea8a8e2d8.png
+Dark Arms: Beast Buster 1999 (USA)	eab30eb1-c433-40ea-a593-9a2c5652cb55.png
+Delta Warp (Japan)	83094281-405d-4e01-ac26-58b1bfa9f947.png
+Densetsu no Ogre Battle Gaiden: Zenobia no Ouji (Japan)	92a718e9-f1af-4b07-b603-f4513b912353.png
+Dive Alert: Becky's Version (USA)	62af9d26-9316-45b4-baca-e955e1429877.png
+Dive Alert: Burn Hen (USA)	fca1608e-3be8-41d9-beea-88e10d90e506.png
+Dive Alert: Matt's Version (USA)	fca1608e-3be8-41d9-beea-88e10d90e506.png
+Dive Alert: Rebecca Hen (USA)	62af9d26-9316-45b4-baca-e955e1429877.png
+Dokodemo Mahjong (Japan)	c5599686-16fa-433d-b4c8-89ffdc0be3b4.png
+Dynamite Slugger (Europe)	b735217c-f29e-4a7b-9459-45067c4b32c2.png
+Dynamite Slugger (Japan)	826f1410-d11b-4631-b4a7-f4f0f2c0af96.png
+Evolution: Eternal Dungeons (Europe)	814b8269-81b8-4932-b39d-757b570ad98b.png
+Fantastic Night Dreams: Cotton (Europe)	97604da8-bb8c-4067-99d8-978f622501f9.png
+Fantastic Night Dreams: Cotton (Japan)	r2_75e04b91-4d4e-457c-8405-6778fea513e9.png
+Faselei! (Europe)	c43d9f43-2cb7-479e-9939-1a485a8d4170.png
+Fatal Fury F-Contact: Pocket Fighting Series (USA)	6e628cc2-6178-4fe5-ae6d-1843a7a1f957.png
+Fatal Fury: First Contact: Pocket Fighting Series (USA)	6e628cc2-6178-4fe5-ae6d-1843a7a1f957.png
+Garou Densetsu F-Contact: Pocket Fighting Series (USA)	6e628cc2-6178-4fe5-ae6d-1843a7a1f957.png
+King of Fighters R-2 (USA)	f1cb13a3-d674-4b87-ac4e-e75e48665c3e.png
+King of Fighters R-2: Pocket Fighting Series (USA)	f1cb13a3-d674-4b87-ac4e-e75e48665c3e.png
+Legend of Ogre Battle Gaiden: Prince of Zenobia (Japan)	92a718e9-f1af-4b07-b603-f4513b912353.png
+Magical Drop Pocket (USA)	dc6ae5af-76d6-46f7-82aa-cdc4dc8f2119.png
+Mega Man: Battle & Fighters (Japan)	77c44809-c951-4c3e-979e-98eb964e9915.png
+Metal Slug: 1st Mission (USA)	0c727faa-a26e-4dad-a763-810d552fd3e4.png
+Metal Slug: 2nd Mission (USA)	81f0050f-77c7-4af7-93d1-6b26f6ab5f00.png
+Neo 21 (USA)	a5c14833-4d32-454d-bda9-dcb726fef6ce.png
+Neo 21: Pocket Casino Series (USA)	a5c14833-4d32-454d-bda9-dcb726fef6ce.png
+Neo 21: Real Casino Series (USA)	a5c14833-4d32-454d-bda9-dcb726fef6ce.png
+Neo Baccarat (Europe)	3ef9f8a4-561c-4c21-a385-81bed2962fa5.png
+Neo Baccarat: Pocket Casino Series (Europe)	3ef9f8a4-561c-4c21-a385-81bed2962fa5.png
+Neo Baccarat: Real Casino Series (Europe)	3ef9f8a4-561c-4c21-a385-81bed2962fa5.png
+Neo Cherry Master Color (USA)	45b7cdc7-9bfe-46df-8673-ed69962c23e3.png
+Neo Cherry Master Color: Pocket Casino Series (USA)	45b7cdc7-9bfe-46df-8673-ed69962c23e3.png
+Neo Cherry Master Color: Real Casino Series (USA)	45b7cdc7-9bfe-46df-8673-ed69962c23e3.png
+Neo Dragon's Wild (Europe)	2c6e32b1-282a-4d8e-aeed-cae60c9be330.png
+Neo Dragon's Wild (USA)	dfa139cb-7575-401a-b640-a40c1edd8051.png
+Neo Dragon's Wild: Pocket Casino Series (Europe)	2c6e32b1-282a-4d8e-aeed-cae60c9be330.png
+Neo Dragon's Wild: Pocket Casino Series (USA)	dfa139cb-7575-401a-b640-a40c1edd8051.png
+Neo Dragon's Wild: Real Casino Series (Europe)	2c6e32b1-282a-4d8e-aeed-cae60c9be330.png
+Neo Dragon's Wild: Real Casino Series (USA)	dfa139cb-7575-401a-b640-a40c1edd8051.png
+Neo Geo Cup '98 Plus Color (USA)	e6f7b752-7156-4bae-bde5-e296017040ff.png
+Neo Mystery Bonus (Europe)	81f91ef0-1025-4288-85b3-5d520fd0c9b0.png
+Neo Mystery Bonus (USA)	e742e71c-fd42-4c5b-955f-5d29c9073af4.png
+Neo Mystery Bonus: Pocket Casino Series (Europe)	81f91ef0-1025-4288-85b3-5d520fd0c9b0.png
+Neo Mystery Bonus: Pocket Casino Series (USA)	e742e71c-fd42-4c5b-955f-5d29c9073af4.png
+Neo Mystery Bonus: Real Casino Series (Europe)	81f91ef0-1025-4288-85b3-5d520fd0c9b0.png
+Neo Mystery Bonus: Real Casino Series (USA)	e742e71c-fd42-4c5b-955f-5d29c9073af4.png
+Neo Turf Masters: Pocket Sports Series (Europe)	f80383db-cabb-4d7e-b6eb-db980c6f1a77.png
+Neo Turf Masters: Pocket Sports Series (USA)	913dab36-e1b1-428c-8b06-ddb53cf72293.png
+Neo Twenty One (USA)	a5c14833-4d32-454d-bda9-dcb726fef6ce.png
+NeoGeo Cup '98 Plus Color: Pocket Sports Series (USA)	e6f7b752-7156-4bae-bde5-e296017040ff.png
+Nige-ron-pa (Japan)	8c2051a7-92f2-40ab-808a-bf5202374fd6.png
+Nigeronpa (Japan)	8c2051a7-92f2-40ab-808a-bf5202374fd6.png
+Oekaki Puzzle (Europe)	96db38f6-2d4b-47bc-937c-71e92dfac33d.png
+Pac-Man (Japan)	r2_f4d54eda-8215-449d-a2a9-201ac059d4b8.png
+Pac-Man (USA)	5bd87b60-8b09-4b81-9288-8a01d30373d0.png
+Pachi-Slot Aruze Oukoku Pocket: Ohanabi (Japan)	b9eee829-3463-4fa6-a923-66fb81ec0c08.png
+Pachi-Slot Aruze Oukoku Pocket: Ohhanabi (Japan)	b9eee829-3463-4fa6-a923-66fb81ec0c08.png
+Picture Puzzle (Europe)	96db38f6-2d4b-47bc-937c-71e92dfac33d.png
+Pocket Reversi (Europe)	d6015f46-4654-4e0d-9371-bb82de3d7910.png
+Pocket Sports Series: Baseball Stars (USA)	4a84898a-32c3-4540-a89c-03eba4497daa.png
+Pocket Tennis Color (USA)	5abd4e45-4628-4bdf-ae6a-450befa1178d.png
+Pocket Tennis Color: Pocket Sports Series (USA)	5abd4e45-4628-4bdf-ae6a-450befa1178d.png
+Puyo Pop (USA)	1afc389a-caf5-4855-8b47-0b9f365dff66.png
+Puzzle Bobble Mini (Europe)	265408a2-692f-491c-985b-efd3e353738f.png
+Puzzle Bobble Mini (USA)	cd340557-d310-4f5a-aab1-72409f90096b.png
+Puzzle Link (USA)	38a6bf88-f9fd-440d-a733-d82b3d3b8d5a.png
+Puzzle Link 2 (USA)	1ae4d845-7473-4e69-a520-269670160fe8.png
+Renketsu Puzzle Tsunagete Pon! Color (USA)	38a6bf88-f9fd-440d-a733-d82b3d3b8d5a.png
+Rockman Battle & Fighters (Japan)	77c44809-c951-4c3e-979e-98eb964e9915.png
+SNK Gals' Fighters (USA)	01a79c0b-8a7f-4dbf-ba99-ff1cee3c08f2.png
+SNK vs. Capcom: Card Fighters 2: Expand Edition (Japan)	7497ac0b-16c3-496c-8967-d54aab0d9d08.png
+SNK vs. Capcom: Card Fighters' Clash - SNK Version (USA)	6e6f95bb-8dc0-4f53-91a5-d8e7d1dd90e8.png
+SNK vs. Capcom: Card Fighters' Clash 2: Expand Edition (Japan)	7497ac0b-16c3-496c-8967-d54aab0d9d08.png
+SNK vs. Capcom: Card Fighters' Clash: Capcom Cardfighter's Version (USA)	f88b39c5-f82d-4d99-a113-35e3b3fa4507.png
+SNK vs. Capcom: Card Fighters' Clash: Capcom Version (USA)	f88b39c5-f82d-4d99-a113-35e3b3fa4507.png
+SNK vs. Capcom: Card Fighters' Clash: SNK Cardfighter's Version (USA)	6e6f95bb-8dc0-4f53-91a5-d8e7d1dd90e8.png
+SNK vs. Capcom: Gekitotsu Card Fighters - Capcom Supporter Version (USA)	f88b39c5-f82d-4d99-a113-35e3b3fa4507.png
+SNK vs. Capcom: Gekitotsu Card Fighters - SNK Supporter Version (USA)	6e6f95bb-8dc0-4f53-91a5-d8e7d1dd90e8.png
+SNK vs. Capcom: The Match of the Millennium (Europe)	r2_42beeb6e-b0bf-47f7-b734-3959c55cb406.png
+SNK vs. Capcom: The Match of the Millennium (USA)	d906de74-b8ce-442c-89e4-de3ce0bf01ef.png
+Samurai Shodown! 2 (USA)	371e4fff-68e7-4bdb-8c69-bb43d56ada15.png
+Samurai Shodown! 2: Pocket Fighting Series (USA)	371e4fff-68e7-4bdb-8c69-bb43d56ada15.png
+Samurai Spirits! 2 (USA)	371e4fff-68e7-4bdb-8c69-bb43d56ada15.png
+Shanghai Mini (USA)	82013bec-113f-4110-b189-fe3e3530a307.png
+Shinki Sekai Evolution: Hateshinai Dungeon (Europe)	814b8269-81b8-4932-b39d-757b570ad98b.png
+Sonic Pocket Adventure (Japan)	bb65c7ad-ef1f-4f44-8f4b-b14aa5c9f1d7.png
+Sonic Pocket Adventure (USA)	5ac5007c-b3f4-489f-80cc-b12e32e48f6c.png
+Sonic the Hedgehog Pocket Adventure (Japan)	bb65c7ad-ef1f-4f44-8f4b-b14aa5c9f1d7.png
+Sonic the Hedgehog Pocket Adventure (USA)	5ac5007c-b3f4-489f-80cc-b12e32e48f6c.png
+The Last Blade: Beyond the Destiny (Europe)	c5648808-f8f7-4a37-ae7f-c8c8daa6cfe2.png
+The Last Blade: Beyond the Destiny (Japan)	c650d962-231a-4df1-b6d2-aa2f2d7a93d4.png
+Tsunagete Pon! 2 (USA)	1ae4d845-7473-4e69-a520-269670160fe8.png
+Wrestling Madness (Japan)	f045d054-267b-4ccd-b0f8-51913fc092bd.png
+w Rouman Tokubetsu Hen-Gekka no Kenshi: Tsuki ni Saku Hana, Chiri Yuku Hana  (Europe)	c5648808-f8f7-4a37-ae7f-c8c8daa6cfe2.png
+w Rouman Tokubetsu Hen-Gekka no Kenshi: Tsuki ni Saku Hana, Chiri Yuku Hana  (Japan)	c650d962-231a-4df1-b6d2-aa2f2d7a93d4.png
+Densha de Go! 2	4e27543c-dcb0-4059-aaa0-18b92f2f14fb.png
+Densha de Go! 2 on Neo Geo Pocket	4e27543c-dcb0-4059-aaa0-18b92f2f14fb.png
+Ganbare Neo Poke-Kun	154cbb28-7dd7-4db3-b090-c32ff33d9143.png
+Infinity Cure	4382126f-4dea-452d-922a-1ea7ff836ff5.png
+KOF: Battle de Paradise (Japan)	431dfb67-a529-4a0e-9dcc-4ec715b526a0.png
+Kikou Seiki Unitron: Sono Tsuide. Hikari Umareru Chi Yori.	c9026817-c606-41b6-a380-8af3d66f887c.png
+Koi Koi Mahjong (Japan)	6ba08248-2575-4c1d-8ec8-d9b2b3190ffa.png
+Memories Off: Pure	e61379fe-ee54-4801-8b84-249cd17ca329.png
+Mezase! Kanji Ou (Japan)	191d89d7-1cd7-416a-a236-1fdc9e6ce53c.png
+Mizuki Shigeru no Youkai Shashinkan	34f631e9-35d4-4f8e-a004-ae44b2f0f665.png
+Neo Derby Champ Daiyosou	793cf51e-6f26-492e-b54b-419e5d4790ca.png
+Neo Poke Pro Yakyuu (Japan)	e2c503cd-29e4-4071-9f5d-9c0d3f910af9.png
+Pachi Slot Aruze Oukoku Pocket : DH2	280fcf03-1a44-4fdf-86b2-cd40dab04d55.png
+Pachi-Slot Aruze Oukoku Pocket: Azteca	a23d4ba9-3a33-44a2-9fb9-360959b46c0a.png
+Pachi-Slot Aruze Oukoku Pocket: Dekahel 2	280fcf03-1a44-4fdf-86b2-cd40dab04d55.png
+Pachi-Slot Aruze Oukoku Pocket: Delsol 2	41222b59-68a3-4b64-a738-9af766ebd6f8.png
+Pachi-Slot Aruze Oukoku Pocket: Hanabi	e2799773-14ee-4c11-829e-1fde0b5a4b11.png
+Pachi-Slot Aruze Oukoku Pocket: Porcano 2	1faf1dd5-8e9c-4023-819c-2d472913d492.png
+Pachi-Slot Aruze Oukoku Pocket: Ward of Lights	0282ea08-5601-4ada-82b4-e786072892d6.png
+Pachi-Slot Aruze Oukoku Pocket: e-Cup	629d591d-70c2-4014-8b16-562888baac9d.png
+Pachi-slot Aruze Oukoku Porcano 2	1faf1dd5-8e9c-4023-819c-2d472913d492.png
+Pachinko Hisshou Guide: Pocket Parlor	fa61b87a-e033-4b01-bf88-00a6c88ee32e.png
+Pachinko Hissyou Guide: Pocket Parlor	fa61b87a-e033-4b01-bf88-00a6c88ee32e.png
+Party Mail (Japan)	31a3e733-c699-4e1c-af70-f63819163705.png
+Pocket Love: If	f57edb7e-225d-465f-873a-3a200d36105e.png
+Soreike!! Hanafuda Doujou	0f30427c-6b45-48d4-a3db-1a9a0be4be50.png
+Super Real Mahjong: Premium Collection	ad88fd8e-d1ac-46c6-9e2c-1537baffe725.png
+The King of Fighters: Battle de Paradise (Japan)	431dfb67-a529-4a0e-9dcc-4ec715b526a0.png
+电车 GO 2	4e27543c-dcb0-4059-aaa0-18b92f2f14fb.png

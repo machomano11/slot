@@ -279,8 +279,14 @@ pub fn fitted_label(cart: &Cart, w: u32, h: u32) -> Option<Vec<u8>> {
     let path = shown_label(cart)?;
     if nes_famicom_of(cart) {
         art::label_fit(path, w, h)
-    } else {
+    } else if plain_cart_of(cart) == Some(PlainCart::MasterSystem) {
+        // A title strip's photo is a little longer than the drawn strip: both ends must show.
+        art::stretch(path, w, h)
+    } else if matches!(cart.platform, Platform::Gb | Platform::Gbc | Platform::Gba) {
         art::cover(path, w, h)
+    } else {
+        // Labels cut from photos of the cart, or covers, whose shapes vary.
+        art::fit(path, w, h)
     }
 }
 
@@ -675,8 +681,14 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
     if plain == Some(PlainCart::WonderSwan) {
         ws_contacts(&mut face);
     }
+    // A label cut from a photo of the cart is wider than tall, unlike a cover.
+    let aspect = label_aspect(cart);
+    // A photo of a disc is the whole disc, hub and all: its corners are clear.
+    let disc_photo = disc && art.as_ref().is_some_and(|a| a.get(3) == Some(&0));
     let mut label = match art {
-        // A Master System cart's label is its title on Sega's red grid, never a picture.
+        // A Western Master System cart's label is the title strip on Sega's grid: its photo,
+        // else drawn, never a cover.
+        Some(rgba) if plain == Some(PlainCart::MasterSystem) && aspect > 3.0 => rgba,
         _ if plain == Some(PlainCart::MasterSystem) => sms_grid_label(&s, &label_text(cart)),
         Some(rgba) => rgba,
         None if disc => generated_disc_label(&s, &label_text(cart)),
@@ -686,7 +698,8 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
         }
         None => generated_label(&s, &label_text(cart), s.label.3),
     };
-    if cart.platform == Platform::Md {
+    // A real Mega Drive label already has its band.
+    if cart.platform == Platform::Md && aspect <= 1.0 {
         let (_, _, lw, lh) = s.label;
         md_band(&mut label, lw, lh, genesis_label_of(cart));
     }
@@ -697,7 +710,7 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
         }
     }
     paste_label(&s, &mut face, &label);
-    if disc {
+    if disc && !disc_photo {
         // A PlayStation disc is printed nearer the hole, behind a thin black ring.
         let ps = cart.platform == Platform::Ps;
         disc_hub(&mut face, shell.colour, if ps { 15.0 } else { 20.0 }, ps);
@@ -1179,6 +1192,24 @@ fn recess_label(s: &Spec, face: &mut CartFace, shell: &Shell) {
             let lower = from_bottom.min(from_right);
             put(x, y, upper <= lower);
         }
+    }
+}
+
+/// The width / height of the picture a cart's label comes from (0 when it has none): a
+/// label cut from a photo of the cart is wider than tall, a cover is not.
+fn label_aspect(cart: &Cart) -> f32 {
+    use std::io::Read;
+    let mut head = [0u8; 24];
+    let read = shown_label(cart)
+        .and_then(|p| std::fs::File::open(p).ok())
+        .and_then(|mut f| f.read_exact(&mut head).ok());
+    if read.is_none() || &head[12..16] != b"IHDR" {
+        return 0.0;
+    }
+    let dim = |at: usize| u32::from_be_bytes([head[at], head[at + 1], head[at + 2], head[at + 3]]);
+    match (dim(16), dim(20)) {
+        (_, 0) => 0.0,
+        (w, h) => w as f32 / h as f32,
     }
 }
 

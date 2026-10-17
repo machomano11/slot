@@ -1489,11 +1489,13 @@ impl App {
             Some(root) => slot_store::labels_of(root, platform, stem),
             None => (label, None),
         };
-        for (p, shelf) in &mut self.shelves {
-            if *p != Rack::Of(platform) {
-                continue;
-            }
-            if let Some(i) = shelf.carts.iter().position(|c| c.stem == stem) {
+        // The console's own shelf, and Recent and Favorites when the game is on them.
+        for (_, shelf) in &mut self.shelves {
+            if let Some(i) = shelf
+                .carts
+                .iter()
+                .position(|c| c.platform == platform && c.stem == stem)
+            {
                 shelf.carts[i].label = own.clone();
                 shelf.carts[i].famicom_label = famicom.clone();
                 self.orphaned.extend(shelf.take_face(i));
@@ -2107,6 +2109,14 @@ impl App {
         }
         self.link_choices.insert(reload.stem, reload.from);
         self.refuse_seated();
+    }
+
+    /// The label the selected cart wears, as the shelf knows it.
+    pub fn selected_label(&self) -> Option<&std::path::Path> {
+        self.shelf()
+            .carts
+            .get(self.shelf().index)
+            .and_then(|c| c.label.as_deref())
     }
 
     pub fn selected_stem(&self) -> Option<&str> {

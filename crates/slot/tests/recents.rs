@@ -239,3 +239,23 @@ fn a_one_game_card_is_still_a_one_game_card_with_recents_on() {
         a.phase()
     );
 }
+
+#[test]
+fn a_label_fetched_for_a_recent_game_shows_on_recents_too() {
+    let d = card();
+    let mut a = boot_with(
+        d.path(),
+        SlotState {
+            show_recents: true,
+            recents: vec![recent(Platform::Gb, "Tetris")],
+            ..SlotState::default()
+        },
+    );
+    assert_eq!(a.shelf_platform_name(), Some("Recents"));
+    assert_eq!(a.selected_label(), None);
+    let label = d.path().join("Labels/GB/Tetris.png");
+    std::fs::create_dir_all(label.parent().unwrap()).unwrap();
+    std::fs::write(&label, b"png").unwrap();
+    a.adopt_label(Platform::Gb, "Tetris", Some(label.clone()));
+    assert_eq!(a.selected_label(), Some(label.as_path()));
+}

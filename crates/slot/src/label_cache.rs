@@ -9,10 +9,10 @@ use std::time::UNIX_EPOCH;
 use slot_store::Cart;
 use slot_ui::{fitted_label, label_size, nes_famicom_of, shown_label};
 
-/// Versioned: a label is fitted differently now (a tall one on a wide label is shown whole),
-/// so the older folder's are of no use.
-const DIR: &str = "System/Cache/Labels2";
-const OLD_DIRS: [&str; 1] = ["System/Cache/Labels"];
+/// Versioned: a label is fitted differently now (one of another shape is shown whole, not cut),
+/// so the older folders' are of no use.
+const DIR: &str = "System/Cache/Labels3";
+const OLD_DIRS: [&str; 2] = ["System/Cache/Labels", "System/Cache/Labels2"];
 
 /// Removes older label caches in the background: they can be large, the card slow.
 pub fn forget_old(root: &Path) {

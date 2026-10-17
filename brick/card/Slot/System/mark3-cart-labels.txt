@@ -1,0 +1,71 @@
+# Sega Master System cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+Akai Koudan Zillion (Japan)	61f97422-4b06-427f-9804-e668a7b8d01a.png
+Akai Koudan Zillion: Zillion (Japan)	61f97422-4b06-427f-9804-e668a7b8d01a.png
+Alex Kidd in Miracle World (Japan)	0f97463f-8fc0-4a6a-b6f6-477ee5f3d377.png
+Alex Kidd no Miracle World (Japan)	0f97463f-8fc0-4a6a-b6f6-477ee5f3d377.png
+Alex Kidd: BMX Trial (Japan)	63061898-6a8e-4ce7-9892-2d312322139c.png
+Argos no Juujiken (Japan)	6731ed8c-2f62-47b2-8939-5b89fc0ab6f1.png
+Astro Flash (Japan)	271e340b-6623-4c2e-b34d-460442ac3e00.png
+Astro Warrior (Japan)	31a9be58-9ef8-423a-a041-89dba43b7027.png
+BMX Trial: Alex Kidd (Japan)	63061898-6a8e-4ce7-9892-2d312322139c.png
+Black Belt (Japan)	3f7af841-ae4c-4716-9283-b6689fde4954.png
+Blade Eagle (Japan)	fda6f854-486b-4f03-9bd0-e6bdfd7bcd86.png
+Blade Eagle 3-D (Japan)	fda6f854-486b-4f03-9bd0-e6bdfd7bcd86.png
+Blade Eagle: Blade Eagle 3-D (Japan)	fda6f854-486b-4f03-9bd0-e6bdfd7bcd86.png
+Bubble Bobble (Japan)	abe8c4da-652e-423b-ab94-04f4ee5c0b39.png
+Bubble Bobble: Dragon Maze (Japan)	abe8c4da-652e-423b-ab94-04f4ee5c0b39.png
+Captain Silver (Japan)	29dcd7c0-e728-491b-b065-aeec00142067.png
+Chouon Senshi Borgman (Japan)	93216253-0e4b-46a3-9847-a71a1e8cb8d6.png
+Comical Machine Gun Joe (Japan)	c4adedcd-8c37-4f20-9ddf-5e3cb766fd33.png
+Cyborg Hunter (Japan)	93216253-0e4b-46a3-9847-a71a1e8cb8d6.png
+F-16 Fighting Falcon (Japan)	625561bf-2537-4368-bc04-3713fcc50c08.png
+F-16 Fighting Falcon: F-16 Fighter (Japan)	625561bf-2537-4368-bc04-3713fcc50c08.png
+Final Bubble Bobble (Japan)	abe8c4da-652e-423b-ab94-04f4ee5c0b39.png
+Fist of the North Star (Japan)	3f7af841-ae4c-4716-9283-b6689fde4954.png
+Fist of the North Star: Hokuto no Ken (Japan)	3f7af841-ae4c-4716-9283-b6689fde4954.png
+Fushigi no Oshiro Pit Pot (Japan)	d99c6712-4f41-4b48-b2bc-e090f80cf959.png
+Galactic Protector (Japan)	0f6a9ee6-591d-40b2-ba7f-41522ffcbf76.png
+Gekioko PunPun Maru (Japan)	95f701e9-9dcf-43d4-9c1d-20357d4e947b.png
+Geraldinho (Japan)	52874280-2003-4102-98c4-f1990513cdf2.png
+Golvellius: Valley of Doom (Japan)	731e70b2-90b7-448a-8271-f12a052a5689.png
+Great Golf (Japan) (Japan)	39dcadd0-11d8-47a4-8b18-c1dcc6213539.png
+Great Golf (Japanese Version) (Japan)	39dcadd0-11d8-47a4-8b18-c1dcc6213539.png
+Great Golf Japan (Japan)	39dcadd0-11d8-47a4-8b18-c1dcc6213539.png
+Great Ice Hockey (Japan)	fc4cff15-1574-4bbb-b463-cec00006f341.png
+Great Soccer: The Mega Cartridge (Japan)	18b4e0c3-1159-4e31-a66d-558d2cabb19b.png
+Hang On (Japan)	r2_c44774b7-8984-412a-aae2-1442ceded3de.png
+High School! Kimengumi (Japan)	c1b8ea18-bd82-48fa-ab5c-97f627380aab.png
+Highschool! Kimengumi (Japan)	c1b8ea18-bd82-48fa-ab5c-97f627380aab.png
+Hokuto No Ken (Japan)	3f7af841-ae4c-4716-9283-b6689fde4954.png
+Kenseiden (Japan)	d3c95e4a-89bc-4af1-91d6-d2f345da9b4d.png
+Mahjong Sengoku Jidai (Japan)	abc6e821-9cd2-4a80-8c5d-cb65b36ad7e4.png
+Mahjong Sengoku Jidai: Mahjong (Japan)	abc6e821-9cd2-4a80-8c5d-cb65b36ad7e4.png
+Maou Golvellius (Japan)	731e70b2-90b7-448a-8271-f12a052a5689.png
+Megumi Rescue (Japan)	c590f72c-72e0-4917-b061-939bac7b56a4.png
+My Hero (Japan)	608cd8b9-7db9-4dff-9552-ceb5677ecfdb.png
+Nekkyuu Koushien (Japan)	fcf940e5-5ee8-4202-a7b2-4bdcfb550325.png
+OutRun 3D (Japan)	415ab753-2ef9-45e6-bd2a-5f03799a5a70.png
+Phantasy Star (Japan)	1e699d32-ece1-4c5a-9ad2-c0ebf984fe6e.png
+Pit Pot: The Magical Castle (Japan)	d99c6712-4f41-4b48-b2bc-e090f80cf959.png
+R-Type (Japan)	611bcfd7-ef52-4317-95bb-9ad0f7ab9300.png
+Rygar: Legendary Warrior (Japan)	6731ed8c-2f62-47b2-8939-5b89fc0ab6f1.png
+Satellite 7 (Japan)	66b169ef-b6c5-452e-9df1-5664e6068550.png
+Seishun Scandal (Japan)	608cd8b9-7db9-4dff-9552-ceb5677ecfdb.png
+Solomon no Kagi: Oujo Rihita no Namida (Japan)	b4086e48-9d20-4bf2-831f-45704bfe7129.png
+Solomon's Key: Tears of Princess Lihita (Japan)	b4086e48-9d20-4bf2-831f-45704bfe7129.png
+Sports Pad Soccer (Japan)	18b4e0c3-1159-4e31-a66d-558d2cabb19b.png
+Sukeban Deka II: Shoujo Tekkamen Densetsu (Japan)	a40975a7-e959-4275-8cc6-0c0dc374fe6a.png
+Super Racing (Japan)	8c083314-c063-4061-a174-379a5c6be35f.png
+Super Wonder Boy (Japan)	7eb4a5af-c05f-467b-ad88-f027d3b9ad58.png
+Super Wonder Boy ~ Wonder Boy (Japan)	7eb4a5af-c05f-467b-ad88-f027d3b9ad58.png
+Super Wonder Boy: Wonder Boy (Japan)	7eb4a5af-c05f-467b-ad88-f027d3b9ad58.png
+Teddy Boy (Japan)	52874280-2003-4102-98c4-f1990513cdf2.png
+Teddy Boy Blues (Japan)	52874280-2003-4102-98c4-f1990513cdf2.png
+Teddyboy-Blues (Japan)	52874280-2003-4102-98c4-f1990513cdf2.png
+The Magical Castle Pit Pot (Japan)	d99c6712-4f41-4b48-b2bc-e090f80cf959.png
+The Pro Yakyuu: Pennant Race (Japan)	6f6dd5ab-3127-4be3-9da1-c0efc8b51cba.png
+Thunder Blade (Japan)	912aa8a3-a29b-4010-b00e-6d76d327603c.png
+TransBot (Japan)	271e340b-6623-4c2e-b34d-460442ac3e00.png
+Wonder Boy (Japan)	7eb4a5af-c05f-467b-ad88-f027d3b9ad58.png
+Woody Pop: Shinjinrui no Block Kuzushi (Japan)	096d6dc5-f338-4f76-9e56-be05c9cdf96a.png
+Zillion (Japan)	61f97422-4b06-427f-9804-e668a7b8d01a.png

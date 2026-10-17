@@ -3,8 +3,8 @@
     <!-- The label runs to the top edge between two rounded grips, over a plain lip. -->
     <g id="lines">
       <path d="M 27 0 L 27 140 Q 27 146 33 146 L 207 146 Q 213 146 213 140 L 213 0"/>
-      <path d="M 14 9 L 14 150"/>
-      <path d="M 226 9 L 226 150"/>
+      <path d="M 14 7 L 14 146"/>
+      <path d="M 226 7 L 226 146"/>
     </g>
   </defs>
   <g fill="none" stroke="#fff" stroke-width="1.3">

@@ -1,0 +1,552 @@
+# Sega Master System cart pictures from the LaunchBox Games Database (https://gamesdb.launchbox-app.com/Metadata.zip): name (region), file
+20 em 1 (Brazil)	b5946a09-afdd-41b3-9a74-3a8fb4e10de1.png
+4 Pak All Action (Australia)	4847eb1f-7d69-4f0f-83d3-0a3b27181416.png
+94-Nen Super Basketball (USA)	5b95a5f8-be65-4d9a-acdf-fcc6a353ecff.png
+ALF (USA)	e1bdac76-0c87-4c78-bb2d-3b0d32bdfcbc.png
+Ace of Aces (Europe)	1d47de92-3ddf-439b-86a8-44e98ae36dbb.png
+Action Boy (Europe)	5ad73863-6779-40a2-9bee-50d29e24d6df.png
+Action Boy (USA)	7909c347-81fc-48b8-8d15-24a1071de4a2.png
+Action Fighter (USA)	8a5bd13b-fee0-4a88-9ed2-7500868961a0.png
+Aerial Assault (World)	6e4f893f-86a7-4719-8909-2e12214af311.png
+After Burner (USA)	372eddf2-e437-4cde-99dd-21e43ef9c189.png
+Air Rescue (Europe)	7b6aa94f-d186-4835-9760-82b9c992d37e.png
+Akai Koudan Zillion: Zillion (USA)	326ca5ba-c11a-4c49-91aa-1bd7c418e19e.png
+Aladdin (Europe)	7cce1660-f11d-43f8-8f4e-388ff1f3a0d3.png
+Alex Kidd in High Tech World (USA)	55d29167-ec28-4139-8097-3fd80f239d8d.png
+Alex Kidd in Miracle World (USA)	e2ce400a-e2ed-4abf-801f-1426d87481f1.png
+Alex Kidd in Miracle World: Voyage: A Sorceress' Vacation (World)	a083678c-1134-43d3-9113-ce85910cbf0b.png
+Alex Kidd in Shinobi World (Brazil)	r2_d01185cd-ffac-4870-97c3-9d86616567ef.png
+Alex Kidd in Shinobi World (Europe)	5a27ffd9-3862-46fc-8631-24a54cfd608e.png
+Alex Kidd in Shinobi World (USA)	8dbcf34f-8392-440e-bd16-9919d0f0e2af.png
+Alex Kidd: High-Tech World (USA)	55d29167-ec28-4139-8097-3fd80f239d8d.png
+Alex Kidd: The Lost Stars (USA)	dc72148b-115b-476c-b597-e6e324c699b1.png
+Alex Kidd: The Lost Stars with Stella (World)	289cc860-c474-46f3-b3be-f92d9a185d0e.png
+Alex Kidd: The Lost Stars: Stella Edition (World)	289cc860-c474-46f3-b3be-f92d9a185d0e.png
+Alex Kido (USA)	e2ce400a-e2ed-4abf-801f-1426d87481f1.png
+Alien 3 (Europe)	cadbea2e-dd11-49f8-b1a0-3463e3dcfb4c.png
+Alien Storm (Europe)	ff992dee-5dac-40ef-af4c-0a822cd175e0.png
+Alien Syndrome (USA)	7bd2451c-cb86-4478-b2d5-1d487e8d4eed.png
+Alien³ (Europe)	cadbea2e-dd11-49f8-b1a0-3463e3dcfb4c.png
+Altered Beast (Brazil)	r2_ecb907a9-9010-413d-a2fa-216a9e74d8d0.png
+Altered Beast (Brazil)	r2_f43f563e-e15e-430e-8252-a73580502bad.png
+Altered Beast (World)	a0c88817-de0b-4ac9-8fd8-df1070f05143.png
+American Baseball (USA)	2d5d121d-bf26-4479-ba97-4e9c285d6b2f.png
+American Baseball (USA)	6decd4ff-f9c4-4d4b-b16a-17635564dbc4.png
+American Pro Football (USA)	fffbfda8-5ac0-4169-b726-6f32f86f4a39.png
+Ancient Ys Vanished Omen (USA)	92b2219b-4eb6-4404-984a-602b7ac7a5d6.png
+Andre Agassi Tennis (Europe)	eb3be76b-cdce-4bc3-b566-8a8615cf503d.png
+Arcade Smash Hits (Europe)	3668bafd-b7ce-4162-8080-f306ca2199be.png
+Ariel the Little Mermaid (Brazil)	7e93da72-ea81-4faf-a2f7-889361fb085c.png
+As Aventuras da TV Colosso	b58f08dd-8900-4ecf-b2be-0fc6ac3eda3b.png
+Asterix (Europe)	f361691e-aa23-44b7-9883-e8dde9b4e55a.png
+Asterix and the Great Rescue (Europe)	c2277469-1705-4e6f-a48f-932832c6c5d3.png
+Asterix and the Secret Mission (Europe)	ecd37a12-2387-4fe1-86b6-d3cf64ba0418.png
+Astro Adventure (USA)	06401229-427d-4907-bb53-6de2aa9d5330.png
+Astro Warrior & Pit Pot (Europe)	cfadff21-62b7-49b8-aebe-6c03bff8868e.png
+Astro Warrior (USA)	948e40fa-6ed1-404a-aae6-cc87e8a6f812.png
+Astro Warrior / Pit Pot (Europe)	cfadff21-62b7-49b8-aebe-6c03bff8868e.png
+Astérix (Europe)	f361691e-aa23-44b7-9883-e8dde9b4e55a.png
+Astérix and the Great Rescue (Europe)	c2277469-1705-4e6f-a48f-932832c6c5d3.png
+Astérix and the Secret Mission (Europe)	ecd37a12-2387-4fe1-86b6-d3cf64ba0418.png
+Aventuras da TV Colosso, As	b58f08dd-8900-4ecf-b2be-0fc6ac3eda3b.png
+Ayrton Senna's Super Monaco GP II (Europe)	40eb14b6-3926-4e9a-b2d9-72368feffa91.png
+Aztec Adventure (USA)	955cff6c-08d6-4e9f-af78-dc94bfb1a5ba.png
+Aztec Adventure: Nazca '88: The Golden Road to Paradise (USA)	955cff6c-08d6-4e9f-af78-dc94bfb1a5ba.png
+Aztec Adventure: The Golden Road to Paradise (USA)	955cff6c-08d6-4e9f-af78-dc94bfb1a5ba.png
+Back to the Future 2 (Europe)	59d4240d-6456-41b7-bc57-f07966d3ecc9.png
+Back to the Future 3 (Europe)	82f9f82b-d3f9-498b-bb24-a964113db26c.png
+Back to the Future II (Europe)	59d4240d-6456-41b7-bc57-f07966d3ecc9.png
+Back to the Future Part 2 (Europe)	59d4240d-6456-41b7-bc57-f07966d3ecc9.png
+Back to the Future Part II (Europe)	59d4240d-6456-41b7-bc57-f07966d3ecc9.png
+Back to the Future Part III (Europe)	82f9f82b-d3f9-498b-bb24-a964113db26c.png
+Baku Baku (Brazil)	9cef6e5b-5c52-4d4b-bffa-c8503cb9896d.png
+Bank Panic (Europe)	2d753ee5-2433-4857-8496-c951c9762625.png
+Bank Panic (Europe)	51192aa0-0378-4bbf-8202-e39b44d4d191.png
+Basketball Nightmare (Europe)	08d571f1-c460-4ea5-b0d5-676630dac3e6.png
+Batman Returns (Europe)	30c6f4f7-4775-4725-a006-360273ced925.png
+Battle Out Run (Europe)	355ed4f1-4ab8-4055-a56f-ee63c4123c9c.png
+Battle OutRun (Europe)	355ed4f1-4ab8-4055-a56f-ee63c4123c9c.png
+Battle Wings (USA)	8fb8e06b-029f-4d12-9a1a-ae68f61a94b5.png
+Battlemaniacs (Brazil)	12082ae0-ad09-4e1f-a25f-fb925e0c205c.png
+Black Belt (USA)	49f91ad5-ce44-4281-8e54-6be16a6cecd5.png
+Blade Eagle 3-D (USA)	f820aee0-fce5-43c9-a9bf-bd4ad748b7d4.png
+Blade Eagle ~ Blade Eagle 3-D (USA)	f820aee0-fce5-43c9-a9bf-bd4ad748b7d4.png
+Blade Eagle: Blade Eagle 3-D (USA)	f820aee0-fce5-43c9-a9bf-bd4ad748b7d4.png
+Bobble Bobble (Europe)	a76c6a32-fa03-4cef-9490-3c597f17d403.png
+Bomber Raid (USA)	8fb8e06b-029f-4d12-9a1a-ae68f61a94b5.png
+Bonanza Bros. (Europe)	0517f534-0b10-433f-8f56-540bf3ce230b.png
+Bonkers: Wax Up! (Brazil)	12d20867-650c-4728-adbe-0ee020197b2f.png
+Bram Stoker's Dracula (Europe)	b5cddd9d-b116-4a43-8bdd-b63cee592eb3.png
+Bruce Lee (World)	8964c1fa-05f8-4f5e-8c15-94ac9e87bf1d.png
+Bubble Bobble (Europe)	a76c6a32-fa03-4cef-9490-3c597f17d403.png
+Bubble Bobble ~ Dragon Maze (Europe)	a76c6a32-fa03-4cef-9490-3c597f17d403.png
+Bubble Bobble: Dragon Maze (Europe)	a76c6a32-fa03-4cef-9490-3c597f17d403.png
+Buggy Run (Europe)	f612c6c4-9c0d-47fd-b8f7-e016d20a53bf.png
+California Games (Europe)	ebff62c0-0993-4f54-8a8d-48bcd931d8de.png
+California Games (USA)	8284c5c0-b015-4a25-905c-94172e474700.png
+California Games II (Europe)	e925d8b1-5ac8-4648-8337-936193857064.png
+California Games: Jogos de Verao (Europe)	ebff62c0-0993-4f54-8a8d-48bcd931d8de.png
+California Games: Jogos de Verao (USA)	8284c5c0-b015-4a25-905c-94172e474700.png
+Captain Silver (USA)	9c7799cd-4f55-4aab-a0a7-5044e694b244.png
+Castelo Ra-Tim-Bum (Brazil)	951cb702-ea47-4626-8286-ae9e5e228a50.png
+Castelo Rá-Tim-Bum (Brazil)	951cb702-ea47-4626-8286-ae9e5e228a50.png
+Castle of Illusion Starring Mickey Mouse (USA)	6e992307-3319-4fdb-be07-101fa65fe671.png
+Champions of Europe (Europe)	87d322d3-1f29-406e-9108-da9bb005bce5.png
+Championship Hockey (Europe)	fe1a9949-e90d-4971-be2f-22ce57f2fade.png
+Chapolim X Dracula: Um Duelo Assustador	b182f0e9-e03d-464a-85db-3d63d6570b5c.png
+Chapolim X Drácula: Um Duelo Assustador	b182f0e9-e03d-464a-85db-3d63d6570b5c.png
+Chapolim X Drácula: Um Duelo Assustador (Europe)	0c379be1-fb1f-4590-81dd-eec3ce9d26da.png
+Chapolim X Drácula: Um Duelo Assustador (USA)	f5d9ab6a-024a-4129-872f-d4b79b4a3452.png
+Chapolim vs. Dracula: A Frightening Duel	b182f0e9-e03d-464a-85db-3d63d6570b5c.png
+Cheese Cat-Astrophe Starring Speedy Gonzales (Europe)	f2c45b37-1a4d-40df-957f-cee2b6d71fec.png
+Choplifter (USA)	bcab247d-b2d9-4fbe-b426-b283fc021b97.png
+Chuck Rock (Europe)	bb878214-388d-4032-963e-8e63b1acc666.png
+Chuck Rock II: Son of Chuck (Europe)	031410f1-cce5-44f3-8eb4-b9bdf1f150fd.png
+Cloud Master (USA)	1e006ae9-bc29-452b-b0b6-3d16d181d0bd.png
+Columns (World)	030e25fa-179e-4be9-854c-16b3c9178950.png
+Columns ~ Shapes and Columns (World)	030e25fa-179e-4be9-854c-16b3c9178950.png
+Columns: Shapes and Columns (World)	030e25fa-179e-4be9-854c-16b3c9178950.png
+Cool Spot (Europe)	870e12d9-86bb-477a-a511-6c5a388200a8.png
+Cosmic Spacehead (Europe)	d8d7f5bc-482b-41ac-9b7a-c719a1f9845e.png
+Cyborg Hunter (USA)	a0fabe89-aec7-4395-8b20-933e7acd7fa3.png
+Daffy Duck in Hollywood (Europe)	49237dde-8c59-4c0d-a975-65c07bcb60d2.png
+Danan: The Jungle Fighter (Europe)	f371a1c8-777f-4e00-8e05-2ecdfd42eb5e.png
+Dead Angle (USA)	9943fdf3-98d9-4171-b483-8e6c306a68fd.png
+Deep Duck Trouble Starring Donald Duck (Europe)	b54b6876-7e6b-4019-8422-29cc78bff2d2.png
+Desert Speedtrap starring Road Runner and Wile E. Coyote (Europe)	eaab72fa-fa66-413e-9964-7f5befd461b1.png
+Desert Strike (Europe)	f963f0a6-c300-43e0-8d4e-1297c0ee4812.png
+Dick Tracy (USA)	63f82eef-8a8a-4a8c-9007-385b357d6fac.png
+Disney's Aladdin (Europe)	7cce1660-f11d-43f8-8f4e-388ff1f3a0d3.png
+Disney's Ariel the Little Mermaid (Brazil)	7e93da72-ea81-4faf-a2f7-889361fb085c.png
+Disney's Bonkers: Wax Up! (Brazil)	12d20867-650c-4728-adbe-0ee020197b2f.png
+Donald Duck In The Lucky Dime Caper (Europe)	d07da539-242d-4b9e-8810-d2484fe98c15.png
+Double Dragon (USA)	2949fefe-8070-4c5d-b257-e5871fef734a.png
+Double Dragon (World)	46e517ed-95ef-4750-ae7f-db3a595fcb31.png
+Double Hawk (Europe)	1e49b342-144a-4424-8e3f-26d57ede3e0b.png
+Dr. Robotnik's Mean Bean Machine (Europe)	f216ea3e-8e36-45f9-b16d-fe365efadb8e.png
+Dragon Crystal (Europe)	5498900d-e63b-4cbf-bf87-f32891833b85.png
+Dragon Wang 2 (USA)	417430e2-68cb-4e92-8f2f-626bf2a32a8c.png
+Dragon: The Bruce Lee Story (Europe)	e32f47fd-e2f6-4d1c-9315-040189e2dd5e.png
+Dynamite Duke (Europe)	14d58b63-f868-495d-a27b-59411c888a44.png
+Dynamite Dux (Europe)	8e107161-6991-40e4-a21e-f3ee00c48726.png
+Dynamite Headdy (Brazil)	18f765eb-adbb-4315-9f3d-6fba10c2d4f2.png
+E-SWAT (USA)	46df6c84-81c6-4993-b7c8-4dc85370a7fe.png
+E-SWAT: Cyber Police (USA)	46df6c84-81c6-4993-b7c8-4dc85370a7fe.png
+ESWAT: City Under Siege (USA)	46df6c84-81c6-4993-b7c8-4dc85370a7fe.png
+Earthworm Jim (Brazil)	999a4283-cb55-480d-85bd-8011b990fbd3.png
+Ecco the Dolphin (Europe)	a638b9fe-ca9d-44e0-a812-7319202f1380.png
+Ecco: The Tides of Time (Brazil)	af98d515-f6dd-4193-85d6-3b33cc0c9040.png
+El Chapulín Colorado X Drácula: Un Duelo Aterrador	b182f0e9-e03d-464a-85db-3d63d6570b5c.png
+Enduro Racer (Brazil)	r2_f2d24837-0751-433e-a1fd-9493db35fcb2.png
+Enduro Racer (Europe)	r2_783cb12a-3b51-47a8-8aab-ac9ff9f66f7b.png
+Enduro Racer (USA)	r2_dfc16e9d-c80b-45c3-8038-17fd58b66353.png
+F-16 Fighter (Europe)	24c4428a-e9a3-43ac-9844-0de5143813f6.png
+F-16 Fighter (Europe)	797346e0-bf1c-463c-8c99-564a896e882c.png
+F-16 Fighter (USA)	1af6b574-66fd-42ab-8c73-b5de15f68929.png
+F-16 Fighter ~ F-16 Fighting Falcon (Europe)	24c4428a-e9a3-43ac-9844-0de5143813f6.png
+F-16 Fighter ~ F-16 Fighting Falcon (Europe)	797346e0-bf1c-463c-8c99-564a896e882c.png
+F-16 Fighter ~ F-16 Fighting Falcon (USA)	1af6b574-66fd-42ab-8c73-b5de15f68929.png
+F-16 Fighter: F-16 Fighting Falcon (Europe)	24c4428a-e9a3-43ac-9844-0de5143813f6.png
+F-16 Fighter: F-16 Fighting Falcon (Europe)	797346e0-bf1c-463c-8c99-564a896e882c.png
+F-16 Fighter: F-16 Fighting Falcon (USA)	1af6b574-66fd-42ab-8c73-b5de15f68929.png
+F-16 Fighting Falcon (Europe)	24c4428a-e9a3-43ac-9844-0de5143813f6.png
+F-16 Fighting Falcon (Europe)	797346e0-bf1c-463c-8c99-564a896e882c.png
+F-16 Fighting Falcon (USA)	1af6b574-66fd-42ab-8c73-b5de15f68929.png
+F-16 Fighting Falcon: F-16 Fighter (Europe)	24c4428a-e9a3-43ac-9844-0de5143813f6.png
+F-16 Fighting Falcon: F-16 Fighter (Europe)	797346e0-bf1c-463c-8c99-564a896e882c.png
+F-16 Fighting Falcon: F-16 Fighter (USA)	1af6b574-66fd-42ab-8c73-b5de15f68929.png
+F1 (Europe)	a7548e59-e582-4525-a9c0-2db73fac423c.png
+F1 Championship (Europe)	a7548e59-e582-4525-a9c0-2db73fac423c.png
+FIFA International Soccer (Brazil)	d3bfe841-0383-4eef-8078-a416fb1f9db5.png
+Fantastic Dizzy (Europe)	faee1b28-54dc-4fec-9934-6841e50fb1f9.png
+Fantasy Zone (Europe)	b2943a79-9f53-4373-a691-a24808a8c895.png
+Fantasy Zone (USA)	86ae488c-138c-4544-bc61-e28fd524669a.png
+Fantasy Zone 2 (USA)	eeb5ee72-5909-4b29-b054-cc1e6b09c0e4.png
+Fantasy Zone 3: The Maze (USA)	fb9daea0-9795-45c1-9d3c-7ae85d7ca672.png
+Fantasy Zone II (USA)	eeb5ee72-5909-4b29-b054-cc1e6b09c0e4.png
+Fantasy Zone II: The Tears of Opa-Opa (USA)	eeb5ee72-5909-4b29-b054-cc1e6b09c0e4.png
+Fantasy Zone: The Maze (USA)	fb9daea0-9795-45c1-9d3c-7ae85d7ca672.png
+Ferias Frustradas do Pica Pau (Brazil)	436e5abc-743d-47ea-9d83-7b59af3f2201.png
+Fire & Forget II (Europe)	fbeffd0e-4152-41b3-9920-89e8f347cf1a.png
+Fire & Ice (Brazil)	0a0a4b08-fa61-4a81-bdbb-d967fae2d079.png
+Fist of the North Star (USA)	49f91ad5-ce44-4281-8e54-6be16a6cecd5.png
+Fist of the North Star: Hokuto no Ken (USA)	49f91ad5-ce44-4281-8e54-6be16a6cecd5.png
+Flight of Pigarus	23657bac-876c-4c27-94d2-9cfd5e213221.png
+Forgotten Worlds (Europe)	0d9a3308-e962-4fe0-8745-ffc03b1b7733.png
+Férias Frustradas do Pica Pau (Brazil)	436e5abc-743d-47ea-9d83-7b59af3f2201.png
+G-LOC Air Battle (Europe)	9c8d753b-de5a-4f34-9835-a756ec05038e.png
+GP Rider (Europe)	eaa75a5a-96e6-40e4-b1cb-2c73d1658d47.png
+Gain Ground (Europe)	e77ad48f-149f-41d5-a574-8f006d171ff5.png
+Game Box Serie Esportes Radicais (Brazil)	dd3fd617-87c9-4281-ad08-49cefd6e4cf4.png
+Game Box Série Esportes Radicais (Brazil)	dd3fd617-87c9-4281-ad08-49cefd6e4cf4.png
+Gang's Fighter (Europe)	5ad73863-6779-40a2-9bee-50d29e24d6df.png
+Gang's Fighter (USA)	7909c347-81fc-48b8-8d15-24a1071de4a2.png
+Gangster Town (USA)	8603d648-22c0-4253-a18a-e270f35bc23f.png
+Gauntlet (Europe)	5a9ad50f-51d8-4ed8-9b3c-f54c6135bf80.png
+George Foreman's KO Boxing (Europe)	96a50b50-4f2d-4a55-9c1f-56b1ebddfabc.png
+George Foreman's KO Boxing (Europe)	r2_dfc09db7-ea64-4a88-90ef-529bc3b7e52a.png
+George Foreman's KO Boxing (USA)	2dcc4cd9-7ae4-4509-8731-c7453c903c02.png
+Geraldinho (USA)	e4fce25c-9184-49bc-ba3f-1718fe99685e.png
+Ghost House (Europe)	0c379be1-fb1f-4590-81dd-eec3ce9d26da.png
+Ghost House (USA)	f5d9ab6a-024a-4129-872f-d4b79b4a3452.png
+Ghostbusters (Europe)	34e623a9-ef2c-40d0-95b0-395eaae3190f.png
+Ghostbusters (USA)	03def294-e17d-486a-98c6-e525e4ed2d5f.png
+Ghouls 'n Ghosts (USA)	4f1ab935-811e-4196-938e-d443e31e0c18.png
+Ghouls'n Ghosts (USA)	4f1ab935-811e-4196-938e-d443e31e0c18.png
+Global Defense (USA)	082b004f-7294-4d18-8c4f-ed2fc89e0f1a.png
+Global Gladiators (Europe)	c7af960d-3d16-4739-bd9d-7cf1edb12380.png
+Golden Axe (USA)	6b696f28-c900-429a-bc39-5b1c5271c903.png
+Golden Axe Warrior (USA)	903de29c-7f9c-46c3-9066-4999a0f8e605.png
+Golf Mania (Europe)	224d6a2e-007d-4d97-ab94-f0d8eb6e355e.png
+Golfamania (Europe)	224d6a2e-007d-4d97-ab94-f0d8eb6e355e.png
+Golvellius: Valley of Doom (USA)	95280bd8-644b-4f28-8ece-e415b6ab0b2c.png
+Great Baseball (1987) (USA)	f48cbf8c-4be6-4b87-a374-02ca328d614d.png
+Great Baseball (USA)	f48cbf8c-4be6-4b87-a374-02ca328d614d.png
+Great Baseball USA (USA)	f48cbf8c-4be6-4b87-a374-02ca328d614d.png
+Great Basketball (USA)	5b95a5f8-be65-4d9a-acdf-fcc6a353ecff.png
+Great Football (USA)	f6f4b29f-1904-4ec0-930c-f3d5682a41df.png
+Great Golf (USA)	ea44a8d2-331d-42e5-a51b-4b91167e4dd6.png
+Great Golf ~ Masters Golf (USA)	ea44a8d2-331d-42e5-a51b-4b91167e4dd6.png
+Great Golf: Masters Golf (USA)	ea44a8d2-331d-42e5-a51b-4b91167e4dd6.png
+Great Ice Hockey (USA)	58cf4522-75b6-4fbf-b405-f4afbbb65574.png
+Great Soccer (Europe)	3817b9be-486b-41c3-884a-227c74d82794.png
+Great Soccer: The Mega Cartridge (Europe)	ccb4c3eb-5291-42bc-92d7-f3d0cd0c6fc2.png
+Great Soccer: The Sega Card (Europe)	3817b9be-486b-41c3-884a-227c74d82794.png
+Great Volleyball (USA)	a1e1731a-6aec-4aa8-8044-9262d184edbd.png
+Hang On (Europe)	r2_a197a308-4cb3-41c2-a5f2-d14ce0596452.png
+Hang On (Europe)	r2_d169c0bc-71e4-4712-b110-b1de8c863b64.png
+Hang-On & Safari Hunt (USA)	be0488f0-c721-4a21-923a-5e57e30d8f82.png
+Hang-On (Europe)	r2_a197a308-4cb3-41c2-a5f2-d14ce0596452.png
+Hang-On (Europe)	r2_d169c0bc-71e4-4712-b110-b1de8c863b64.png
+Heavyweight Champ (Europe)	96a50b50-4f2d-4a55-9c1f-56b1ebddfabc.png
+Heavyweight Champ (Europe)	r2_dfc09db7-ea64-4a88-90ef-529bc3b7e52a.png
+Heavyweight Champ (USA)	2dcc4cd9-7ae4-4509-8731-c7453c903c02.png
+Heroes of the Lance (Europe)	20300f7f-57f1-4895-8dfa-0799dc226fa1.png
+Home Alone (Europe)	9ca25dec-5d0e-4feb-98c4-f49e0ecc7609.png
+Hwarang Ui Geom (USA)	e087aa5c-6210-45c2-a494-e27568f0f0f6.png
+Impossible Mission (Europe)	ae423d58-c2aa-4521-aece-2c9f5d6176c0.png
+Indiana Jones and the Last Crusade (Europe)	c3246519-fdda-4c72-a6e9-d7b77c4777ce.png
+Ivan 'Ironman' Stewart's Super Off Road (Europe)	52adaba5-a6c6-4138-93d6-89f001683ac3.png
+James "Buster" Douglas Knockout Boxing (Europe)	96a50b50-4f2d-4a55-9c1f-56b1ebddfabc.png
+James "Buster" Douglas Knockout Boxing (Europe)	r2_dfc09db7-ea64-4a88-90ef-529bc3b7e52a.png
+James "Buster" Douglas Knockout Boxing (USA)	2dcc4cd9-7ae4-4509-8731-c7453c903c02.png
+James Bond 007: The Duel (Europe)	a3138d9b-a18e-4b53-aeb0-e1941908ca92.png
+James Pond 2: Codename RoboCod (Europe)	a054dfb7-a4f3-4abc-8b0f-a56b8fa700ae.png
+Jang Pung 2 (Korea)	ba93d0a8-e2ba-4a2b-b296-952b41e92c63.png
+Jang Pung II (Korea)	ba93d0a8-e2ba-4a2b-b296-952b41e92c63.png
+Joe Montana Football (USA)	0978af45-e59d-41fd-8f34-b88def8ffcda.png
+Jogos Olímpicos (Europe)	91048946-3fe4-44a5-9df4-f1ebf3ed9ea4.png
+Jogos de Verao II (Europe)	e925d8b1-5ac8-4648-8337-936193857064.png
+Jogos de Verão II (Europe)	e925d8b1-5ac8-4648-8337-936193857064.png
+Jurassic Park (Europe)	64c6e362-7fa7-4496-9644-91ce852afb7c.png
+KLAX (Europe)	a3110de7-f1ea-4c4a-9398-fc07f2634949.png
+Kenseiden (USA)	e087aa5c-6210-45c2-a494-e27568f0f0f6.png
+King & Balloon (Korea)	r2_6220f9f6-b884-4bd5-ab5d-a81ac47425af.png
+King's Quest: Quest for the Crown (USA)	55ffa561-5cbc-4da9-877d-42935a7709ba.png
+Krusty's Fun House (Europe)	6b2e7114-d56e-4be0-8727-30b90186110e.png
+Kung Fu Kid (USA)	417430e2-68cb-4e92-8f2f-626bf2a32a8c.png
+Land of Illusion Starring Mickey Mouse (Europe)	d7a59d82-79bb-4829-b37d-ba6ef8955f6a.png
+Lander 2 (World)	78c3e724-0b10-4da6-aff9-67b63227e3a3.png
+Laser Ghost (Europe)	699678ca-ef66-400f-884a-5e0e4d965696.png
+Legend of Illusion Starring Mickey Mouse (Brazil)	4b251b98-fa50-478a-aa9a-89658d90bcfd.png
+Lemmings (Europe)	fe7e22d8-2e8c-4270-b239-a03eb6de9bdd.png
+Les Schtroumpfs Autour du Monde (France)	ff2e8322-8cf3-40c8-9062-39c0897f1e46.png
+Line of Fire (Europe)	1bd9abff-5dfb-45d8-a1b0-3bb534b3bb7a.png
+Lord of the Sword (USA)	01bcd713-d717-4fb1-bdb9-82a8bccd3ace.png
+Los Pitufos (Europe)	07e7ae1a-9154-4bcd-9801-d6e126182061.png
+Los Pitufos: Travel The World (France)	ff2e8322-8cf3-40c8-9062-39c0897f1e46.png
+Marble Madness (Europe)	12becccb-7b44-4381-aca3-680a33f96e4e.png
+Marksman Shooting & Trap Shooting (USA)	6d82c554-0fbe-41c6-83f3-606522826554.png
+Master of Darkness (Europe)	682d4484-f04c-4bcf-bf72-68ba348d70de.png
+Masters of Combat (Europe)	43d909c5-99ef-48b6-a7b9-46c59f843777.png
+Maze Hunter 3-D (USA)	36e44064-48bb-44dd-98bc-4cc8e0518b9f.png
+Mercs (Europe)	79366203-13c9-40de-8824-e69293f50909.png
+Michael Jackson's Moonwalker (USA)	82bc7e9e-18e3-4429-9a87-52f544ac7b34.png
+Mick & Mack as the Global Gladiators (Europe)	c7af960d-3d16-4739-bd9d-7cf1edb12380.png
+Mickey Mouse: Castle of Illusion (USA)	6e992307-3319-4fdb-be07-101fa65fe671.png
+Mickey Mouse: Land of Illusion (Europe)	d7a59d82-79bb-4829-b37d-ba6ef8955f6a.png
+Mickey's Ultimate Challenge (Brazil)	475a7942-4312-43e1-b3a9-cd67d2ff369a.png
+Micro Machines (Europe)	583c72bc-e842-4cfc-bf3b-d89d7c2b1e44.png
+Minigolf (Europe)	d8ac9f91-6dfa-4b1e-a734-8e53b4412eab.png
+Miracle Warriors: Seal of the Dark Lord (USA)	ae0e3ff9-b96b-4943-9e61-786a029330b5.png
+Missile Defense 3-D (USA)	b69d0e07-78ba-4d43-b701-afbbea0b02ab.png
+Monica no Castelo do Dragao (USA)	b1762dda-bf89-4fa8-b813-a017a608b1cf.png
+Monopoly (USA)	8052efa7-28d4-4ca1-a24b-131af13999db.png
+Montezuma's Revenge Featuring Panama Joe (USA)	968b2cc9-56f6-49d0-826d-ab921a642df1.png
+Moonwalker (USA)	82bc7e9e-18e3-4429-9a87-52f544ac7b34.png
+Mortal Kombat (Europe)	92849531-33f2-4590-bde9-562dbada353d.png
+Mortal Kombat 3 (Brazil)	2d9ea66c-3f2c-456f-b257-fdb19fd22139.png
+Mortal Kombat II (Europe)	9160b4e9-d4d4-4df9-b260-d983a55b6812.png
+Ms. Pac-Man (Europe)	43fab9a5-00f4-461c-91d0-55208e9d4557.png
+My Hero (Europe)	5ad73863-6779-40a2-9bee-50d29e24d6df.png
+My Hero (USA)	7909c347-81fc-48b8-8d15-24a1071de4a2.png
+Mônica no Castelo do Dragão (USA)	b1762dda-bf89-4fa8-b813-a017a608b1cf.png
+Ninja Gaiden (Europe)	96c4b0f9-8260-4ab1-8a75-ce824973498c.png
+Northen Ken (USA)	49f91ad5-ce44-4281-8e54-6be16a6cecd5.png
+Nuclear Creature (Europe)	b1e2111c-e998-4885-978b-4ad96a554b46.png
+Nuclear Creature (USA)	9db56f62-ce93-445c-b5af-f22612398379.png
+Olympic Gold (Europe)	9e641f0e-ac23-42ea-9b91-128a89257629.png
+Olympic Gold: Barcelona '92 (Europe)	9e641f0e-ac23-42ea-9b91-128a89257629.png
+Operation Wolf (Europe)	360bbd43-ab10-43bd-a82b-65e2b9117f0a.png
+Out Run (Brazil)	r2_f41d16da-a6d6-4f2f-bfe0-df7ef9a967c8.png
+Out Run (Europe)	b5e23fec-0c5a-4a5d-adb1-f2c244dd01a4.png
+Out Run (USA)	5cc3fb8b-e3b5-4e5c-a554-c900b1e39e12.png
+OutRun (Brazil)	r2_f41d16da-a6d6-4f2f-bfe0-df7ef9a967c8.png
+OutRun (Europe)	b5e23fec-0c5a-4a5d-adb1-f2c244dd01a4.png
+OutRun (USA)	5cc3fb8b-e3b5-4e5c-a554-c900b1e39e12.png
+OutRun 3-D (Europe)	63a12090-6ca5-4261-ab65-a705b5073efa.png
+OutRun 3D (Europe)	63a12090-6ca5-4261-ab65-a705b5073efa.png
+OutRun Europa (Europe)	fb0cbc8c-e8ec-4df7-aa73-82605b53156d.png
+PGA Tour Golf (Europe)	72aa32fe-19bd-4cba-96bf-e0850d818c5f.png
+Pac-Mania (Europe)	13869c5c-9820-46ca-bce2-0a94d46cc083.png
+Paperboy (USA)	829d6b35-7fff-4c96-9b46-06dbab0d4f98.png
+Parlour Games (USA)	cab45e10-bae6-424a-a038-fc21767f9692.png
+Penguin Land (USA)	06401229-427d-4907-bb53-6de2aa9d5330.png
+Phantasy Star (Brazil)	259488cc-d2ca-4862-9fa8-acc317673090.png
+Phantasy Star (Brazil)	dd5a8b37-23be-4e56-b377-37a607e1f7ef.png
+Phantasy Star (World)	fb174765-1e76-4629-b479-f571a4f882e4.png
+Pit Fighter (Europe)	0ff37ca0-ade9-4829-87c8-f32a133c936e.png
+Pit-Fighter (Europe)	0ff37ca0-ade9-4829-87c8-f32a133c936e.png
+Populous (Europe)	45fbffb4-8fe3-4632-b499-60d98fc4a18d.png
+Poseidon Wars 3-D (World)	c83d2795-c5d9-44b4-8f18-902bda1a5c41.png
+Power Strike (USA)	1fceb166-a956-4ba5-95cc-7db414f39b8d.png
+Power Strike II (Europe)	7932afde-f84c-49b2-b591-c6112761e102.png
+Predator 2 (Europe)	8bc29d12-97c8-465b-be55-8c6800b1cc2f.png
+Prince of Persia (Europe)	f41eb10e-9c62-4dea-901d-f1fd13d60164.png
+Prince of Persia (Europe)	fcef0541-76c2-47ec-a5ae-d72bed264232.png
+Pro Wrestling (USA)	748ba0db-396c-4507-b7f5-8aa680381e67.png
+Psychic World (Europe)	18286ce8-a675-467e-88d4-b272bb192f0b.png
+Psycho Fox (USA)	ccb080f7-5488-42fa-8077-44e0f0b7039d.png
+Psyco Fox (USA)	ccb080f7-5488-42fa-8077-44e0f0b7039d.png
+Putt & Putter (Europe)	d8ac9f91-6dfa-4b1e-a734-8e53b4412eab.png
+Putt & Putter: Minigolf (Europe)	d8ac9f91-6dfa-4b1e-a734-8e53b4412eab.png
+Quartet (USA)	83566f2c-78ac-4d3a-9360-fa60323b34e2.png
+Quest for the Shaven Yak Starring Ren Hoek & Stimpy (Brazil)	c69f51f3-454e-4b64-b37d-3f19ff40de4a.png
+Quest for the Shaven Yak Starring Ren Hoëk & Stimpy (Brazil)	c69f51f3-454e-4b64-b37d-3f19ff40de4a.png
+R-Type (USA)	5e366ae0-c857-4072-b3bb-77c2e220b00b.png
+R.C. Grand Prix (Europe)	568cb937-9334-41b9-bb1f-489544f1cbf3.png
+R.C. Grand Prix (USA)	3c2e15b4-6a58-42a8-a7b4-07b78c611015.png
+Rainbow Islands (Europe)	17659deb-273a-4719-b04a-2ebbdcda1cb6.png
+Rainbow Islands: Story of the Bubble Bobble 2 (Europe)	17659deb-273a-4719-b04a-2ebbdcda1cb6.png
+Rambo III (USA)	69a76adb-9a69-498a-b1be-2fad1a09fa18.png
+Rambo: First Blood Part II (USA)	a399a6c4-9188-478a-b384-7a63377b90bf.png
+Rampage (USA)	fbe262cf-c9c8-4259-8e8f-54c492800780.png
+Rampart (Europe)	6b52993e-959e-49ac-b4e8-fa52f93dba1c.png
+Rastan (World)	295b336c-3fb8-4b02-a29d-204f5bf50f66.png
+Reggie Jackson Baseball (USA)	2d5d121d-bf26-4479-ba97-4e9c285d6b2f.png
+Reggie Jackson Baseball (USA)	6decd4ff-f9c4-4d4b-b16a-17635564dbc4.png
+Renegade (Europe)	ef2adb0e-1cb1-4836-bc69-8f8aaee640ff.png
+Rescue Mission (World)	94df87ae-6548-4925-8d0f-4a8fc0d053f6.png
+Road Rash (Europe)	3f5c3745-20bb-4c74-8b4f-d61ac502baf9.png
+Road Rash (Europe)	9f07b062-0d99-4ce8-97ae-636e85a5aef6.png
+RoboCop 3 (Europe)	30d1ee09-4c1f-47bd-881b-ab966f478c4b.png
+RoboCop Versus The Terminator (Europe)	62eecd9b-2448-4e85-a5cf-04d01fa0b54a.png
+Robocop vs. Terminator (Europe)	62eecd9b-2448-4e85-a5cf-04d01fa0b54a.png
+Rocky (Brazil)	r2_e9a305f6-2402-47bc-9cb9-d3b0236037c7.png
+Rocky (USA)	386c48ce-d139-4ecd-9790-62ac2f492aad.png
+Running Battle (Europe)	a075d757-ad2b-4411-81e7-46b6a8fce681.png
+Sagaia (Europe)	10dd1f87-2091-4310-bfee-2f070418460e.png
+Sapo Xule vs. Os Invasores do Brejo	ec8fc740-0f79-43ea-93c2-c58a1118c41f.png
+Sapo Xule vs. The Swamp Invaders	ec8fc740-0f79-43ea-93c2-c58a1118c41f.png
+Sapo Xule: O Mestre do Kung Fu	06064b98-1912-4091-afea-dc79f433bba5.png
+Sapo Xule: S.O.S. Lagoa Poluida (Brazil)	r2_5c8685b7-13d2-4eb0-8c6f-1da9dd3cf4e9.png
+Sapo Xule: SOS Polluted Lagoon (Brazil)	r2_5c8685b7-13d2-4eb0-8c6f-1da9dd3cf4e9.png
+Sapo Xule: The Master of Kung Fu	06064b98-1912-4091-afea-dc79f433bba5.png
+Sapo Xulé vs Os Invasores do Brejo	ec8fc740-0f79-43ea-93c2-c58a1118c41f.png
+Sapo Xulé: O Mestre do Kung Fu	06064b98-1912-4091-afea-dc79f433bba5.png
+Sapo Xulé: S.O.S. Lagoa Poluída (Brazil)	r2_5c8685b7-13d2-4eb0-8c6f-1da9dd3cf4e9.png
+Schtroumpfs Autour du Monde, Les (France)	ff2e8322-8cf3-40c8-9062-39c0897f1e46.png
+Scramble Spirits (Europe)	f083d7be-8a66-49f5-81b6-99bb7e3fe4da.png
+Secret Command (USA)	a399a6c4-9188-478a-b384-7a63377b90bf.png
+Secret Commando (USA)	a399a6c4-9188-478a-b384-7a63377b90bf.png
+Sega Chess (Europe)	bcfa27f8-22f2-4298-9c06-1c6db677ed37.png
+Sega World Tournament Golf (Europe)	55b3ec57-1acc-44f7-b1eb-d6120cd10c58.png
+Sensible Soccer (Europe)	e22c8228-5da9-4461-957f-ad12de83640a.png
+Sensible Soccer: European Champions (Europe)	e22c8228-5da9-4461-957f-ad12de83640a.png
+Shadow Dancer: The Secret Of Shinobi ~ Shadow Dancer (Europe)	bd190480-6e67-4236-95f8-24fdbe5f845e.png
+Shadow Dancer: The Secret of Shinobi (Europe)	bd190480-6e67-4236-95f8-24fdbe5f845e.png
+Shadow Dancer: The Secret of Shinobi: Shadow Dancer (Europe)	bd190480-6e67-4236-95f8-24fdbe5f845e.png
+Shadow of the Beast (Europe)	07ea51f3-3493-4db3-873c-c5fc4f9c5dad.png
+Shanghai (World)	26155d8c-2d77-47af-9541-699a22b5d9c7.png
+Shangwei Mingling (USA)	a399a6c4-9188-478a-b384-7a63377b90bf.png
+Shinobi (USA)	9fe4b9cd-1699-45c5-a571-4f00b479b2b9.png
+Shooting G (USA)	83456c17-168d-43a4-b9f7-94187a78cce8.png
+Shooting G. (USA)	83456c17-168d-43a4-b9f7-94187a78cce8.png
+Shooting Gallery (USA)	83456c17-168d-43a4-b9f7-94187a78cce8.png
+Sitio do Picapau Amarelo (Brazil)	5d7cddc6-0970-44ab-a644-89b248968392.png
+Slap Shoot (USA)	cb1057cf-b53e-43ef-a88a-cb03f44b4399.png
+Slap Shot (USA)	cb1057cf-b53e-43ef-a88a-cb03f44b4399.png
+Smash TV (Europe)	08b25937-973e-4be4-a2e5-ff030173c9b0.png
+Smurfs 2 (France)	ff2e8322-8cf3-40c8-9062-39c0897f1e46.png
+Sonic 1: Triple Trouble (Brazil)	r2_02191249-30d1-4cd4-85f7-0619f666b00d.png
+Sonic 2 (Europe)	dc760138-67c7-442f-8238-e38a37e26712.png
+Sonic Blast (Brazil)	fd022039-65dd-4c5f-a139-08b8ebc46adb.png
+Sonic Chaos (Europe)	e3e7ab68-70f1-4fad-9879-c8d4da18c7b0.png
+Sonic Spinball (Europe)	c589cea2-d461-497f-86a0-c463735cfafd.png
+Sonic Triple Trouble (Brazil)	r2_02191249-30d1-4cd4-85f7-0619f666b00d.png
+Sonic the Hedgehog (Europe)	a9d8c552-bff4-4da6-a98b-16bad0dae34d.png
+Sonic the Hedgehog 2 (Europe)	dc760138-67c7-442f-8238-e38a37e26712.png
+Sonic the Hedgehog Chaos (Europe)	e3e7ab68-70f1-4fad-9879-c8d4da18c7b0.png
+Sonic the Hedgehog Spinball (Europe)	c589cea2-d461-497f-86a0-c463735cfafd.png
+Sonic the Hedgehog: Triple Trouble (Brazil)	r2_02191249-30d1-4cd4-85f7-0619f666b00d.png
+Space Gun (Europe)	7fa28217-73ba-4d93-929b-6f2a89054111.png
+Space Harrier (USA)	e08eb007-f12e-4353-9964-8cf7a8dfae76.png
+Space Harrier 3-D (USA)	10fa208a-4934-4c5b-b71d-23089c924956.png
+Space Harrier 3D (USA)	10fa208a-4934-4c5b-b71d-23089c924956.png
+Special Criminal Investigation (Europe)	f03e877b-3b20-4768-a589-061e84a0d47f.png
+Speedball (Europe)	2f491943-bd4c-453f-8d44-c1ce838db555.png
+Speedball 2 (Europe)	9aca1abf-6962-4d4f-8d09-ebe28f51463f.png
+SpellCaster (USA)	c856729e-eba5-4d06-b348-83bb2254db19.png
+Spider-Man (Europe)	ee21faa7-8f2d-4870-8cd7-7bda1c5a1fc8.png
+Spider-Man vs. The Kingpin (Europe)	ee21faa7-8f2d-4870-8cd7-7bda1c5a1fc8.png
+Spider-Man: Return of the Sinister Six (Europe)	dfe795bc-4781-499a-880c-dfb440499b31.png
+Spiderman: Return of the Sinister Six (Europe)	dfe795bc-4781-499a-880c-dfb440499b31.png
+Sports Pad Football (USA)	5781ec28-788f-48c0-bf03-42d84a8daa97.png
+Spy vs Spy (USA)	5e01e98f-9b07-44e2-8bfb-24aec21aadfa.png
+Star Wars (Europe)	ff87f9ac-4713-4532-8242-a31b3396d300.png
+Street Fighter II' (Brazil)	5d080f79-bbaa-4a4a-959e-099ef01dc4b6.png
+Streets of Rage (Europe)	cb8d4f63-93c6-43db-b975-7e99dfd49172.png
+Streets of Rage II (Europe)	77a7860d-46d2-4b34-98a6-d0b160f67d6a.png
+Strider (Europe)	8845681d-395f-4688-876a-5d12bcf105dd.png
+Strider II (Europe)	c278ff21-e5de-4d51-82f2-954d0729a2bd.png
+Submarine Attack (Europe)	3b9cdafd-6012-499e-a35d-fbe0efa7461d.png
+Summer Games (Europe)	91048946-3fe4-44a5-9df4-f1ebf3ed9ea4.png
+Summer Games: Jogos Olimpicos (Europe)	91048946-3fe4-44a5-9df4-f1ebf3ed9ea4.png
+Super Cross (Brazil)	r2_f2d24837-0751-433e-a1fd-9493db35fcb2.png
+Super Cross (Europe)	r2_783cb12a-3b51-47a8-8aab-ac9ff9f66f7b.png
+Super Cross (USA)	r2_dfc16e9d-c80b-45c3-8038-17fd58b66353.png
+Super Futebol (Europe)	ccb4c3eb-5291-42bc-92d7-f3d0cd0c6fc2.png
+Super Futebol II (Europe)	83434485-0423-43f5-bf93-b5a368dc22fb.png
+Super Golf (Europe)	224d6a2e-007d-4d97-ab94-f0d8eb6e355e.png
+Super Kick Off (Europe)	3aebccb1-3e94-433a-9a97-038a05e49bf0.png
+Super Monaco GP (USA)	1ffc6b63-5183-48d8-b2ad-e255c0299597.png
+Super Off Road (Europe)	52adaba5-a6c6-4138-93d6-89f001683ac3.png
+Super River Raid (USA)	8fb8e06b-029f-4d12-9a1a-ae68f61a94b5.png
+Super Smash T.V. (Europe)	08b25937-973e-4be4-a2e5-ff030173c9b0.png
+Super Space Invaders (Europe)	c20492f5-5259-4f6f-8844-4918ff5938b3.png
+Super Tennis (Europe)	7f308aac-8503-495f-8e3e-5d6156ffd452.png
+Super Tennis (Europe)	acc1ec20-bd91-4d5b-8f45-a0be8fcc4938.png
+Super Tennis (USA)	fdf256ad-2547-4876-8696-4b2b9c2ad01e.png
+Superman: The Man of Steel (Europe)	e81ce2f4-b889-4323-876b-51ab532b93cb.png
+Suwang-gi (Brazil)	r2_ecb907a9-9010-413d-a2fa-216a9e74d8d0.png
+Suwang-gi (Brazil)	r2_f43f563e-e15e-430e-8252-a73580502bad.png
+Suwang-gi (World)	a0c88817-de0b-4ac9-8fd8-df1070f05143.png
+Sítio do Picapau Amarelo (Brazil)	5d7cddc6-0970-44ab-a644-89b248968392.png
+T2: The Arcade Game (Europe)	8fc98459-8313-4d45-ba1e-e11deb58b272.png
+T2: The Arcade Game (Europe)	c8fbc0bc-0fc7-427a-88bc-f2bae9800abb.png
+Taito Chase H.Q. (Europe)	414216c5-bace-48b2-aae3-0d1ba986db5c.png
+Taz in Escape from Mars (Brazil)	2fc3d134-8199-4f4e-bd8c-aaab731b8ad8.png
+Taz-Mania (Europe)	39ba5ce2-d811-4361-b1da-4b2154fa217d.png
+Tecmo World Cup '93 (Europe)	be2baf7f-4b0b-4738-8ec4-85827db9053c.png
+Teddy Boy (USA)	e4fce25c-9184-49bc-ba3f-1718fe99685e.png
+Tennis Ace (Europe)	7f308aac-8503-495f-8e3e-5d6156ffd452.png
+Tennis Ace ~ Super Tennis (Europe)	7f308aac-8503-495f-8e3e-5d6156ffd452.png
+Tennis Ace: Super Tennis (Europe)	7f308aac-8503-495f-8e3e-5d6156ffd452.png
+Terminator 2: Judgment Day (Europe)	8fc98459-8313-4d45-ba1e-e11deb58b272.png
+The Addams Family (Europe)	5dacdb8b-f093-4d7d-8299-e2f49c87fc4e.png
+The Adventures of TV Colosso	b58f08dd-8900-4ecf-b2be-0fc6ac3eda3b.png
+The Cyber Shinobi (Europe)	01ca9428-22e7-4be6-86ec-d3f796c7ae7a.png
+The Flash (Europe)	13d06d9e-0b3b-4faa-9715-0c346278e6a9.png
+The Flintstones (Europe)	47e31b04-e2f0-404e-917b-46ab8dffb99d.png
+The Incredible Crash Dummies (Europe)	59c2b4e1-fa52-4fd7-be1c-c000e7192717.png
+The Incredible Hulk (Europe)	6afaa7fc-7962-42b8-9696-c7f38d739f49.png
+The Jungle Book (Europe)	196c555c-384c-49c8-ac19-4d66697c618c.png
+The Lion King (Europe)	49b78788-7bc4-44d5-86f3-8f3141007acd.png
+The Lucky Dime Caper Estralando Pato Donald (Europe)	d07da539-242d-4b9e-8810-d2484fe98c15.png
+The Lucky Dime Caper starring Donald Duck (Europe)	d07da539-242d-4b9e-8810-d2484fe98c15.png
+The New Zealand Story (Europe)	ad4b1694-8d08-4eed-8c61-634756439d8f.png
+The Newzealand Story (Europe)	ad4b1694-8d08-4eed-8c61-634756439d8f.png
+The Ninja (USA)	56f092d9-c714-4695-a281-51bfacd4deb5.png
+The Ottifants (Europe)	c8d3a370-2470-49c2-a63b-21d3ef5ba6b4.png
+The Red Grasshopper vs. Dracula: A Scary Duel	b182f0e9-e03d-464a-85db-3d63d6570b5c.png
+The Simpsons: Bart vs. the Space Mutants (Europe)	73cb0378-6904-44ab-b06f-d9247671a4e2.png
+The Simpsons: Bart vs. the World (Europe)	0ece1df8-656a-4beb-b35c-5f84e8d7a102.png
+The Smurfs (Europe)	07e7ae1a-9154-4bcd-9801-d6e126182061.png
+The Smurfs Travel the World (France)	ff2e8322-8cf3-40c8-9062-39c0897f1e46.png
+The Terminator (Europe)	906085e3-37a5-460b-8ee3-9ebf8d36451a.png
+Thunder Blade (World)	cfce75a4-92e3-43c8-a276-ca49d871d656.png
+Time Soldiers (World)	19c46442-8007-42ed-b5ec-84f6d676d070.png
+Tom and Jerry: The Movie (Europe)	876be764-4f76-4153-b42e-29150dd08e21.png
+TransBot (Europe)	b1e2111c-e998-4885-978b-4ad96a554b46.png
+TransBot (USA)	9db56f62-ce93-445c-b5af-f22612398379.png
+Trivial Pursuit: Genus Edition (Europe)	60f3e078-bb3d-468c-8bc5-04f6a21d2e9c.png
+Ttoriui Moheom (Europe)	5ad73863-6779-40a2-9bee-50d29e24d6df.png
+Ttoriui Moheom (USA)	7909c347-81fc-48b8-8d15-24a1071de4a2.png
+Turma da Monica em O Resgate (Brazil)	5f67f812-cab9-455d-8c5f-facf427d8f12.png
+Turma da Monica em O Resgate (USA)	d184c210-7b78-4004-b92b-9a1da6ff2b1d.png
+Turma da Mônica em: O Resgate (Brazil)	5f67f812-cab9-455d-8c5f-facf427d8f12.png
+Turma da Mônica em: O Resgate (USA)	d184c210-7b78-4004-b92b-9a1da6ff2b1d.png
+Ultima IV: Quest of the Avatar (Europe)	cb0fb664-bdfd-4bb3-9768-b940376a886e.png
+Ultimate Soccer (Europe)	1caa4c14-9d47-4c31-8d64-dcb63c2d100d.png
+Vampire: Master of Darkness (Europe)	682d4484-f04c-4bcf-bf72-68ba348d70de.png
+Vigilante (USA)	6900b7a2-c690-4ef2-8baf-0bd823e15bbe.png
+Virtua Fighter Animation (Brazil)	20b540d6-284d-4fb9-83ad-2b3051f24e78.png
+Voyage: A Sorceress' Vacation (World)	a083678c-1134-43d3-9113-ce85910cbf0b.png
+WWF WrestleMania: Steel Cage Challenge (Europe)	39257971-9a25-43f2-bc26-7034990cd969.png
+Walt Disney's The Jungle Book (Europe)	196c555c-384c-49c8-ac19-4d66697c618c.png
+Walter Payton Football (USA)	fffbfda8-5ac0-4169-b726-6f32f86f4a39.png
+Wang-gwa Pungseon (Korea)	r2_6220f9f6-b884-4bd5-ab5d-a81ac47425af.png
+Wanted (World)	3d535f3d-4c85-4cdd-bbf0-7947b4cbf470.png
+Where in the World Is Carmen Sandiego? (USA)	9496f624-903e-4a3d-9309-d10e8d4e92f6.png
+Wimbledon (Europe)	93d89b48-cf34-4a6b-a96d-d326acb47e8f.png
+Wimbledon (Tec Toy) (Europe)	ac06d265-ef0a-4c5e-92d1-76db5deb9f35.png
+Wimbledon II (Europe)	ac06d265-ef0a-4c5e-92d1-76db5deb9f35.png
+Wimbledon II ~ Wimbledon (Europe)	ac06d265-ef0a-4c5e-92d1-76db5deb9f35.png
+Wimbledon II: Wimbledon (Europe)	ac06d265-ef0a-4c5e-92d1-76db5deb9f35.png
+Winter Olympics '94 (Europe)	21fe1eb3-6c60-45d6-bc2c-290026b1c389.png
+Winter Olympics (Europe)	21fe1eb3-6c60-45d6-bc2c-290026b1c389.png
+Winter Olympics: Lillehammer '94 (Europe)	21fe1eb3-6c60-45d6-bc2c-290026b1c389.png
+Wolfchild (Europe)	dbae7034-518f-4e59-9f4c-67753f0a375d.png
+Wonder Boy (USA)	f3dd7619-604d-48cf-bc9c-526548ea6ec4.png
+Wonder Boy 5: Wonder Boy in Monster World (Europe)	495ef2e8-0b98-4622-8051-fb11b4a0890e.png
+Wonder Boy III: The Dragon's Trap (Brazil)	5f67f812-cab9-455d-8c5f-facf427d8f12.png
+Wonder Boy III: The Dragon's Trap (USA)	d184c210-7b78-4004-b92b-9a1da6ff2b1d.png
+Wonder Boy in Monster Land (USA)	b1762dda-bf89-4fa8-b813-a017a608b1cf.png
+Wonder Boy in Monster World (Europe)	495ef2e8-0b98-4622-8051-fb11b4a0890e.png
+World Class Leader Board (Europe)	1df8063a-7fea-49c0-856f-8775a9fbf237.png
+World Class Leaderboard (Europe)	1df8063a-7fea-49c0-856f-8775a9fbf237.png
+World Cup '93 by Tecmo (Europe)	be2baf7f-4b0b-4738-8ec4-85827db9053c.png
+World Cup '94 (Europe)	e65c9077-9a4b-4b30-afd0-325c05e2bb52.png
+World Cup Italia '90 (Europe)	83434485-0423-43f5-bf93-b5a368dc22fb.png
+World Cup Italia '90 ~ Super Futebol II (Europe)	83434485-0423-43f5-bf93-b5a368dc22fb.png
+World Cup Italia '90: Super Futebol II (Europe)	83434485-0423-43f5-bf93-b5a368dc22fb.png
+World Cup USA '94 (Europe)	e65c9077-9a4b-4b30-afd0-325c05e2bb52.png
+World Games (Europe)	757b2d4d-0cdf-462e-913b-871672b74034.png
+World Grand Prix (USA)	ca368cff-0a51-432f-b50f-462af8ed50a8.png
+World Soccer (Europe)	ccb4c3eb-5291-42bc-92d7-f3d0cd0c6fc2.png
+X-Men: Mojo World (Brazil)	efa4af91-6bc9-4b3a-93d7-4ecfc34d9cba.png
+Xenon 2: Megablast (Europe)	9ff29aa8-82f5-41dd-bcb0-869052714659.png
+Y's (USA)	92b2219b-4eb6-4404-984a-602b7ac7a5d6.png
+Ys: The Vanished Omens (USA)	92b2219b-4eb6-4404-984a-602b7ac7a5d6.png
+Yuyryeong-ui Jip (Europe)	0c379be1-fb1f-4590-81dd-eec3ce9d26da.png
+Yuyryeong-ui Jip (USA)	f5d9ab6a-024a-4129-872f-d4b79b4a3452.png
+Zaxxon 3-D (USA)	4bd8eba4-a693-4f19-ab04-7947bf940846.png
+Zillion (USA)	326ca5ba-c11a-4c49-91aa-1bd7c418e19e.png
+Zillion II (USA)	fe4fb230-f93c-495c-bb60-9e150638d479.png
+Zillion II: The Tri Formation (USA)	fe4fb230-f93c-495c-bb60-9e150638d479.png
+수왕기 (Brazil)	r2_ecb907a9-9010-413d-a2fa-216a9e74d8d0.png
+수왕기 (Brazil)	r2_f43f563e-e15e-430e-8252-a73580502bad.png
+수왕기 (World)	a0c88817-de0b-4ac9-8fd8-df1070f05143.png
+스페이스 해리어 (USA)	e08eb007-f12e-4353-9964-8cf7a8dfae76.png
+아웃런 (Brazil)	r2_f41d16da-a6d6-4f2f-bfe0-df7ef9a967c8.png
+아웃런 (Europe)	b5e23fec-0c5a-4a5d-adb1-f2c244dd01a4.png
+아웃런 (USA)	5cc3fb8b-e3b5-4e5c-a554-c900b1e39e12.png
+Alex Kidd 2 (World)	ceb931c9-a00e-404f-9db4-ba74e2d77d69.png
+Alex Kidd in Miracle World 2 (World)	ceb931c9-a00e-404f-9db4-ba74e2d77d69.png
+Assault City (USA)	r2_daec77f1-7ddd-4abd-87fc-433b6c1e35a3.png
+Assault City: Light Phaser Edition (USA)	r2_daec77f1-7ddd-4abd-87fc-433b6c1e35a3.png
+Assault City: Pad Version (USA)	r2_daec77f1-7ddd-4abd-87fc-433b6c1e35a3.png
+Comical Machine Gun Joe	8a0d51a2-50f2-451d-85fd-724051e2a964.png
+Dinobasher: Starring Bignose the Caveman (Europe)	07053aae-6743-4918-9d10-367374c18483.png
+Galaxy Force (USA)	r2_11b3cc5e-07a2-48e6-9bac-1e962204e9dd.png
+Gun.Smoke (Korea)	cae30760-82e3-4226-b14f-39de797fbc49.png
+Hook (Europe)	42d1caf5-1ac9-491b-b2b8-518aaeeecf06.png
+Lemmings 2: The Tribes	02a865f3-b9bc-4482-85f8-da0558062e95.png
+NBA Jam (USA)	67550672-ef4a-4215-ac29-ddd8b9efa123.png
+Pat Riley Basketball (USA)	52ffb63a-2019-4cfe-9c53-f5b0aa516684.png
+Snail Maze (World)	6fca76d9-0c88-4b18-871a-ff03b307ec33.png
+Sonic Edusoft (USA)	f865edae-a174-4e22-8e1b-44d26c605151.png
+Sonic's Edusoft (USA)	f865edae-a174-4e22-8e1b-44d26c605151.png
+Super  Basketball (USA)	52ffb63a-2019-4cfe-9c53-f5b0aa516684.png
+Super Mario Bros. (USA)	e5d73dc1-06da-4d99-95ce-3a05dd020589.png
+Super Real Basketball (USA)	52ffb63a-2019-4cfe-9c53-f5b0aa516684.png
