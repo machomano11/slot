@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 use crate::board::{board_in, Placed};
 use crate::cart::{
-    cart_box, gb_shell_of, label_colour, label_rect, label_text, nes_famicom_of, shows_interior,
+    cart_box_of, gb_shell_of, label_colour, label_rect, label_text, nes_famicom_of, shows_interior,
     snes_shell_of, CART_H, CART_W,
 };
 use crate::hud::Millis;
@@ -54,7 +54,7 @@ enum Backing {
 }
 
 fn backing(cart: &Cart) -> Backing {
-    if let Some(plain) = crate::cart::plain_cart_for(cart.platform) {
+    if let Some(plain) = crate::cart::plain_cart_of(cart) {
         return Backing::Plain(plain);
     }
     match cart.platform {
@@ -447,9 +447,9 @@ impl Shelf {
     }
 
     fn slot_width(&self, slot: i32) -> (f32, bool) {
-        match self.cart_at_offset(slot).map(|i| self.carts[i].platform) {
-            Some(Platform::Gba) | None => (CART_W as f32, true),
-            Some(p) => (cart_box(p).0 as f32, false),
+        match self.cart_at_offset(slot).map(|i| &self.carts[i]) {
+            Some(c) if c.platform != Platform::Gba => (cart_box_of(c).0 as f32, false),
+            _ => (CART_W as f32, true),
         }
     }
 
@@ -517,7 +517,7 @@ impl Shelf {
             let t = offset.abs().min(1.0);
             let scale = shrink(offset);
             let alpha = (1.0 + (SIDE_ALPHA - 1.0) * t) * (1.0 - recede);
-            let (cw, ch) = cart_box(cart.platform);
+            let (cw, ch) = cart_box_of(cart);
             let (w, h) = (cw as f32 * scale, ch as f32 * scale);
             let away = offset.signum() * (1.0 + offset.abs());
             let x = self.centre(canvas, slot) - w / 2.0 + away * PART * recede;

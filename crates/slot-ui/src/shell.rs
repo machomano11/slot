@@ -63,8 +63,10 @@ pub const SNES_SHELL: Shell = shell([0x95, 0x94, 0x9a], Finish::Solid);
 /// The PAL and Super Famicom cart's lighter, warmer grey.
 /// Sega's black: the Game Gear and Master System carts.
 pub const SEGA_SHELL: Shell = shell([0x2b, 0x2b, 0x2e], Finish::Solid);
-/// SNK's carts, mono and colour alike, were a dark slate grey.
+/// SNK's Neo Geo Pocket Color carts were a dark slate grey.
 pub const NGP_SHELL: Shell = shell([0x3b, 0x3d, 0x44], Finish::Solid);
+/// The mono Neo Geo Pocket's were black.
+const NGP_MONO_SHELL: Shell = shell([0x1f, 0x1f, 0x22], Finish::Solid);
 /// Bandai's WonderSwan carts were a near-black grey.
 pub const WS_SHELL: Shell = shell([0x26, 0x27, 0x2b], Finish::Solid);
 /// A PlayStation disc: black on its underside, which shows at its edge.
@@ -122,7 +124,8 @@ pub fn shell_for(cart: &Cart) -> Shell {
         Platform::Nes => NES_SHELL,
         Platform::Gg | Platform::Sms | Platform::Md | Platform::S32x => SEGA_SHELL,
         Platform::Scd => SEGA_CD_DISC,
-        Platform::Ngp | Platform::Ngpc => NGP_SHELL,
+        Platform::Ngp => NGP_MONO_SHELL,
+        Platform::Ngpc => NGP_SHELL,
         Platform::Ws | Platform::Wsc => WS_SHELL,
         Platform::Ps => DISC_SHELL,
         Platform::Snes => match crate::cart::snes_shell_of(cart) {

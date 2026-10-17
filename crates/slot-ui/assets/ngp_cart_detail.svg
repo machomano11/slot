@@ -1,16 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 228">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 215">
   <defs>
+    <!-- Grip grooves across the top, the label's frame, and the foot with its SNK and
+         Neo Geo Pocket plates either side of a pointer. -->
     <g id="grip">
-      <rect x="60" y="10.0" width="120" height="2.4" rx="1.2"/>
-      <rect x="60" y="18.0" width="120" height="2.4" rx="1.2"/>
-      <rect x="60" y="26.0" width="120" height="2.4" rx="1.2"/>
-      <rect x="0" y="214" width="240" height="1.6"/>
+      <rect x="22" y="9" width="196" height="2.2" rx="0.6"/>
+      <rect x="22" y="14" width="196" height="2.2" rx="0.6"/>
+      <rect x="22" y="19" width="196" height="2.2" rx="0.6"/>
+      <rect x="22" y="24" width="196" height="2.2" rx="0.6"/>
+      <rect x="22" y="29" width="196" height="2.2" rx="0.6"/>
+    </g>
+    <g id="lines">
+      <path d="M 1 37 L 239 37"/>
+      <rect x="18" y="43" width="204" height="116" rx="6"/>
+      <path d="M 1 166 L 239 166"/>
+      <rect x="19.5" y="175" width="67" height="32" rx="3"/>
+      <rect x="153.5" y="175" width="69" height="32" rx="3"/>
+      <path d="M 104 176 L 136 176 L 120 196 Z"/>
     </g>
   </defs>
   <g fill="#fff">
     <use href="#grip" x="1.1" y="1.1"/>
   </g>
+  <g fill="none" stroke="#fff" stroke-width="1.3">
+    <use href="#lines" x="1.1" y="1.1"/>
+  </g>
   <g fill="#000">
     <use href="#grip"/>
+  </g>
+  <g fill="none" stroke="#000" stroke-width="1.3">
+    <use href="#lines"/>
   </g>
 </svg>

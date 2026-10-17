@@ -18,6 +18,8 @@ const GG_CART_SVG: &str = include_str!("../assets/gg_cart.svg");
 const GG_DETAIL_SVG: &str = include_str!("../assets/gg_cart_detail.svg");
 const SMS_CART_SVG: &str = include_str!("../assets/sms_cart.svg");
 const SMS_DETAIL_SVG: &str = include_str!("../assets/sms_cart_detail.svg");
+const MARK3_CART_SVG: &str = include_str!("../assets/mark3_cart.svg");
+const MARK3_DETAIL_SVG: &str = include_str!("../assets/mark3_cart_detail.svg");
 const MD_CART_SVG: &str = include_str!("../assets/md_cart.svg");
 const MD_DETAIL_SVG: &str = include_str!("../assets/md_cart_detail.svg");
 const NGP_CART_SVG: &str = include_str!("../assets/ngp_cart.svg");
@@ -29,12 +31,15 @@ const DISC_DETAIL_SVG: &str = include_str!("../assets/disc_detail.svg");
 const S32X_CART_SVG: &str = include_str!("../assets/s32x_cart.svg");
 const S32X_DETAIL_SVG: &str = include_str!("../assets/s32x_cart_detail.svg");
 
-/// A cart of one fixed shape, drawn from its SVG outline and moulding: the consoles whose
-/// carts have no regional or colour variants to choose between.
+/// A cart drawn from its SVG outline and moulding, for the consoles whose carts came in one
+/// colour: one shape, or (the Master System) one for each region.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum PlainCart {
     GameGear,
+    /// The US and European Master System cart, wide and low with a title strip.
     MasterSystem,
+    /// The tall Japanese Mark III / Master System cart, with a picture label.
+    MarkIII,
     MegaDrive,
     NeoGeoPocket,
     WonderSwan,
@@ -44,9 +49,10 @@ pub enum PlainCart {
 }
 
 impl PlainCart {
-    pub const ALL: [PlainCart; 7] = [
+    pub const ALL: [PlainCart; 8] = [
         PlainCart::GameGear,
         PlainCart::MasterSystem,
+        PlainCart::MarkIII,
         PlainCart::MegaDrive,
         PlainCart::NeoGeoPocket,
         PlainCart::WonderSwan,
@@ -58,6 +64,7 @@ impl PlainCart {
         match self {
             PlainCart::GameGear => (GG_CART_SVG, GG_DETAIL_SVG),
             PlainCart::MasterSystem => (SMS_CART_SVG, SMS_DETAIL_SVG),
+            PlainCart::MarkIII => (MARK3_CART_SVG, MARK3_DETAIL_SVG),
             PlainCart::MegaDrive => (MD_CART_SVG, MD_DETAIL_SVG),
             PlainCart::NeoGeoPocket => (NGP_CART_SVG, NGP_DETAIL_SVG),
             PlainCart::WonderSwan => (WS_CART_SVG, WS_DETAIL_SVG),

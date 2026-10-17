@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 312">
+  <defs>
+    <!-- Ridges down both sides beside the label, and the seam above the connector. -->
+    <g id="grip">
+      <rect x="1" y="16" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="16" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="23" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="23" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="30" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="30" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="37" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="37" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="44" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="44" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="51" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="51" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="58" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="58" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="65" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="65" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="72" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="72" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="79" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="79" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="86" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="86" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="93" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="93" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="100" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="100" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="107" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="107" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="114" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="114" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="121" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="121" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="128" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="128" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="135" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="135" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="142" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="142" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="149" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="149" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="156" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="156" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="163" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="163" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="170" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="170" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="177" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="177" width="8" height="1.8" rx="0.6"/>
+      <rect x="1" y="184" width="8" height="1.8" rx="0.6"/>
+      <rect x="231" y="184" width="8" height="1.8" rx="0.6"/>
+      <rect x="0" y="306" width="240" height="1.2"/>
+    </g>
+  </defs>
+  <g fill="#fff">
+    <use href="#grip" x="1.1" y="1.1"/>
+  </g>
+  <g fill="#000">
+    <use href="#grip"/>
+  </g>
+</svg>

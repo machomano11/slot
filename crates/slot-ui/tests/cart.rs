@@ -1038,3 +1038,60 @@ fn a_nes_game_wears_the_label_of_the_cart_it_is_on() {
         Some(std::path::Path::new("fc.png"))
     );
 }
+
+#[test]
+fn a_sega_cart_follows_its_region_unless_the_menu_picks_one() {
+    use slot_store::{Outline, ShellChoice, ShellFinish};
+    use slot_ui::{genesis_label_of, plain_cart_of, PlainCart};
+    let cart = |platform, stem: &str, outline: Option<Outline>| slot_store::Cart {
+        platform,
+        stem: stem.into(),
+        rom: "missing.bin".into(),
+        label: None,
+        code: String::new(),
+        shell: outline.map(|outline| ShellChoice {
+            outline,
+            colour: [0; 3],
+            finish: ShellFinish::Solid,
+        }),
+        title: String::new(),
+        famicom_label: None,
+    };
+    for (stem, genesis) in [
+        ("Sonic (USA)", true),
+        ("Sonic (USA, Korea)", true),
+        ("Sonic (U) [!]", true),
+        ("Sonic (USA, Europe)", false),
+        ("Sonic (World)", false),
+        ("Sonic (Europe)", false),
+        ("Sonic (Japan)", false),
+    ] {
+        assert_eq!(
+            genesis_label_of(&cart(Platform::Md, stem, None)),
+            genesis,
+            "{stem}"
+        );
+    }
+    assert!(genesis_label_of(&cart(
+        Platform::Md,
+        "Sonic (Europe)",
+        Some(Outline::Notched)
+    )));
+    assert!(!genesis_label_of(&cart(
+        Platform::Md,
+        "Sonic (USA)",
+        Some(Outline::Rounded)
+    )));
+
+    let sms = |stem, outline| plain_cart_of(&cart(Platform::Sms, stem, outline));
+    assert_eq!(sms("Sonic (Japan)", None), Some(PlainCart::MarkIII));
+    assert_eq!(sms("Sonic (Europe)", None), Some(PlainCart::MasterSystem));
+    assert_eq!(
+        sms("Sonic (Japan)", Some(Outline::Notched)),
+        Some(PlainCart::MasterSystem)
+    );
+    assert_eq!(
+        sms("Sonic (Europe)", Some(Outline::Rounded)),
+        Some(PlainCart::MarkIII)
+    );
+}

@@ -380,6 +380,10 @@ fn fetch_label(cart: &Cart, src: &mut Sources) -> Result<Outcome, String> {
 /// even when it has a NES one.
 fn needs_label(cart: &Cart) -> bool {
     match cart.platform {
+        // The Western cart's label is the title on Sega's grid, drawn from the file name.
+        Platform::Sms if slot_ui::plain_cart_of(cart) == Some(slot_ui::PlainCart::MasterSystem) => {
+            false
+        }
         Platform::Nes if slot_ui::nes_famicom_of(cart) => cart.famicom_label.is_none(),
         _ => cart.label.is_none(),
     }

@@ -1,17 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 288">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 159">
   <defs>
-    <g id="grip">
-      <rect x="40" y="12.0" width="160" height="2.4" rx="0.6"/>
-      <rect x="40" y="20.0" width="160" height="2.4" rx="0.6"/>
-      <rect x="40" y="28.0" width="160" height="2.4" rx="0.6"/>
-      <rect x="40" y="36.0" width="160" height="2.4" rx="0.6"/>
-      <rect x="0" y="262" width="240" height="1.6"/>
+    <!-- The label runs to the top edge between two rounded grips, over a plain lip. -->
+    <g id="lines">
+      <path d="M 27 0 L 27 140 Q 27 146 33 146 L 207 146 Q 213 146 213 140 L 213 0"/>
+      <path d="M 14 9 L 14 150"/>
+      <path d="M 226 9 L 226 150"/>
     </g>
   </defs>
-  <g fill="#fff">
-    <use href="#grip" x="1.1" y="1.1"/>
+  <g fill="none" stroke="#fff" stroke-width="1.3">
+    <use href="#lines" x="1.1" y="1.1"/>
   </g>
-  <g fill="#000">
-    <use href="#grip"/>
+  <g fill="none" stroke="#000" stroke-width="1.3">
+    <use href="#lines"/>
   </g>
 </svg>

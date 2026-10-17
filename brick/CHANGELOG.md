@@ -1,6 +1,13 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- The carts of the newer consoles are redrawn from photos of the real ones: the 32X, Game Gear,
+  Mega Drive, Neo Geo Pocket (black, and slate for the Color), Master System and WonderSwan
+  (with its bare contacts) carts, and the print area of PlayStation and Sega CD discs.
+- Carts follow the region a game was sold in, as SNES and NES ones already did: US Mega Drive
+  games get the Genesis label and others the Mega Drive one, and Japanese Master System games
+  the tall Mark III cart with a picture label while the rest get the red grid strip with the
+  title. Both can be changed under `START` → Shape.
 - Cart Art covers every console: a game with no label scan or cart picture (all Game Gear,
   Master System, Mega Drive, 32X, Sega CD, Neo Geo Pocket, WonderSwan and PlayStation games, and
   the many NES and SNES games LaunchBox has no cart of) gets its front cover as a label, from

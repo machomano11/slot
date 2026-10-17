@@ -67,6 +67,14 @@ pub const SNES_SHAPES: [&str; 3] = ["Original", "US", "Europe / Japan"];
 /// Their faces follow SNES_SHAPES'.
 pub const NES_SHAPES: [&str; 3] = ["Original", "NES", "Famicom"];
 
+/// Labels a Mega Drive cart can wear: the game's own, the US Genesis one, the European and
+/// Japanese Mega Drive one. Their faces follow NES_SHAPES'.
+pub const MD_SHAPES: [&str; 3] = ["Original", "Genesis", "Mega Drive"];
+
+/// Shapes a Master System cart can take: the game's own, the Western cart, the tall Japanese
+/// one. Their faces follow MD_SHAPES'.
+pub const SMS_SHAPES: [&str; 3] = ["Original", "Master System", "Mark III"];
+
 const fn solid(name: &'static str, colour: [u8; 3]) -> (&'static str, Shell) {
     (
         name,
@@ -108,7 +116,7 @@ pub fn colour_choices() -> Vec<(&'static str, Option<Shell>)> {
 pub struct CartMenuFaces {
     pub labels: Vec<(TexId, u32, u32)>,
     /// [dim, lit] for each colour_choices() name (then "Custom"), FINISHES, and SHAPES then
-    /// SNES_SHAPES then NES_SHAPES.
+    /// SNES_SHAPES then NES_SHAPES then MD_SHAPES then SMS_SHAPES.
     pub colours: Vec<[(TexId, u32, u32); 2]>,
     pub finishes: Vec<[(TexId, u32, u32); 2]>,
     pub shapes: Vec<[(TexId, u32, u32); 2]>,
