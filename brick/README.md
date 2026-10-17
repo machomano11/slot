@@ -40,7 +40,7 @@ doesn't flash anything to the device.
 | Button           | Action                                  |
 | ---------------- | --------------------------------------- |
 | `Left` / `Right` | Browse games                            |
-| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES) |
+| `L1` / `R1`      | Switch shelves (GBA, GB, GBC, NES, SNES, GG, SMS) |
 | Tap `A`          | Resume from the last save state         |
 | Hold `A`         | Start the game fresh                    |
 | `START`          | Cart colour and finish (GBA: and core)   |
@@ -62,7 +62,7 @@ doesn't flash anything to the device.
 | `SELECT + L2` / `R2`        | GB: previous / next colour palette                  |
 | `SELECT + Up` / `Down`      | Brightness                                          |
 | `SELECT + Left` / `Right`   | Blue light filter                                   |
-| `L1` / `R1`                 | GB/GBC/NES: stretched / original picture            |
+| `L1` / `R1`                 | GB/GBC/NES/GG/SMS: stretched / original picture     |
 | Hold `L2`                   | Rewind                                              |
 | Hold `R2`                   | Fast-forward (double-tap to lock it on)             |
 
@@ -96,6 +96,13 @@ run on Snes9x. No BIOS is needed. European and Japanese games get the rounder PA
 cart; Slot reads where a game was sold from the ROM, so a ripped `Terranigma.sfc` works too. `L1` / `R1` and `X` / `Y` are the SNES's own buttons (no turbo
 on SNES), so `SELECT + X` switches the picture between original and full screen. Cart Art fetches
 SNES labels too, and RetroAchievements work.
+
+**Game Gear and Master System:** put `.gg` ROMs in `Slot/Games/GG` and `.sms` ROMs in
+`Slot/Games/SMS`; each gets a shelf of black Sega cartridges and runs on PicoDrive. No BIOS is
+needed. Button 1 is `B`, button 2 is `A`, and `START` is Start (Pause on the Master System).
+`L1` / `R1` switch between the original and stretched picture. RetroAchievements work for both.
+Cart Art has no labels for them yet, so put your own pictures in `Slot/Labels/GG` and
+`Slot/Labels/SMS` if you want them. PicoDrive is free for non-commercial use only.
 
 **Cart art:** connect to Wi-Fi, then open **HOME → Cart Art**.
 **GET CART ART** gives every game with no label a scan of its real cartridge label; labels you

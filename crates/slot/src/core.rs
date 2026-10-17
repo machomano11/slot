@@ -106,6 +106,7 @@ fn open_named(
                 let console = match core {
                     Core::Fceumm => Some(Platform::Nes),
                     Core::Snes9x => Some(Platform::Snes),
+                    Core::Picodrive => Some(platform),
                     Core::Mgba | Core::Gpsp => None,
                 };
                 if let Some((w, h)) = console.map(Platform::canvas) {
@@ -182,8 +183,9 @@ pub fn colour_option(
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
         )),
-        // A NES or SNES drew on a TV, with no LCD to correct for.
-        Core::Fceumm | Core::Snes9x => None,
+        // A NES, SNES or Master System drew on a TV, with no LCD to correct for; PicoDrive
+        // has no correction for the Game Gear's.
+        Core::Fceumm | Core::Snes9x | Core::Picodrive => None,
     }
 }
 
@@ -215,6 +217,18 @@ pub fn apply_core_options(
         for (key, value) in [
             ("snes9x_overscan", "enabled"),
             ("snes9x_mode7_hires", "disabled"),
+        ] {
+            core.set_option(key, value);
+        }
+    }
+    if which == Core::Picodrive {
+        // Slot scales the picture itself, so the core sends it square-pixelled; the Game
+        // Gear's screen is shown as it was, without the LCD's smearing.
+        for (key, value) in [
+            ("picodrive_aspect", "PAR"),
+            ("picodrive_ggghost", "off"),
+            ("picodrive_region", "Auto"),
+            ("picodrive_smstype", "Auto"),
         ] {
             core.set_option(key, value);
         }

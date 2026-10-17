@@ -223,7 +223,9 @@ fn both_cores_are_told_about_colour_correction_in_their_own_words() {
         let theirs = match which {
             Core::Mgba => "gpsp_color_correction",
             Core::Gpsp => "mgba_color_correction",
-            Core::Fceumm | Core::Snes9x => unreachable!("only the GBA cores correct colour"),
+            Core::Fceumm | Core::Snes9x | Core::Picodrive => {
+                unreachable!("only the GBA cores correct colour")
+            }
         };
         assert_eq!(
             core.option(theirs),

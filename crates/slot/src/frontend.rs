@@ -310,6 +310,11 @@ impl Frontend {
             compositor.create_texture(face.w, face.h, &face.rgba)
         });
         self.session.app_mut().set_snes_cart_shadows(us, pal);
+        for cart in slot_ui::PlainCart::ALL {
+            let face = slot_ui::plain_cart_shadow(cart);
+            let face = compositor.create_texture(face.w, face.h, &face.rgba);
+            self.session.app_mut().set_plain_cart_shadow(cart, face);
+        }
         self.upload_cart_menu_faces(compositor);
         let slot = {
             let mut upload =

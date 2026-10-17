@@ -2,7 +2,8 @@ use std::sync::OnceLock;
 
 use crate::bitmaps;
 use crate::cart::{
-    CART_H, CART_W, GB_CART_H, GB_CART_W, NES_CART_H, NES_CART_W, SNES_CART_H, SNES_CART_W,
+    plain_cart_box, CART_H, CART_W, GB_CART_H, GB_CART_W, NES_CART_H, NES_CART_W, SNES_CART_H,
+    SNES_CART_W,
 };
 
 const NES_CART_SVG: &str = include_str!("../assets/nes_cart.svg");
@@ -13,6 +14,29 @@ const SNES_CART_SVG: &str = include_str!("../assets/snes_cart.svg");
 const SNES_DETAIL_SVG: &str = include_str!("../assets/snes_cart_detail.svg");
 const SNES_PAL_CART_SVG: &str = include_str!("../assets/snes_pal_cart.svg");
 const SNES_PAL_DETAIL_SVG: &str = include_str!("../assets/snes_pal_cart_detail.svg");
+const GG_CART_SVG: &str = include_str!("../assets/gg_cart.svg");
+const GG_DETAIL_SVG: &str = include_str!("../assets/gg_cart_detail.svg");
+const SMS_CART_SVG: &str = include_str!("../assets/sms_cart.svg");
+const SMS_DETAIL_SVG: &str = include_str!("../assets/sms_cart_detail.svg");
+
+/// A cart of one fixed shape, drawn from its SVG outline and moulding: the consoles whose
+/// carts have no regional or colour variants to choose between.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum PlainCart {
+    GameGear,
+    MasterSystem,
+}
+
+impl PlainCart {
+    pub const ALL: [PlainCart; 2] = [PlainCart::GameGear, PlainCart::MasterSystem];
+
+    fn svgs(self) -> (&'static str, &'static str) {
+        match self {
+            PlainCart::GameGear => (GG_CART_SVG, GG_DETAIL_SVG),
+            PlainCart::MasterSystem => (SMS_CART_SVG, SMS_DETAIL_SVG),
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum GbShell {
@@ -151,6 +175,31 @@ pub(crate) fn snes_detail_mask(shell: SnesShell) -> &'static Detail {
     lock.get_or_init(|| {
         rasterise_detail(svg, SNES_CART_W, SNES_CART_H)
             .unwrap_or_else(|| Detail::blank(SNES_CART_W, SNES_CART_H))
+    })
+}
+
+pub(crate) fn plain_cart_mask(cart: PlainCart) -> &'static [u8] {
+    static MASKS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    MASKS[cart as usize].get_or_init(|| {
+        let (w, h) = plain_cart_box(cart);
+        rasterise_svg(cart.svgs().0, w, h).unwrap_or_else(|| vec![255; (w * h) as usize])
+    })
+}
+
+pub(crate) fn plain_cart_depth(cart: PlainCart) -> &'static [u8] {
+    static DEPTHS: [OnceLock<Vec<u8>>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    DEPTHS[cart as usize].get_or_init(|| {
+        let (w, h) = plain_cart_box(cart);
+        depth_map(plain_cart_mask(cart), w as usize, h as usize)
+    })
+}
+
+/// The grip ridges and the seam above the connector; the label recess is cut by the cart face.
+pub(crate) fn plain_detail_mask(cart: PlainCart) -> &'static Detail {
+    static DETAILS: [OnceLock<Detail>; PlainCart::ALL.len()] = [const { OnceLock::new() }; 2];
+    DETAILS[cart as usize].get_or_init(|| {
+        let (w, h) = plain_cart_box(cart);
+        rasterise_detail(cart.svgs().1, w, h).unwrap_or_else(|| Detail::blank(w, h))
     })
 }
 

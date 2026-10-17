@@ -1,6 +1,11 @@
 # Changelog — Slot. for TrimUI Brick
 
 ## Unreleased
+- Game Gear and Master System: `.gg` ROMs in `Slot/Games/GG` and `.sms` ROMs in
+  `Slot/Games/SMS` get their own shelves of black Sega cartridges and run on PicoDrive, with
+  save states, rewind, fast-forward and RetroAchievements. L1/R1 switch the picture, as on the
+  NES. The Game Gear has the LCD shaders, the Master System Off and Grid. Their carts have one
+  shape and colour, so START on them does nothing, and Cart Art has no labels for them yet.
 - New HOME > Cart Art: GET CART ART gives games with no label a real cartridge label scan (by
   ROM checksum, from the slot art set behind Cart Studio; NES and SNES labels from LaunchBox cart
   pictures), over HTTPS. Existing labels are never replaced, and labels can be deleted there one

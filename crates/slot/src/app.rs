@@ -892,8 +892,8 @@ impl App {
     }
 
     pub fn in_game_hidden(&self) -> &'static [QuickRow] {
-        // A NES or SNES has no LCD colour to correct, no palette and no bezel.
-        if matches!(self.playing_platform(), Platform::Nes | Platform::Snes) {
+        // A NES, SNES or Sega console has no LCD colour to correct, no palette and no bezel.
+        if !self.playing_platform().game_boy_family() {
             const TV: [QuickRow; 3] = [
                 QuickRow::Palette,
                 QuickRow::ColourCorrection,
@@ -954,16 +954,10 @@ impl App {
         }
 
         match row {
-            QuickRow::Shader
-                if matches!(self.playing_platform(), Platform::Nes | Platform::Snes) =>
-            {
+            QuickRow::Shader if !self.playing_platform().game_boy_family() => {
                 Some(shader_value(self.screen_shader()))
             }
-            QuickRow::ColourCorrection
-                if matches!(self.playing_platform(), Platform::Nes | Platform::Snes) =>
-            {
-                None
-            }
+            QuickRow::ColourCorrection if !self.playing_platform().game_boy_family() => None,
             QuickRow::Shader | QuickRow::ColourCorrection => {
                 self.quick_value(self.playing_row(row))
             }
@@ -1089,7 +1083,7 @@ impl App {
             Platform::Gba => Some(&mut self.state.bezel_gba),
             Platform::Gb => Some(&mut self.state.bezel_gb),
             Platform::Gbc => Some(&mut self.state.bezel_gbc),
-            Platform::Nes | Platform::Snes => None,
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
         }
     }
 
@@ -1098,7 +1092,9 @@ impl App {
             Platform::Gba => &self.state.bezel_gba,
             Platform::Gb => &self.state.bezel_gb,
             Platform::Gbc => &self.state.bezel_gbc,
-            Platform::Nes | Platform::Snes => return BezelPick::None,
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => {
+                return BezelPick::None
+            }
         };
         match self.bezel_choices(platform).contains(pick) {
             true => pick.clone(),
@@ -1290,6 +1286,12 @@ impl App {
         for (_, shelf) in &mut self.shelves {
             shelf.set_snes_shadow(slot_ui::SnesShell::Us, us);
             shelf.set_snes_shadow(slot_ui::SnesShell::Pal, pal);
+        }
+    }
+
+    pub fn set_plain_cart_shadow(&mut self, cart: slot_ui::PlainCart, face: TexId) {
+        for (_, shelf) in &mut self.shelves {
+            shelf.set_plain_shadow(cart, face);
         }
     }
 
@@ -1554,7 +1556,10 @@ impl App {
     /// they are the game's own L and R.
     fn slot_owns_the_shoulders(&self) -> bool {
         matches!(self.phase, Phase::Playing { .. })
-            && matches!(self.platform, Platform::Gb | Platform::Gbc | Platform::Nes)
+            && matches!(
+                self.platform,
+                Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Gg | Platform::Sms
+            )
     }
 
     pub fn taken_buttons(&self) -> &'static [Btn] {
@@ -1819,6 +1824,8 @@ impl App {
             Platform::Gbc => self.state.shader_gbc,
             Platform::Nes => self.state.shader_nes,
             Platform::Snes => self.state.shader_snes,
+            Platform::Gg => self.state.shader_gg,
+            Platform::Sms => self.state.shader_sms,
         }
     }
 
@@ -1835,7 +1842,7 @@ impl App {
             Platform::Gba => self.state.colour_correction_gba,
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
-            Platform::Nes | Platform::Snes => false,
+            Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => false,
         }
     }
 
@@ -2343,12 +2350,14 @@ impl App {
             let platform = self.playing_platform();
             let s = &mut self.state;
             let shader = match platform {
-                Platform::Nes => Some(&mut s.shader_nes),
-                Platform::Snes => Some(&mut s.shader_snes),
+                Platform::Nes => Some((&mut s.shader_nes, &Shader::NES[..])),
+                Platform::Snes => Some((&mut s.shader_snes, &Shader::NES[..])),
+                Platform::Sms => Some((&mut s.shader_sms, &Shader::NES[..])),
+                Platform::Gg => Some((&mut s.shader_gg, &Shader::GB[..])),
                 _ => None,
             };
-            if let Some(shader) = shader {
-                let to = shader.step(&Shader::NES, right);
+            if let Some((shader, choices)) = shader {
+                let to = shader.step(choices, right);
                 if to != *shader {
                     *shader = to;
                     self.persist();
@@ -2511,6 +2520,8 @@ impl App {
             Platform::Gbc => (&mut self.state.shader_gbc, &Shader::GB[..]),
             Platform::Nes => (&mut self.state.shader_nes, &Shader::NES[..]),
             Platform::Snes => (&mut self.state.shader_snes, &Shader::NES[..]),
+            Platform::Gg => (&mut self.state.shader_gg, &Shader::GB[..]),
+            Platform::Sms => (&mut self.state.shader_sms, &Shader::NES[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -2579,8 +2590,9 @@ impl App {
                 Platform::Gba => QuickRow::GbaColourCorrection,
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
-                // A NES or SNES drew on a TV: there is no LCD colour to correct.
-                Platform::Nes | Platform::Snes => {
+                // A NES, SNES or Master System drew on a TV: there is no LCD colour to
+                // correct. PicoDrive has none for the Game Gear's.
+                Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => {
                     self.refuse();
                     return true;
                 }
@@ -4439,6 +4451,11 @@ impl App {
         let Some(cart) = self.shelf().carts.get(index).cloned() else {
             return;
         };
+        if slot_ui::plain_cart_for(cart.platform).is_some() {
+            // One shape, one colour: a Sega cart has nothing to choose.
+            self.refuse();
+            return;
+        }
         self.cart_menu = Some(CartMenu::open(&cart));
         self.shelf_mut().release_hold();
         self.play_held = None;
@@ -5437,7 +5454,7 @@ fn bezel_slot(platform: Platform) -> Option<usize> {
         Platform::Gba => Some(0),
         Platform::Gb => Some(1),
         Platform::Gbc => Some(2),
-        Platform::Nes | Platform::Snes => None,
+        Platform::Nes | Platform::Snes | Platform::Gg | Platform::Sms => None,
     }
 }
 
@@ -5536,6 +5553,8 @@ impl CartMenu {
         };
         let rows = match cart.platform {
             Platform::Nes | Platform::Snes => vec![CartRow::Shape, CartRow::Reset],
+            // A Sega cart has one shape and colour: its menu never opens.
+            Platform::Gg | Platform::Sms => vec![CartRow::Reset],
             Platform::Gb | Platform::Gbc => vec![
                 CartRow::Colour,
                 CartRow::Finish,
