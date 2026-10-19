@@ -6,6 +6,7 @@ use crate::plate::{
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
 use crate::slot_chrome::{opening, MOUTH_H};
 use crate::text;
+use slot_store::Platform;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum QuickRow {
@@ -59,10 +60,34 @@ pub enum QuickRow {
     ScreenGb,
     Achievements,
     CartArt,
+    ScreenNes,
+    ScreenSnes,
+    ScreenGg,
+    ScreenSms,
+    ScreenMd,
+    ScreenScd,
+    ScreenS32x,
+    ScreenNgp,
+    ScreenNgpc,
+    ScreenWs,
+    ScreenWsc,
+    ScreenPs,
+    NesShader,
+    SnesShader,
+    GgShader,
+    SmsShader,
+    MdShader,
+    ScdShader,
+    S32xShader,
+    NgpShader,
+    NgpcShader,
+    WsShader,
+    WscShader,
+    PsShader,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 50] = [
+    pub const ALL: [QuickRow; 74] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -113,6 +138,30 @@ impl QuickRow {
         QuickRow::ScreenGb,
         QuickRow::Achievements,
         QuickRow::CartArt,
+        QuickRow::ScreenNes,
+        QuickRow::ScreenSnes,
+        QuickRow::ScreenGg,
+        QuickRow::ScreenSms,
+        QuickRow::ScreenMd,
+        QuickRow::ScreenScd,
+        QuickRow::ScreenS32x,
+        QuickRow::ScreenNgp,
+        QuickRow::ScreenNgpc,
+        QuickRow::ScreenWs,
+        QuickRow::ScreenWsc,
+        QuickRow::ScreenPs,
+        QuickRow::NesShader,
+        QuickRow::SnesShader,
+        QuickRow::GgShader,
+        QuickRow::SmsShader,
+        QuickRow::MdShader,
+        QuickRow::ScdShader,
+        QuickRow::S32xShader,
+        QuickRow::NgpShader,
+        QuickRow::NgpcShader,
+        QuickRow::WsShader,
+        QuickRow::WscShader,
+        QuickRow::PsShader,
     ];
 
     #[cfg(not(feature = "brick"))]
@@ -154,8 +203,51 @@ impl QuickRow {
         Self::LIGHTS.contains(&self)
     }
 
-    pub const SCREEN: [QuickRow; 3] =
-        [QuickRow::ScreenGba, QuickRow::ScreenGbc, QuickRow::ScreenGb];
+    pub const SCREEN: [QuickRow; 15] = [
+        QuickRow::ScreenGba,
+        QuickRow::ScreenGbc,
+        QuickRow::ScreenGb,
+        QuickRow::ScreenNes,
+        QuickRow::ScreenSnes,
+        QuickRow::ScreenGg,
+        QuickRow::ScreenSms,
+        QuickRow::ScreenMd,
+        QuickRow::ScreenScd,
+        QuickRow::ScreenS32x,
+        QuickRow::ScreenNgp,
+        QuickRow::ScreenNgpc,
+        QuickRow::ScreenWs,
+        QuickRow::ScreenWsc,
+        QuickRow::ScreenPs,
+    ];
+
+    /// The consoles past the Game Boys, each with its row on the Screen page and the shader row
+    /// on the page that opens. A TV console (or a handheld whose core has no LCD options) has
+    /// only the shader to choose.
+    pub const CONSOLES: [(Platform, QuickRow, QuickRow); 12] = [
+        (Platform::Nes, QuickRow::ScreenNes, QuickRow::NesShader),
+        (Platform::Snes, QuickRow::ScreenSnes, QuickRow::SnesShader),
+        (Platform::Gg, QuickRow::ScreenGg, QuickRow::GgShader),
+        (Platform::Sms, QuickRow::ScreenSms, QuickRow::SmsShader),
+        (Platform::Md, QuickRow::ScreenMd, QuickRow::MdShader),
+        (Platform::Scd, QuickRow::ScreenScd, QuickRow::ScdShader),
+        (Platform::S32x, QuickRow::ScreenS32x, QuickRow::S32xShader),
+        (Platform::Ngp, QuickRow::ScreenNgp, QuickRow::NgpShader),
+        (Platform::Ngpc, QuickRow::ScreenNgpc, QuickRow::NgpcShader),
+        (Platform::Ws, QuickRow::ScreenWs, QuickRow::WsShader),
+        (Platform::Wsc, QuickRow::ScreenWsc, QuickRow::WscShader),
+        (Platform::Ps, QuickRow::ScreenPs, QuickRow::PsShader),
+    ];
+
+    /// The console a Screen page row opens the settings of, past the Game Boys.
+    pub fn console_screen(self) -> Option<Platform> {
+        Self::CONSOLES.iter().find(|c| c.1 == self).map(|c| c.0)
+    }
+
+    /// The console whose shader this row changes, past the Game Boys.
+    pub fn console_shader(self) -> Option<Platform> {
+        Self::CONSOLES.iter().find(|c| c.2 == self).map(|c| c.0)
+    }
 
     pub const SCREEN_GBA: [QuickRow; 3] = [
         QuickRow::GbaShader,
@@ -207,6 +299,9 @@ impl QuickRow {
     }
 
     pub fn page(self) -> &'static [QuickRow] {
+        if let Some(i) = Self::CONSOLES.iter().position(|c| c.2 == self) {
+            return &CONSOLE_SCREENS[i];
+        }
         match self {
             QuickRow::LedMode
             | QuickRow::LedTop
@@ -215,6 +310,7 @@ impl QuickRow {
             | QuickRow::LedColor
             | QuickRow::LedEffect => &QuickRow::LIGHTS,
             QuickRow::ScreenGba | QuickRow::ScreenGbc | QuickRow::ScreenGb => &QuickRow::SCREEN,
+            row if row.console_screen().is_some() => &QuickRow::SCREEN,
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
                 &QuickRow::SCREEN_GBA
             }
@@ -260,7 +356,7 @@ impl QuickRow {
             QuickRow::Wallpaper => Some(QuickRow::General),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::Shader => Some(QuickRow::PlayScreen),
-            _ => None,
+            row => Self::CONSOLES.iter().find(|c| c.2 == row).map(|c| c.1),
         }
     }
 
@@ -293,7 +389,7 @@ impl QuickRow {
             QuickRow::ScreenGba => Some(QuickRow::SCREEN_GBA[0]),
             QuickRow::ScreenGbc => Some(QuickRow::SCREEN_GBC[0]),
             QuickRow::ScreenGb => Some(QuickRow::SCREEN_GB[0]),
-            _ => None,
+            row => Self::CONSOLES.iter().find(|c| c.1 == row).map(|c| c.2),
         }
     }
 
@@ -364,6 +460,30 @@ impl QuickRow {
             QuickRow::GbcBezel => "Bezel",
             QuickRow::GbaBezel => "Bezel",
             QuickRow::Bezel => "Bezel",
+            QuickRow::ScreenNes => "NES",
+            QuickRow::ScreenSnes => "Super NES",
+            QuickRow::ScreenGg => "Game Gear",
+            QuickRow::ScreenSms => "Master System",
+            QuickRow::ScreenMd => "Mega Drive",
+            QuickRow::ScreenScd => "Sega CD",
+            QuickRow::ScreenS32x => "Sega 32X",
+            QuickRow::ScreenNgp => "Neo Geo Pocket",
+            QuickRow::ScreenNgpc => "Neo Geo Pocket Color",
+            QuickRow::ScreenWs => "WonderSwan",
+            QuickRow::ScreenWsc => "WonderSwan Color",
+            QuickRow::ScreenPs => "PlayStation",
+            QuickRow::NesShader
+            | QuickRow::SnesShader
+            | QuickRow::GgShader
+            | QuickRow::SmsShader
+            | QuickRow::MdShader
+            | QuickRow::ScdShader
+            | QuickRow::S32xShader
+            | QuickRow::NgpShader
+            | QuickRow::NgpcShader
+            | QuickRow::WsShader
+            | QuickRow::WscShader
+            | QuickRow::PsShader => "Shader",
         }
     }
 
@@ -388,7 +508,7 @@ impl QuickRow {
                 | QuickRow::ScreenGba
                 | QuickRow::ScreenGbc
                 | QuickRow::ScreenGb
-        )
+        ) || self.console_screen().is_some()
     }
 
     pub fn up(self, hidden: &[QuickRow]) -> QuickRow {
@@ -401,6 +521,17 @@ impl QuickRow {
         rows[(self.position(hidden) + 1) % rows.len()]
     }
 }
+
+/// The page each console's Screen row opens: its shader, the one setting it has.
+static CONSOLE_SCREENS: [[QuickRow; 1]; 12] = {
+    let mut pages = [[QuickRow::NesShader]; 12];
+    let mut i = 0;
+    while i < 12 {
+        pages[i] = [QuickRow::CONSOLES[i].2];
+        i += 1;
+    }
+    pages
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum QuickValue {
@@ -833,8 +964,15 @@ impl QuickMenu<'_> {
             .map(|l| l[1].1)
             .max()
             .unwrap_or(0);
-        for row in self.row.shown(self.hidden) {
-            let y = quick_row_top(row, self.hidden) + TYPE_DROP;
+        let (first, count) = quick_window(self.row, self.hidden);
+        for row in self
+            .row
+            .shown(self.hidden)
+            .into_iter()
+            .skip(first)
+            .take(count)
+        {
+            let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
             let lit = row == self.row;
             if let Some(&(tex, w, h)) = faces.labels.get(row.index()).map(|l| &l[lit as usize]) {
                 let x = match row.centred() {
@@ -921,12 +1059,35 @@ pub fn draw_menu_ground(canvas: Canvas, ground: Option<TexId>, out: &mut Vec<Dra
 }
 
 pub fn quick_row_top(row: QuickRow, hidden: &[QuickRow]) -> f32 {
-    let rows = QUICK_PITCH * row.shown(hidden).len() as f32;
+    quick_row_top_at(row, row, hidden)
+}
+
+/// Where `row` sits while the pointer is on `cursor`: a page longer than fits scrolls to keep
+/// the pointer in its middle.
+pub fn quick_row_top_at(row: QuickRow, cursor: QuickRow, hidden: &[QuickRow]) -> f32 {
+    let (first, count) = quick_window(cursor, hidden);
+    let rows = QUICK_PITCH * count as f32;
     let top = match row.page() == QuickRow::PLAY_SCREEN {
         true => OUT_H as f32 - MOUTH_H - PANEL_GAP - rows,
         false => (LEGEND_Y - rows) / 2.0,
     };
-    top + QUICK_PITCH * row.position(hidden) as f32
+    top + QUICK_PITCH * (row.position(hidden) as f32 - first as f32)
+}
+
+/// The rows a page shows at once, above the legends.
+pub const QUICK_ROWS_SHOWN: usize = 8;
+
+/// The first of the rows on screen while the pointer is on `cursor`, and how many there are.
+pub fn quick_window(cursor: QuickRow, hidden: &[QuickRow]) -> (usize, usize) {
+    let len = cursor.shown(hidden).len();
+    if len <= QUICK_ROWS_SHOWN {
+        return (0, len);
+    }
+    let first = cursor
+        .position(hidden)
+        .saturating_sub(QUICK_ROWS_SHOWN / 2)
+        .min(len - QUICK_ROWS_SHOWN);
+    (first, QUICK_ROWS_SHOWN)
 }
 
 fn push(out: &mut Vec<Draw>, tex: TexId, x: f32, y: f32, w: u32, h: u32) {
