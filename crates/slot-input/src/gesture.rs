@@ -51,6 +51,7 @@ pub enum Action {
     PowerOff,
     LidClose,
     LidOpen,
+    RepairCard,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -70,6 +71,7 @@ pub struct Gestures {
     select: Select,
     home_chords: bool,
     menu_dpad_display: bool,
+    repair_chord: bool,
     chord_held: u16,
     menu_down_at: Option<Millis>,
     menu_last_tap: Option<Millis>,
@@ -125,6 +127,10 @@ impl Gestures {
 
     pub fn triggers_to_game(&self) -> bool {
         self.triggers_to_game
+    }
+
+    pub fn set_repair_chord(&mut self, on: bool) {
+        self.repair_chord = on;
     }
 
     pub fn ff_latched(&self) -> bool {
@@ -215,7 +221,7 @@ impl Gestures {
             self.chord_held |= bit;
             return vec![action];
         }
-        if let (true, Some((bit, action))) = (self.chording(now), chord(b)) {
+        if let (true, Some((bit, action))) = (self.chording(now), self.select_chord(b)) {
             self.mark_chorded();
             self.chord_held |= bit;
             return vec![action];
@@ -266,7 +272,7 @@ impl Gestures {
             self.chord_held &= !HOME_R2;
             return Vec::new();
         }
-        if let Some((bit, _)) = chord(b) {
+        if let Some(bit) = held_bit(b) {
             if self.chord_held & bit != 0 {
                 self.chord_held &= !bit;
                 return Vec::new();
@@ -508,6 +514,25 @@ impl Gestures {
             && (self.menu_down_at.is_some() || self.menu_display_chorded))
             .then(|| display_chord(b))
             .flatten()
+    }
+}
+
+/// Clear of HOME_R2 (8192), which the Brick's fast-forward chord holds.
+const REPAIR_BIT: u16 = 16384;
+
+impl Gestures {
+    fn select_chord(&self, b: Btn) -> Option<(u16, Action)> {
+        match b {
+            Btn::Start if self.repair_chord => Some((REPAIR_BIT, Action::RepairCard)),
+            _ => chord(b),
+        }
+    }
+}
+
+fn held_bit(b: Btn) -> Option<u16> {
+    match b {
+        Btn::Start => Some(REPAIR_BIT),
+        _ => chord(b).map(|(bit, _)| bit),
     }
 }
 

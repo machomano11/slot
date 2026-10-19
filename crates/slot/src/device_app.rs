@@ -232,6 +232,9 @@ pub fn run() {
             cpu.restore();
             frontend.restart();
         }
+        if frontend.repairing() {
+            frontend.repair();
+        }
         if frontend.powering_off() {
             #[cfg(feature = "brick")]
             cpu.restore();

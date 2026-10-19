@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use slot_gfx::{Canvas, Layout, OUT_H, OUT_W};
 use slot_input::{Action, Btn, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS};
-use slot_power::{Battery, Charge, LedState, LidPolicy, Power};
+use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
     format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core,
@@ -74,6 +74,8 @@ pub const LINK_LOST_MS: Millis = 2000;
 const PLAY_HOLD_MS: Millis = 500;
 
 const SHUTDOWN_SHOW_MS: Millis = 250;
+
+const REPAIR_GAP: u32 = 12;
 
 const CORE_PICKER_RECEDE: f32 = 0.26;
 
@@ -322,6 +324,7 @@ pub struct App {
     refused_from: Option<f32>,
     alert_face: Option<TexId>,
     shutdown_faces: Vec<(TexId, u32, u32)>,
+    repair_faces: Vec<(TexId, u32, u32)>,
     core_picker: Option<CorePicker>,
     /// START on a cart: its plastic and shape.
     cart_menu: Option<CartMenu>,
@@ -354,6 +357,8 @@ pub struct App {
     starting: Option<LinkStarting>,
     link_transport: Option<(u16, Box<dyn LinkChannel>)>,
     restarting: bool,
+    repairing: bool,
+    repair_prompt: bool,
     act_at: Millis,
     root: Option<PathBuf>,
     state: SlotState,
@@ -516,6 +521,7 @@ impl App {
             wifi: None,
             #[cfg(feature = "brick")]
             wifi_power: None,
+            repair_faces: Vec::new(),
             core_picker: None,
             cart_menu: None,
             picker_look: None,
@@ -546,6 +552,8 @@ impl App {
             starting: None,
             link_transport: None,
             restarting: false,
+            repairing: false,
+            repair_prompt: false,
             act_at: 0,
             root: None,
             state: SlotState::default(),
@@ -1873,6 +1881,13 @@ impl App {
             self.phase = clock_screen(secs, 0, false);
         }
         self.copy_card_log(&power);
+        if let Some(result) = power.take_repair_result() {
+            let toast = match result {
+                RepairResult::Repaired | RepairResult::Clean => Toast::CardRepaired,
+                RepairResult::Failed => Toast::CardRepairFailed,
+            };
+            self.hud.toast(toast, self.now());
+        }
         self.power = Some(power);
         self.battery_at = self.now();
         self.charge_at = self.now();
@@ -1972,12 +1987,36 @@ impl App {
         self.powering_off && self.now() >= self.act_at
     }
 
+    pub fn ready_to_repair(&self) -> bool {
+        self.repairing && self.now() >= self.act_at
+    }
+
+    pub fn repair_offered(&self) -> bool {
+        // The Brick has no repair script: its platform would only restart (exit to stock).
+        !cfg!(feature = "brick")
+            && self.card_read_only
+            && !self.repair_prompt
+            && !self.shutting_down()
+            && matches!(self.phase, Phase::Shelf | Phase::Playing { .. })
+    }
+
+    pub fn repair_prompt(&self) -> bool {
+        self.repair_prompt
+    }
+
+    pub fn repair(&mut self) {
+        self.settle_saves();
+        if let Some(power) = &mut self.power {
+            power.repair_card();
+        }
+    }
+
     pub fn ready_to_restart(&self) -> bool {
         self.restarting && self.now() >= self.act_at
     }
 
     pub fn shutting_down(&self) -> bool {
-        self.powering_off || self.restarting
+        self.powering_off || self.restarting || self.repairing
     }
 
     pub fn restarting(&self) -> bool {
@@ -2212,6 +2251,18 @@ impl App {
                 }
                 _ => {}
             }
+            return;
+        }
+        if self.repair_prompt {
+            match action {
+                Action::GbaDown(Btn::A) => self.begin_repair(),
+                Action::GbaDown(Btn::B) => self.repair_prompt = false,
+                _ => {}
+            }
+            return;
+        }
+        if action == Action::RepairCard {
+            self.repair_prompt = self.repair_offered();
             return;
         }
         if self.adjust(action) {
@@ -3269,6 +3320,11 @@ impl App {
             self.log_card(failing);
         }
         self.hud.set_alarm(failing, self.now());
+        self.hud.set_alarm_toast(if self.repair_offered() {
+            Toast::CardRepair
+        } else {
+            Toast::CardUnwritable
+        });
         if self.now() >= self.battery_at {
             self.battery_at = self.now() + BATTERY_POLL_MS;
             self.battery = self.power.as_ref().and_then(|p| p.battery());
@@ -3645,7 +3701,9 @@ impl App {
                 h: OUT_H as f32,
                 colour: [0.0, 0.0, 0.0, 1.0],
             });
-            let which = if self.restarting {
+            let which = if self.repairing {
+                PowerChoice::Repair
+            } else if self.restarting {
                 PowerChoice::Restart
             } else {
                 PowerChoice::PowerOff
@@ -3661,6 +3719,9 @@ impl App {
                 });
             }
             return;
+        }
+        if self.repair_prompt {
+            return self.draw_repair_prompt(out);
         }
         #[cfg(feature = "brick")]
         if let Some(wifi) = &self.wifi {
@@ -3959,6 +4020,33 @@ impl App {
         .draw(out);
     }
 
+    fn draw_repair_prompt(&self, out: &mut Vec<Draw>) {
+        out.push(Draw::Rect {
+            x: 0.0,
+            y: 0.0,
+            w: self.canvas().w,
+            h: OUT_H as f32,
+            colour: [0.0, 0.0, 0.0, 1.0],
+        });
+        let [title, detail, not_now, repair] = match self.repair_faces[..] {
+            [a, b, c, d] => [a, b, c, d],
+            _ => return,
+        };
+        let top = ((OUT_H - title.2 - REPAIR_GAP - detail.2) / 2) as f32;
+        for ((tex, w, h), y) in [(title, top), (detail, top + (title.2 + REPAIR_GAP) as f32)] {
+            out.push(Draw::Tex {
+                x: self.canvas().centred(w as f32).floor(),
+                y,
+                w: w as f32,
+                h: h as f32,
+                tex,
+                alpha: 1.0,
+            });
+        }
+        self.draw_side_legend((not_now.0, not_now.1), false, LINK_LEGEND_Y, out);
+        self.draw_side_legend((repair.0, repair.1), true, LINK_LEGEND_Y, out);
+    }
+
     fn draw_about_legend(&self, out: &mut Vec<Draw>) {
         let Some(faces) = &self.quick_menu_faces else {
             return;
@@ -4052,6 +4140,10 @@ impl App {
 
     pub fn set_alert_face(&mut self, face: TexId) {
         self.alert_face = Some(face);
+    }
+
+    pub fn set_repair_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
+        self.repair_faces = faces;
     }
 
     pub fn set_shutdown_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
@@ -4602,6 +4694,16 @@ impl App {
     fn hold_power(&mut self) {
         self.flush_resume();
         self.begin_power_off();
+    }
+
+    fn begin_repair(&mut self) {
+        self.repair_prompt = false;
+        if self.shutting_down() {
+            return;
+        }
+        self.repairing = true;
+        self.act_at = self.now() + SHUTDOWN_SHOW_MS;
+        self.set_led(LedState::Off);
     }
 
     fn begin_restart(&mut self) {
@@ -5456,6 +5558,10 @@ impl App {
 
     pub fn card_alarm(&self) -> bool {
         self.hud.alarmed()
+    }
+
+    pub fn alarm_toast(&self) -> Option<Toast> {
+        self.hud.alarm_toast()
     }
 
     pub fn undo(&mut self, now: Millis) {
