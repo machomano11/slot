@@ -10,7 +10,7 @@ use slot_store::{
     format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core,
     GbPalette, Outline, Platform, Recent, Shader, ShellChoice, ShellFinish, SlotState, StateEntry,
     StateRing, WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, RING_MAX,
-    RUN_AHEAD_MAX, VOLUME_MAX,
+    VOLUME_MAX,
 };
 use slot_ui::{
     board_from, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_slot_name,
@@ -989,7 +989,6 @@ impl App {
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
             QuickRow::Rewind => Some(QuickValue::flag(self.state.rewind)),
-            QuickRow::RunAhead => QuickValue::frames(self.state.runahead),
             QuickRow::Recents => Some(if self.state.show_recents {
                 QuickValue::Show
             } else {
@@ -1933,14 +1932,6 @@ impl App {
         self.state.ff_sound
     }
 
-    pub fn runahead(&self) -> u8 {
-        self.state.runahead
-    }
-
-    pub fn runahead_in_play(&self) -> u8 {
-        runahead_for(self.core, self.platform, self.state.runahead)
-    }
-
     pub fn screen_shader(&self) -> Shader {
         self.state.shader(self.playing_platform())
     }
@@ -2463,7 +2454,6 @@ impl App {
             | QuickRow::GbShader
             | QuickRow::GbcShader
             | QuickRow::GbPalettes
-            | QuickRow::RunAhead
             | QuickRow::Rumble
             | QuickRow::Theme
             | QuickRow::Recents
@@ -2616,10 +2606,6 @@ impl App {
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::GbPalettes => s.gb_palettes = !s.gb_palettes,
-            QuickRow::RunAhead => {
-                let n = RUN_AHEAD_MAX + 1;
-                s.runahead = (s.runahead + if right { 1 } else { n - 1 }) % n;
-            }
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::Wallpaper
@@ -5581,13 +5567,6 @@ fn shader_value(shader: Shader) -> QuickValue {
         Shader::Grid => QuickValue::Grid,
         Shader::Dot => QuickValue::Dot,
         Shader::Simpletex => QuickValue::Simpletex,
-    }
-}
-
-pub fn runahead_for(core: Core, platform: Platform, frames: u8) -> u8 {
-    match (core, platform) {
-        (Core::Mgba, Platform::Gba) => frames,
-        _ => 0,
     }
 }
 
