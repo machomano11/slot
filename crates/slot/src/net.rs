@@ -2,7 +2,7 @@
 //! roots built in, so nothing depends on the firmware's certificate store). HTTP/1.0
 //! keeps bodies unchunked; one request per connection.
 use std::io::{Read, Write};
-use std::net::{TcpStream, ToSocketAddrs};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -80,17 +80,12 @@ pub fn send(req: &Request) -> Result<Response, String> {
     if !(plain(req.method) && plain(req.server) && plain(req.path) && req.path.starts_with('/')) {
         return Err("bad request address".into());
     }
-    let addrs: Vec<_> = req
-        .server
-        .to_socket_addrs()
-        .map_err(|_| format!("cannot look up {host} (no internet?)"))?
-        .collect();
-    let tcp = addrs
-        .iter()
-        .find_map(|a| TcpStream::connect_timeout(a, Duration::from_secs(8)).ok())
-        .ok_or_else(|| format!("cannot connect to {host}"))?;
-    let _ = tcp.set_read_timeout(Some(Duration::from_secs(20)));
-    let _ = tcp.set_write_timeout(Some(Duration::from_secs(8)));
+    let addrs = by_family(
+        req.server
+            .to_socket_addrs()
+            .map_err(|_| format!("cannot look up {host} (no internet?)"))?
+            .collect(),
+    );
     let mut text = format!(
         "{} {} HTTP/1.0\r\nHost: {host}\r\nUser-Agent: {}\r\nConnection: close\r\n",
         req.method,
@@ -105,8 +100,35 @@ pub fn send(req: &Request) -> Result<Response, String> {
     } else {
         text.push_str("\r\n");
     }
+    // Every address in turn: a host with an IPv6 address the network can't really carry
+    // (the RG SP picks one up from the router) connects there and is then hung up on.
+    let mut failed = None;
+    for addr in &addrs {
+        let Ok(tcp) = TcpStream::connect_timeout(addr, Duration::from_secs(8)) else {
+            continue;
+        };
+        match exchange(req, host, &text, tcp) {
+            Ok(raw) => return parse(&raw, req.limit),
+            Err(e) => {
+                eprintln!("slot: net: {host} at {addr}: {e}");
+                failed = Some(e);
+            }
+        }
+    }
+    Err(failed.unwrap_or_else(|| format!("cannot connect to {host}")))
+}
+
+/// IPv4 first, each family in the resolver's order.
+fn by_family(mut addrs: Vec<SocketAddr>) -> Vec<SocketAddr> {
+    addrs.sort_by_key(|a| a.is_ipv6());
+    addrs
+}
+
+fn exchange(req: &Request, host: &str, text: &str, tcp: TcpStream) -> Result<Vec<u8>, String> {
+    let _ = tcp.set_read_timeout(Some(Duration::from_secs(20)));
+    let _ = tcp.set_write_timeout(Some(Duration::from_secs(8)));
     let cap = req.limit as u64 + 64 * 1024;
-    let raw = if req.tls {
+    if req.tls {
         let name = rustls::pki_types::ServerName::try_from(host.to_string())
             .map_err(|_| format!("bad host name {host}"))?;
         let conn = rustls::ClientConnection::new(tls_config(), name).map_err(|e| e.to_string())?;
@@ -115,14 +137,13 @@ pub fn send(req: &Request) -> Result<Response, String> {
         stream
             .write_all(text.as_bytes())
             .map_err(|e| tls_error(&e))?;
-        read_all(stream, cap).map_err(|e| tls_error(&e))?
+        read_all(stream, cap).map_err(|e| tls_error(&e))
     } else {
         let mut tcp = tcp;
         tcp.write_all(text.as_bytes())
             .map_err(|e| format!("send failed: {e}"))?;
-        read_all(tcp, cap).map_err(|e| format!("download failed: {e}"))?
-    };
-    parse(&raw, req.limit)
+        read_all(tcp, cap).map_err(|e| format!("download failed: {e}"))
+    }
 }
 
 /// To the end of the stream. A server that closes TLS without a close_notify
@@ -289,6 +310,29 @@ mod tests {
             &send(&req("no-such-host.invalid:80")).err().unwrap()
         ));
         assert!(!unreachable("server said 403") && !unreachable("reply too large"));
+    }
+
+    #[test]
+    fn ipv4_is_tried_before_ipv6() {
+        let a: Vec<SocketAddr> = [
+            "[2606:4700::1]:443",
+            "1.2.3.4:443",
+            "[2606:4700::2]:443",
+            "5.6.7.8:443",
+        ]
+        .iter()
+        .map(|s| s.parse().unwrap())
+        .collect();
+        let order: Vec<String> = by_family(a).iter().map(|a| a.to_string()).collect();
+        assert_eq!(
+            order,
+            [
+                "1.2.3.4:443",
+                "5.6.7.8:443",
+                "[2606:4700::1]:443",
+                "[2606:4700::2]:443"
+            ]
+        );
     }
 
     #[test]
