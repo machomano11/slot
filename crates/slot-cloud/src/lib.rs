@@ -134,6 +134,55 @@ pub trait Remote {
     fn delete(&mut self, rel: &str) -> Result<(), Error>;
 }
 
+/// Where the server's files live on a device. Slot's cards keep them under
+/// the same names ([`Card`]); a system with its own folders (BananaOS: one
+/// flat `saves` folder, `roms/<system>`) maps them.
+pub trait Layout {
+    /// The device's copy of the server's `rel`, or `None` when this device
+    /// doesn't keep that file: it is then left alone on both sides.
+    fn local(&self, rel: &str) -> Option<PathBuf>;
+    /// Calls `found` with every file under `folder` (one of [`FOLDERS`]) on
+    /// the device: its name on the server and its path here. Hidden files and
+    /// conflict copies ([`skipped`]) are left out.
+    fn walk(&self, folder: &str, found: &mut dyn FnMut(String, PathBuf));
+    /// Where free space is measured before a download.
+    fn root(&self) -> &Path;
+}
+
+/// A Slot card: the server's names under the card's root.
+pub struct Card<'a>(pub &'a Path);
+
+impl Layout for Card<'_> {
+    fn local(&self, rel: &str) -> Option<PathBuf> {
+        Some(self.0.join(rel))
+    }
+
+    fn walk(&self, folder: &str, found: &mut dyn FnMut(String, PathBuf)) {
+        let mut todo = vec![folder.to_string()];
+        while let Some(dir) = todo.pop() {
+            let Ok(entries) = std::fs::read_dir(self.0.join(&dir)) else {
+                continue;
+            };
+            for e in entries.flatten() {
+                let name = e.file_name().to_string_lossy().into_owned();
+                if skipped(&name) {
+                    continue;
+                }
+                let rel = format!("{dir}/{name}");
+                match e.file_type() {
+                    Ok(t) if t.is_dir() => todo.push(rel),
+                    Ok(_) => found(rel, e.path()),
+                    Err(_) => {}
+                }
+            }
+        }
+    }
+
+    fn root(&self) -> &Path {
+        self.0
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Report {
     pub uploaded: usize,
@@ -192,9 +241,21 @@ pub fn sync_holding(
     cancel: &AtomicBool,
     held: &dyn Fn(&str) -> bool,
 ) -> Result<Report, Error> {
+    sync_layout(&Card(root), manifest, remote, folders, cancel, held)
+}
+
+/// [`sync_holding`] for a device whose files are where `layout` says.
+pub fn sync_layout(
+    layout: &dyn Layout,
+    manifest: &Path,
+    remote: &mut dyn Remote,
+    folders: &[&str],
+    cancel: &AtomicBool,
+    held: &dyn Fn(&str) -> bool,
+) -> Result<Report, Error> {
     let mut seen = read_manifest(manifest);
     let mut run = Run {
-        root,
+        layout,
         remote,
         cancel,
         dirs: BTreeSet::new(),
@@ -209,7 +270,7 @@ pub fn sync_holding(
 }
 
 struct Run<'a> {
-    root: &'a Path,
+    layout: &'a dyn Layout,
     remote: &'a mut dyn Remote,
     cancel: &'a AtomicBool,
     /// Remote folders known to exist.
@@ -228,7 +289,7 @@ impl Run<'_> {
         let mut local = BTreeMap::new();
         let mut settling = BTreeSet::new();
         for folder in folders {
-            walk_local(self.root, folder, self.now, &mut local, &mut settling);
+            walk_local(self.layout, folder, self.now, &mut local, &mut settling);
         }
         // The folder named in the settings may not exist yet.
         if self.remote.list("")?.is_none() {
@@ -238,11 +299,16 @@ impl Run<'_> {
         for folder in folders {
             self.walk_remote(folder, &mut remote)?;
         }
+        // What this device doesn't keep is left alone on both sides.
+        remote.retain(|rel, _| self.layout.local(rel).is_some());
         let ours = |rel: &String| folders.iter().any(|f| rel.starts_with(&format!("{f}/")));
         let names: BTreeSet<String> = local
             .keys()
             .chain(remote.keys())
-            .chain(seen.keys().filter(|k| ours(k)))
+            .chain(
+                seen.keys()
+                    .filter(|k| ours(k) && self.layout.local(k).is_some()),
+            )
             .cloned()
             .collect();
         // Saves and states first, so a big batch of games never holds them up;
@@ -373,7 +439,7 @@ impl Run<'_> {
 
     /// Streams the card's `rel` to `to` on the server.
     fn send(&mut self, to: &str, rel: &str) -> Result<(), Error> {
-        let file = std::fs::File::open(self.root.join(rel))
+        let file = std::fs::File::open(self.path(rel)?)
             .map_err(|e| Error::new(format!("reading {rel}: {e}")))?;
         let len = file
             .metadata()
@@ -389,10 +455,10 @@ impl Run<'_> {
     /// Streams the server's `rel` into a hidden file beside the card's copy,
     /// flushed to the card. The caller renames or removes it.
     fn fetch(&mut self, rel: &str, size: u64) -> Result<PathBuf, Error> {
-        if free_bytes(self.root).is_some_and(|free| free < size.saturating_add(ROOM)) {
+        if free_bytes(self.layout.root()).is_some_and(|free| free < size.saturating_add(ROOM)) {
             return Err(Error::no_room(rel));
         }
-        let tmp = tmp_of(&self.root.join(rel));
+        let tmp = tmp_of(&self.path(rel)?);
         let written = (|| {
             if let Some(dir) = tmp.parent() {
                 std::fs::create_dir_all(dir)
@@ -430,7 +496,7 @@ impl Run<'_> {
 
     /// Both sides have the file and at least one changed it.
     fn both(&mut self, rel: &str, l: Local, r: &Listed) -> Result<Seen, Error> {
-        let path = self.root.join(rel);
+        let path = self.path(rel)?;
         let tmp = self.fetch(rel, r.size)?;
         if same_bytes(&path, &tmp).map_err(|e| Error::new(format!("reading {rel}: {e}")))? {
             let _ = std::fs::remove_file(&tmp);
@@ -441,10 +507,11 @@ impl Run<'_> {
             });
         }
         let conflict = format!("{rel}{CONFLICT}{}", stamp(self.now));
+        let conflict_path = conflict_of(&path, self.now);
         let local_secs = l.mtime_ns / 1_000_000_000;
         let seen = if r.modified.unwrap_or(0) > local_secs {
             eprintln!("slot: cloud: {rel} changed on both sides, keeping the server's newer copy");
-            if let Err(e) = std::fs::rename(&path, self.root.join(&conflict)) {
+            if let Err(e) = std::fs::rename(&path, &conflict_path) {
                 let _ = std::fs::remove_file(&tmp);
                 return Err(Error::new(format!("keeping {conflict}: {e}")));
             }
@@ -454,7 +521,7 @@ impl Run<'_> {
             seen
         } else {
             eprintln!("slot: cloud: {rel} changed on both sides, keeping this card's newer copy");
-            std::fs::rename(&tmp, self.root.join(&conflict))
+            std::fs::rename(&tmp, &conflict_path)
                 .map_err(|e| Error::new(format!("keeping {conflict}: {e}")))?;
             self.upload(rel, l)?
         };
@@ -464,7 +531,7 @@ impl Run<'_> {
 
     /// Puts a fetched file in place as the card's `rel`.
     fn adopt(&mut self, rel: &str, tmp: &Path, tag: &str) -> Result<Seen, Error> {
-        let path = self.root.join(rel);
+        let path = self.path(rel)?;
         if let Err(e) = std::fs::rename(tmp, &path) {
             let _ = std::fs::remove_file(tmp);
             return Err(Error::new(format!("writing {rel}: {e}")));
@@ -482,7 +549,7 @@ impl Run<'_> {
     }
 
     fn remove_local(&mut self, rel: &str) -> Result<(), Error> {
-        match std::fs::remove_file(self.root.join(rel)) {
+        match std::fs::remove_file(self.path(rel)?) {
             Ok(()) => {}
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(Error::new(format!("deleting {rel}: {e}"))),
@@ -490,6 +557,13 @@ impl Run<'_> {
         eprintln!("slot: cloud: deleted {rel}, as the server did");
         self.report.deleted += 1;
         Ok(())
+    }
+
+    /// The device's copy of `rel`; only names the layout keeps get this far.
+    fn path(&self, rel: &str) -> Result<PathBuf, Error> {
+        self.layout
+            .local(rel)
+            .ok_or_else(|| Error::new(format!("{rel} has no place on this device")))
     }
 
     fn make_parents(&mut self, rel: &str) -> Result<(), Error> {
@@ -622,46 +696,42 @@ fn same_bytes(a: &Path, b: &Path) -> std::io::Result<bool> {
 }
 
 /// Hidden files (half-written temporaries among them) and conflict copies.
-fn skipped(name: &str) -> bool {
+pub fn skipped(name: &str) -> bool {
     name.is_empty() || name.starts_with('.') || name.contains(CONFLICT)
 }
 
 fn walk_local(
-    root: &Path,
+    layout: &dyn Layout,
     folder: &str,
     now: SystemTime,
     out: &mut BTreeMap<String, Local>,
     settling: &mut BTreeSet<String>,
 ) {
-    let mut todo = vec![folder.to_string()];
-    while let Some(dir) = todo.pop() {
-        let Ok(entries) = std::fs::read_dir(root.join(&dir)) else {
-            continue;
+    layout.walk(folder, &mut |rel, path| {
+        let Ok(meta) = std::fs::metadata(&path) else {
+            return;
         };
-        for e in entries.flatten() {
-            let name = e.file_name().to_string_lossy().into_owned();
-            if skipped(&name) {
-                continue;
-            }
-            let rel = format!("{dir}/{name}");
-            let Ok(meta) = e.metadata() else { continue };
-            if meta.is_dir() {
-                todo.push(rel);
-            } else if meta.is_file() {
-                let modified = meta.modified().unwrap_or(UNIX_EPOCH);
-                if now.duration_since(modified).is_ok_and(|age| age < SETTLE) {
-                    settling.insert(rel.clone());
-                }
-                out.insert(
-                    rel,
-                    Local {
-                        mtime_ns: ns(modified),
-                        size: meta.len(),
-                    },
-                );
-            }
+        if !meta.is_file() {
+            return;
         }
-    }
+        let modified = meta.modified().unwrap_or(UNIX_EPOCH);
+        if now.duration_since(modified).is_ok_and(|age| age < SETTLE) {
+            settling.insert(rel.clone());
+        }
+        out.insert(
+            rel,
+            Local {
+                mtime_ns: ns(modified),
+                size: meta.len(),
+            },
+        );
+    });
+}
+
+/// `<path>.conflict-<when>`, beside the device's copy.
+fn conflict_of(path: &Path, now: SystemTime) -> PathBuf {
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    path.with_file_name(format!("{name}{CONFLICT}{}", stamp(now)))
 }
 
 fn local_of(path: &Path) -> Option<Local> {
