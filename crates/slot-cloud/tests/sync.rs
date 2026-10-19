@@ -6,7 +6,8 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use slot_cloud::{
-    belongs_to, sync, sync_holding, Error, Listed, Remote, Report, FOLDERS, PROGRESS,
+    belongs_to, sync, sync_counted, sync_holding, Error, Listed, Moment, Remote, Report, Tally,
+    FOLDERS, PROGRESS,
 };
 
 #[derive(Default)]
@@ -28,6 +29,9 @@ struct Memory {
     down: bool,
     /// Files stored, in order.
     puts: Vec<String>,
+    /// Read as each upload finishes, into `moments`.
+    tally: Option<Arc<Tally>>,
+    moments: Vec<Moment>,
 }
 
 impl Memory {
@@ -118,6 +122,9 @@ impl Remote for Memory {
         let now = self.clock;
         self.store(rel, &bytes, now);
         self.puts.push(rel.into());
+        if let Some(t) = &self.tally {
+            self.moments.push(t.read());
+        }
         Ok(())
     }
 
@@ -631,4 +638,94 @@ fn a_server_that_stops_answering_ends_the_run() {
     .unwrap_err();
     assert!(e.offline, "the server is gone, not the file: {e}");
     assert!(remote.bytes("Games/PS/b.chd").is_none());
+}
+
+#[test]
+fn the_tally_counts_the_files_to_copy_and_the_bytes_of_each() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Saves/GBA/Zelda.sav", b"save", HOUR);
+    write_aged(root, "Games/GBA/Zelda.gba", &[0; 300], HOUR);
+    let tally = Arc::new(Tally::default());
+    let mut remote = Memory {
+        tally: Some(tally.clone()),
+        ..Memory::default()
+    };
+    remote.store("Games/GB/Tetris.gb", &[1; 50], 1);
+    let manifest = root.join("Config/cloudsync.manifest");
+    let no = AtomicBool::new(false);
+    sync_counted(
+        root,
+        &manifest,
+        &mut remote,
+        &FOLDERS,
+        &no,
+        &|_| false,
+        &tally,
+    )
+    .unwrap();
+    let seen: Vec<_> = remote
+        .moments
+        .iter()
+        .map(|m| (m.files, m.moved, m.name.as_str(), m.sending, m.at, m.of))
+        .collect();
+    assert_eq!(
+        seen,
+        [
+            (3, 0, "Saves/GBA/Zelda.sav", true, 4, 4),
+            (3, 2, "Games/GBA/Zelda.gba", true, 300, 300),
+        ],
+        "the download of Tetris came between them"
+    );
+    let end = tally.read();
+    assert_eq!((end.files, end.moved, end.name.as_str()), (3, 3, ""));
+
+    sync_counted(
+        root,
+        &manifest,
+        &mut remote,
+        &FOLDERS,
+        &no,
+        &|_| false,
+        &tally,
+    )
+    .unwrap();
+    assert_eq!(tally.read().files, 0, "nothing left to copy");
+}
+
+#[test]
+fn devices_check_in_and_see_each_other() {
+    use slot_cloud::devices::{check_in, clean_space, Device};
+    let mut remote = Memory::default();
+    let brick = Device {
+        id: "brick-1a2b".into(),
+        name: "TrimUI Brick".into(),
+        space: String::new(),
+        seen: 10,
+    };
+    let rgsp = Device {
+        id: "rgsp-3c4d".into(),
+        name: "RG SP".into(),
+        space: "Spaces/rgsp-3c4d".into(),
+        seen: 20,
+    };
+    assert_eq!(
+        check_in(&mut remote, &brick).unwrap(),
+        std::slice::from_ref(&brick)
+    );
+    let all = check_in(&mut remote, &rgsp).unwrap();
+    assert_eq!(all, [rgsp.clone(), brick.clone()]);
+    assert!(
+        remote.dirs.contains("Spaces/rgsp-3c4d"),
+        "its space is made"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(remote.bytes("Devices/brick-1a2b.ini").unwrap()),
+        "name=TrimUI Brick\nspace=\nseen=10\n"
+    );
+
+    assert_eq!(clean_space("Spaces/../x"), "");
+    assert_eq!(clean_space("/Spaces/rg-ds/"), "Spaces/rg-ds");
+    assert_eq!(brick.own_space(""), "Spaces/brick-1a2b");
+    assert_eq!(brick.own_space("Spaces/brick-1a2b"), "Spaces/brick-1a2b-10");
 }

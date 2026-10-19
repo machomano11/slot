@@ -67,7 +67,8 @@ const BLANK_DIM: f32 = 0.1;
 const VOLUME_STEP: u8 = 5;
 
 const AUTOSAVE_MS: Millis = 60_000;
-/// How long a dozing device stays up, screen off, to let cloud sync finish a transfer.
+/// How long a dozing device stays up, screen off, to let cloud sync finish a transfer;
+/// a full sync asked for from HOME > Cloud Sync holds it for as long as it runs.
 const SYNC_HOLD_MS: Millis = 30 * 60_000;
 const CARD_CHECK_MS: Millis = 2_000;
 
@@ -460,8 +461,10 @@ pub struct App {
     clock: f64,
     power: Option<Power>,
     dozed_at: Millis,
-    /// Cloud sync is moving files.
-    cloud_busy: bool,
+    /// Cloud sync is moving files; `Some(true)` for a full sync.
+    cloud_busy: Option<bool>,
+    /// Behind HOME > Cloud Sync; none without a cloud sync account.
+    cloud_panel: Option<Arc<crate::cloud::Panel>>,
     /// When the device last began to doze; the sync hold counts from here.
     doze_began: Millis,
     woke_on_press: bool,
@@ -662,7 +665,8 @@ impl App {
             clock: 0.0,
             power: None,
             dozed_at: 0,
-            cloud_busy: false,
+            cloud_busy: None,
+            cloud_panel: None,
             doze_began: 0,
             woke_on_press: false,
             autosave_at: AUTOSAVE_MS,
@@ -1077,6 +1081,7 @@ impl App {
             | QuickRow::Wallpaper
             | QuickRow::Wifi
             | QuickRow::CartArt
+            | QuickRow::Cloud
             | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
@@ -2849,6 +2854,12 @@ impl App {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::cart_art());
                 }
             }
+            QuickRow::Cloud => {
+                #[cfg(feature = "wifi")]
+                {
+                    self.wifi = Some(crate::brick_wifi::WifiMenu::cloud(self.cloud_panel.clone()));
+                }
+            }
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
@@ -3105,6 +3116,7 @@ impl App {
             | QuickRow::General
             | QuickRow::Wifi
             | QuickRow::CartArt
+            | QuickRow::Cloud
             | QuickRow::Achievements
             | QuickRow::Lights
             | QuickRow::LedMode
@@ -5799,7 +5811,16 @@ impl App {
         self.begin_power_off();
     }
 
-    pub fn set_cloud_busy(&mut self, busy: bool) {
+    pub fn set_cloud_panel(&mut self, panel: Arc<crate::cloud::Panel>) {
+        self.cloud_panel = Some(panel);
+    }
+
+    /// A full sync is running: the device stays up until it is done.
+    pub fn full_sync_running(&self) -> bool {
+        self.cloud_busy == Some(true)
+    }
+
+    pub fn set_cloud_busy(&mut self, busy: Option<bool>) {
         let held = self.holding_for_sync();
         self.cloud_busy = busy;
         if held && !self.holding_for_sync() {
@@ -5810,11 +5831,13 @@ impl App {
 
     /// Dozing, but kept up (screen off) so cloud sync can finish what it is sending
     /// or fetching: neither sleep nor the power-off timer runs until it's done, or
-    /// until [`SYNC_HOLD_MS`] after the doze began.
+    /// until [`SYNC_HOLD_MS`] after the doze began (a full sync, for as long as it runs).
     pub fn holding_for_sync(&self) -> bool {
-        self.cloud_busy
-            && matches!(self.phase, Phase::Doze { .. })
-            && self.now().saturating_sub(self.doze_began) < SYNC_HOLD_MS
+        matches!(self.phase, Phase::Doze { .. })
+            && match self.cloud_busy {
+                Some(full) => full || self.now().saturating_sub(self.doze_began) < SYNC_HOLD_MS,
+                None => false,
+            }
     }
 
     fn doze_expired(&self) -> bool {
