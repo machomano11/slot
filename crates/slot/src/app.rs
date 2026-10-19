@@ -4225,8 +4225,8 @@ impl App {
                 out.push(Draw::Tex {
                     x: 0.0,
                     y: 0.0,
-                    w: 640.0,
-                    h: 480.0,
+                    w: slot_gfx::OUT_W as f32,
+                    h: slot_gfx::OUT_H as f32,
                     tex,
                     alpha: 1.0,
                 });

@@ -1232,7 +1232,7 @@ impl WifiMenu {
         for (line, row) in (first..rows.min(first + 7)).enumerate() {
             let y = 110 + line * 41;
             if row == self.row {
-                p.rect(0, y, 640, 38, slot_ui::edge());
+                p.band(y, 38, slot_ui::edge());
             }
             let label = match row {
                 0 => "GET CART ART".into(),
@@ -1269,8 +1269,8 @@ impl WifiMenu {
         );
         UndoFace {
             rgba: p.rgba,
-            w: 640,
-            h: 480,
+            w: W as u32,
+            h: H as u32,
         }
     }
     fn render_ra(&self, ra: &RaScreen) -> UndoFace {
@@ -1303,7 +1303,7 @@ impl WifiMenu {
         for (i, label) in rows.iter().enumerate() {
             let y = 110 + i * 41;
             if i == self.row {
-                p.rect(0, y, 640, 38, slot_ui::edge());
+                p.band(y, 38, slot_ui::edge());
             }
             p.text(label, 32, y + 1, 576, 23.0);
         }
@@ -1320,8 +1320,8 @@ impl WifiMenu {
         );
         UndoFace {
             rgba: p.rgba,
-            w: 640,
-            h: 480,
+            w: W as u32,
+            h: H as u32,
         }
     }
     pub fn render(&self) -> UndoFace {
@@ -1390,7 +1390,7 @@ impl WifiMenu {
             for (line, row) in (first..(self.networks.len() + 3).min(first + 7)).enumerate() {
                 let y = 110 + line * 41;
                 if row == self.row {
-                    p.rect(0, y, 640, 38, slot_ui::edge());
+                    p.band(y, 38, slot_ui::edge());
                 }
                 let label = match row {
                     0 => format!(
@@ -1431,27 +1431,39 @@ impl WifiMenu {
         }
         UndoFace {
             rgba: p.rgba,
-            w: 640,
-            h: 480,
+            w: W as u32,
+            h: H as u32,
         }
     }
 }
+/// The screens are laid out for 640 x 480 and centred on the frame, which is wider on the
+/// RG SP (720 x 480) than on the Brick; backgrounds and highlight bands span the whole width.
+const W: usize = slot_gfx::OUT_W as usize;
+const H: usize = slot_gfx::OUT_H as usize;
+const X0: usize = (W - 640) / 2;
 struct Painter {
     rgba: Vec<u8>,
 }
 impl Painter {
     fn new() -> Self {
         let mut s = Self {
-            rgba: vec![0; 640 * 480 * 4],
+            rgba: vec![0; W * H * 4],
         };
-        s.rect(0, 0, 640, 480, slot_ui::opening());
+        s.fill(0, 0, W, H, slot_ui::opening());
         s
     }
+    /// A row highlight across the whole frame.
+    fn band(&mut self, y: usize, h: usize, c: [f32; 4]) {
+        self.fill(0, y, W, h, c);
+    }
     fn rect(&mut self, x: usize, y: usize, w: usize, h: usize, c: [f32; 4]) {
+        self.fill(X0 + x, y, w, h, c);
+    }
+    fn fill(&mut self, x: usize, y: usize, w: usize, h: usize, c: [f32; 4]) {
         let c = c.map(|v| (v * 255.0) as u8);
-        for yy in y..(y + h).min(480) {
-            for xx in x..(x + w).min(640) {
-                self.rgba[(yy * 640 + xx) * 4..(yy * 640 + xx) * 4 + 4].copy_from_slice(&c)
+        for yy in y..(y + h).min(H) {
+            for xx in x..(x + w).min(W) {
+                self.rgba[(yy * W + xx) * 4..(yy * W + xx) * 4 + 4].copy_from_slice(&c)
             }
         }
     }
@@ -1471,10 +1483,11 @@ impl Painter {
             tracking: 0.0,
         };
         slot_ui::text::draw_centred(&mut face, w as u32, h as u32, &layout, [238, 238, 242]);
-        for yy in 0..h.min(480 - y) {
-            for xx in 0..w.min(640 - x) {
+        let x = X0 + x;
+        for yy in 0..h.min(H - y) {
+            for xx in 0..w.min(W - x) {
                 let a = (yy * w + xx) * 4;
-                let b = ((y + yy) * 640 + x + xx) * 4;
+                let b = ((y + yy) * W + x + xx) * 4;
                 let alpha = face[a + 3] as u32;
                 for ch in 0..3 {
                     self.rgba[b + ch] = ((face[a + ch] as u32 * alpha
@@ -1818,9 +1831,9 @@ mod tests {
             ra: None,
         };
         let f = s.render();
-        assert_eq!(f.rgba.len(), 640 * 480 * 4);
+        assert_eq!(f.rgba.len(), W * H * 4);
         if let Ok(path) = std::env::var("SLOT_WIFI_PREVIEW") {
-            let mut e = png::Encoder::new(fs::File::create(path).unwrap(), 640, 480);
+            let mut e = png::Encoder::new(fs::File::create(path).unwrap(), W as u32, H as u32);
             e.set_color(png::ColorType::Rgba);
             e.set_depth(png::BitDepth::Eight);
             e.write_header().unwrap().write_image_data(&f.rgba).unwrap();
