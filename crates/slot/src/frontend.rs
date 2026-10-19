@@ -75,7 +75,7 @@ pub struct Frontend {
     link_shot: Option<TexId>,
     link_shot_size: (u32, u32),
     link_shot_shown: bool,
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     wifi_tex: Option<TexId>,
     banner_tex: Option<TexId>,
     #[cfg(feature = "brick")]
@@ -168,7 +168,7 @@ impl Frontend {
     pub fn boot_with(platform: Box<dyn Platform>, sink: Box<dyn crate::audio::AudioSink>) -> Self {
         let now = Instant::now();
         let cart_faces = CartFaces::spawn(platform.root().to_path_buf());
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         crate::brick_wifi::ensure_address_at_boot();
         #[cfg(feature = "brick")]
         let session_root = platform.root().to_path_buf();
@@ -213,7 +213,7 @@ impl Frontend {
             link_shot: None,
             link_shot_size: (0, 0),
             link_shot_shown: false,
-            #[cfg(feature = "brick")]
+            #[cfg(feature = "wifi")]
             wifi_tex: None,
             banner_tex: None,
             #[cfg(feature = "brick")]
@@ -715,7 +715,7 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         if let Some(wifi) = &mut self.session.app_mut().wifi {
             if wifi.dirty {
                 let f = wifi.render();

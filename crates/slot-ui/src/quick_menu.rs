@@ -232,7 +232,7 @@ impl QuickRow {
         QuickRow::LeftStick,
     ];
 
-    #[cfg(not(feature = "brick"))]
+    #[cfg(not(feature = "wifi"))]
     pub const MAIN: [QuickRow; 5] = [
         QuickRow::General,
         QuickRow::Screen,
@@ -249,6 +249,17 @@ impl QuickRow {
         QuickRow::ShowTitles,
         QuickRow::LidOff,
         QuickRow::DateTime,
+    ];
+    #[cfg(all(feature = "wifi", not(feature = "brick")))]
+    pub const MAIN: [QuickRow; 8] = [
+        QuickRow::General,
+        QuickRow::Screen,
+        QuickRow::Game,
+        QuickRow::Controls,
+        QuickRow::Wifi,
+        QuickRow::CartArt,
+        QuickRow::Achievements,
+        QuickRow::About,
     ];
     #[cfg(feature = "brick")]
     pub const MAIN: [QuickRow; 9] = [

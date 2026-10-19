@@ -10,7 +10,6 @@ use slot_store::{
     read_slot_state, write_slot_state, Appearance, BezelPick, Platform, Shader, SlotState,
     WallpaperPick,
 };
-#[cfg(feature = "brick")]
 use slot_ui::quick_window;
 use slot_ui::{
     Draw, Icon, QuickMenuFaces, QuickRow, QuickValue, TexId, HINT_EDGE, MENU_PAD, MOUTH_H, OUT_H,
@@ -910,14 +909,11 @@ fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
             ly + lh / 2.0,
             "{row:?}: the pointer is off the row"
         );
-        // The Brick's main page is longer than fits, so only the rows in view are drawn.
-        #[cfg(feature = "brick")]
+        // A main page longer than fits draws only the rows in view.
         let shown = {
             let (first, count) = quick_window(row, &a.hidden_rows());
             &QuickRow::MAIN[first..first + count]
         };
-        #[cfg(not(feature = "brick"))]
-        let shown = &QuickRow::MAIN[..];
         for other in shown.iter().copied().filter(|r| *r != row) {
             assert!(drawn(&out, label(other, false)), "{other:?} is not grey");
             assert!(!drawn(&out, label(other, true)), "{other:?} is lit");

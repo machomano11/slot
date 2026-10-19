@@ -54,7 +54,7 @@ pub mod brick_led;
 #[cfg(feature = "brick")]
 pub mod brick_power;
 
-#[cfg(feature = "brick")]
+#[cfg(feature = "wifi")]
 pub mod brick_wifi;
 
 #[cfg(feature = "brick")]

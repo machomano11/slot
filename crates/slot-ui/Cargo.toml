@@ -19,4 +19,5 @@ slot-gfx = { path = "../slot-gfx", default-features = false, features = ["test-s
 tempfile.workspace = true
 
 [features]
-brick = []
+brick = ["wifi"]
+wifi = []

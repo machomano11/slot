@@ -77,10 +77,24 @@ fn the_fast_forward_row_offers_the_four_ceilings_the_card_can_hold() {
 
 #[test]
 fn the_rows_run_in_the_order_the_user_chose() {
-    #[cfg(not(feature = "brick"))]
+    #[cfg(not(feature = "wifi"))]
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
         ["General", "Screen", "Gameplay", "Controls", "About"]
+    );
+    #[cfg(all(feature = "wifi", not(feature = "brick")))]
+    assert_eq!(
+        QuickRow::MAIN.map(QuickRow::label),
+        [
+            "General",
+            "Screen",
+            "Gameplay",
+            "Controls",
+            "Wi-Fi",
+            "Cart Art",
+            "RetroAchievements",
+            "About"
+        ]
     );
     #[cfg(feature = "brick")]
     assert_eq!(

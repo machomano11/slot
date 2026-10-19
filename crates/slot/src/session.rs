@@ -762,9 +762,9 @@ struct RaLogin {
 
 /// Wi-Fi has an address, so a sign-in can reach the server.
 fn net_online() -> bool {
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     return crate::brick_wifi::online();
-    #[cfg(not(feature = "brick"))]
+    #[cfg(not(feature = "wifi"))]
     true
 }
 

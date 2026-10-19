@@ -327,9 +327,9 @@ const RECENTS_AT: usize = 0;
 const FAVORITES_AT: usize = 1;
 
 pub struct App {
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     pub(crate) wifi: Option<crate::brick_wifi::WifiMenu>,
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     wifi_power: Option<Action>,
     phase: Phase,
     shelves: Vec<(Rack, Shelf)>,
@@ -544,9 +544,9 @@ impl App {
             refused_from: None,
             alert_face: None,
             shutdown_faces: Vec::new(),
-            #[cfg(feature = "brick")]
+            #[cfg(feature = "wifi")]
             wifi: None,
-            #[cfg(feature = "brick")]
+            #[cfg(feature = "wifi")]
             wifi_power: None,
             repair_faces: Vec::new(),
             core_picker: None,
@@ -1600,7 +1600,7 @@ impl App {
     }
 
     /// The Wi-Fi / Cart Art overlay is open.
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     pub fn overlay_open(&self) -> bool {
         self.wifi.is_some()
     }
@@ -2529,7 +2529,7 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         if let Some(wifi) = &mut self.wifi {
             if matches!(
                 action,
@@ -2561,7 +2561,7 @@ impl App {
             Action::PowerOff => return,
             _ => {}
         }
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         if let Some(wifi) = &mut self.wifi {
             if wifi.input(action) {
                 self.wifi = None;
@@ -2824,19 +2824,19 @@ impl App {
     fn open_quick_row(&mut self, row: QuickRow) {
         match row {
             QuickRow::Wifi => {
-                #[cfg(feature = "brick")]
+                #[cfg(feature = "wifi")]
                 {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::new());
                 }
             }
             QuickRow::Achievements => {
-                #[cfg(feature = "brick")]
+                #[cfg(feature = "wifi")]
                 {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::achievements());
                 }
             }
             QuickRow::CartArt => {
-                #[cfg(feature = "brick")]
+                #[cfg(feature = "wifi")]
                 {
                     self.wifi = Some(crate::brick_wifi::WifiMenu::cart_art());
                 }
@@ -3746,7 +3746,7 @@ impl App {
                 self.banner = Some((self.banner_seq, title, detail, badge, now));
             }
         }
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         {
             if let Some(wifi) = &mut self.wifi {
                 wifi.poll();
@@ -4219,7 +4219,7 @@ impl App {
         if let Some(row) = self.reset_prompt {
             return self.draw_prompt(&self.reset_prompt_faces(row), out);
         }
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         if let Some(wifi) = &self.wifi {
             if let Some(tex) = wifi.face {
                 out.push(Draw::Tex {
@@ -5143,7 +5143,7 @@ impl App {
     }
 
     fn doze(&mut self) {
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         {
             self.wifi = None;
         }

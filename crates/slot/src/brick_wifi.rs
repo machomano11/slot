@@ -264,19 +264,39 @@ fn pause(cancel: &AtomicBool, ms: u64) -> Result<()> {
     }
     Ok(())
 }
-/// slot carries its own System/brick_wifi.sh, and it wins: an
-/// /etc/wifi/wifi_init.sh on a Brick is left over from another firmware and can
-/// call tools stock firmware lacks (rfkill.elf), leaving the radio blocked.
+/// slot carries its own helper (System/brick_wifi.sh on the Brick, System/wifi.sh on
+/// the RG SP), and it wins: an /etc/wifi/wifi_init.sh on a Brick is left over from
+/// another firmware and can call tools stock firmware lacks (rfkill.elf), leaving the
+/// radio blocked.
 fn helper(firmware: &Path, root: &Path) -> Option<PathBuf> {
-    let own = root.join("System/brick_wifi.sh");
-    if own.is_file() {
-        return Some(own);
-    }
-    firmware.is_file().then(|| firmware.into())
+    let own = ["System/brick_wifi.sh", "System/wifi.sh"]
+        .iter()
+        .map(|s| root.join(s))
+        .find(|p| p.is_file());
+    own.or_else(|| firmware.is_file().then(|| firmware.into()))
 }
 fn service(on: bool) -> Result<()> {
-    run_helper(if on { "start" } else { "stop" }, Duration::from_secs(15))
+    run_helper(if on { "start" } else { "stop" }, Duration::from_secs(15))?;
+    remember(&card_root(), on);
+    Ok(())
 }
+/// Wi-Fi left on is switched on again at the next boot: BaseOS on the RG SP starts no
+/// supplicant of its own (the Brick's firmware does).
+fn remember(root: &Path, on: bool) {
+    let mark = root.join(WIFI_ON);
+    let done = if on {
+        fs::create_dir_all(root.join("Config")).and_then(|_| fs::write(&mark, ""))
+    } else {
+        fs::remove_file(&mark).or_else(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => Ok(()),
+            _ => Err(e),
+        })
+    };
+    if let Err(e) = done {
+        eprintln!("slot: wifi: cannot remember the switch: {e}");
+    }
+}
+const WIFI_ON: &str = "Config/wifi-on";
 /// Joined but no address: have the helper start a DHCP client, or make the
 /// running one ask again. A client that kept an old lease or backed off while the
 /// supplicant was joining otherwise leaves the menu on "Waiting for IP".
@@ -296,9 +316,23 @@ fn request_address() {
 /// The firmware starts its own supplicant at boot, which joins a saved network
 /// but runs no DHCP client, so Wi-Fi sat on "Waiting for IP" until it was
 /// switched off and on. Watch it for a minute after boot and ask for an address
-/// once it has joined. Never blocks startup.
+/// once it has joined. On the RG SP, Wi-Fi left on is first switched on again.
+/// Never blocks startup.
 pub fn ensure_address_at_boot() {
     thread::spawn(|| {
+        // BaseOS loads the Wi-Fi driver in the background, so wlan0 can still be missing.
+        if !cfg!(feature = "brick") && card_root().join(WIFI_ON).exists() {
+            for _ in 0..4 {
+                if Control::open().is_ok() {
+                    break;
+                }
+                match service(true) {
+                    Ok(()) => break,
+                    Err(e) => eprintln!("slot: wifi: switching on at boot: {e}"),
+                }
+                thread::sleep(Duration::from_secs(5));
+            }
+        }
         let deadline = Instant::now() + Duration::from_secs(60);
         while Instant::now() < deadline {
             if let Ok(s) = Control::open().and_then(|c| c.command("STATUS")) {
@@ -317,7 +351,7 @@ fn run_helper(verb: &str, limit: Duration) -> Result<()> {
     let root =
         PathBuf::from(std::env::var_os("SLOT_ROOT").unwrap_or_else(|| "/mnt/SDCARD/Slot".into()));
     let Some(script) = helper(Path::new("/etc/wifi/wifi_init.sh"), &root) else {
-        return Err("Wi-Fi helper missing: System/brick_wifi.sh".into());
+        return Err("Wi-Fi helper missing: System/wifi.sh".into());
     };
     let mut child = Command::new("/bin/sh")
         .arg(&script)
@@ -1562,6 +1596,24 @@ mod tests {
         fs::create_dir_all(root.join("System")).unwrap();
         fs::write(root.join("System/brick_wifi.sh"), "").unwrap();
         assert_eq!(helper(&fw, &root), Some(root.join("System/brick_wifi.sh")));
+    }
+    #[test]
+    fn the_switch_is_remembered_for_the_next_boot() {
+        let d = tempfile::tempdir().unwrap();
+        remember(d.path(), true);
+        assert!(d.path().join(WIFI_ON).exists());
+        remember(d.path(), false);
+        assert!(!d.path().join(WIFI_ON).exists());
+        remember(d.path(), false);
+    }
+    #[test]
+    fn helper_finds_the_rg_sp_script() {
+        let d = tempfile::tempdir().unwrap();
+        let fw = d.path().join("wifi_init.sh");
+        fs::write(&fw, "").unwrap();
+        fs::create_dir_all(d.path().join("System")).unwrap();
+        fs::write(d.path().join("System/wifi.sh"), "").unwrap();
+        assert_eq!(helper(&fw, d.path()), Some(d.path().join("System/wifi.sh")));
     }
     #[test]
     fn all_keys() {
