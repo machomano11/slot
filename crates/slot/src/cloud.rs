@@ -246,7 +246,7 @@ impl CloudSync {
         let stop = cancel.clone();
         let held = self.game.clone();
         let game = held.clone();
-        let folders = self.account.folders(!full || held.is_some());
+        let folders = library(&self.account.folders(!full || held.is_some()));
         let panel = self.panel.clone();
         let spawned = std::thread::Builder::new()
             .name("slot-cloud".into())
@@ -258,6 +258,7 @@ impl CloudSync {
                 let seen = devices::check_in(&mut top, &me)
                     .map_err(|e| eprintln!("slot: cloud: checking in: {e}"))
                     .ok();
+                let folders: Vec<&str> = folders.iter().map(String::as_str).collect();
                 let result = slot_cloud::sync_counted(
                     &root,
                     &manifest,
@@ -354,6 +355,21 @@ impl Drop for CloudSync {
             job.cancel.store(true, Ordering::Relaxed);
         }
     }
+}
+
+/// The folders a run covers: games and art only for the consoles Slot
+/// plays, so another system's games (a DS's, say) stay on the server.
+fn library(folders: &[&'static str]) -> Vec<String> {
+    folders
+        .iter()
+        .flat_map(|&f| match f {
+            slot_cloud::GAMES | slot_cloud::ART => Platform::ALL
+                .iter()
+                .map(|p| format!("{f}/{}", p.dir_name()))
+                .collect(),
+            f => vec![f.to_string()],
+        })
+        .collect()
 }
 
 /// The manifest for a space: what the last run there saw.
@@ -509,6 +525,16 @@ mod tests {
             Some("Spaces/brick-3-5"),
             "a space of our own that others joined is left for a new one"
         );
+    }
+
+    #[test]
+    fn games_and_art_only_for_the_consoles_slot_plays() {
+        let f = library(&["Saves", slot_cloud::GAMES, slot_cloud::ART]);
+        assert_eq!(f[0], "Saves");
+        assert!(f.contains(&"Games/GBA".to_string()));
+        assert!(f.contains(&"Labels/PS".to_string()));
+        assert!(!f.iter().any(|f| f == "Games" || f.ends_with("/NDS")));
+        assert_eq!(f.len(), 1 + 2 * Platform::ALL.len());
     }
 
     #[test]

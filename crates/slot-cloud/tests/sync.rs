@@ -729,3 +729,25 @@ fn devices_check_in_and_see_each_other() {
     assert_eq!(brick.own_space(""), "Spaces/brick-1a2b");
     assert_eq!(brick.own_space("Spaces/brick-1a2b"), "Spaces/brick-1a2b-10");
 }
+
+#[test]
+fn a_run_of_some_consoles_leaves_other_systems_games_on_the_server() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    let mut remote = Memory::default();
+    remote.store("Games/NDS/Mario.nds", b"ds", 1);
+    remote.store("Games/GBA/Zelda.gba", b"gba", 1);
+    write_aged(root, "Games/GB/Tetris.gb", b"gb", HOUR);
+    let r = sync_holding(
+        root,
+        &root.join("Config/cloudsync.manifest"),
+        &mut remote,
+        &["Games/GBA", "Games/GB"],
+        &AtomicBool::new(false),
+        &|_| false,
+    )
+    .unwrap();
+    assert_eq!((r.uploaded, r.downloaded), (1, 1), "{r:?}");
+    assert!(read(root, "Games/NDS/Mario.nds").is_none());
+    assert!(remote.bytes("Games/GB/Tetris.gb").is_some());
+}
