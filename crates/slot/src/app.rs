@@ -50,6 +50,8 @@ const FOOTER_SLIDE_S: f32 = POWER_ON_S;
 const VOLUME_STEP: u8 = 5;
 
 const AUTOSAVE_MS: Millis = 60_000;
+/// How long a dozing device stays up, screen off, to let cloud sync finish a transfer.
+const SYNC_HOLD_MS: Millis = 30 * 60_000;
 const CARD_CHECK_MS: Millis = 2_000;
 
 const BATTERY_CRITICAL: u8 = 5;
@@ -426,6 +428,10 @@ pub struct App {
     clock: f64,
     power: Option<Power>,
     dozed_at: Millis,
+    /// Cloud sync is moving files.
+    cloud_busy: bool,
+    /// When the device last began to doze; the sync hold counts from here.
+    doze_began: Millis,
     woke_on_press: bool,
     autosave_at: Millis,
     pending_save: Option<std::thread::JoinHandle<()>>,
@@ -611,6 +617,8 @@ impl App {
             clock: 0.0,
             power: None,
             dozed_at: 0,
+            cloud_busy: false,
+            doze_began: 0,
             woke_on_press: false,
             autosave_at: AUTOSAVE_MS,
             pending_save: None,
@@ -4551,6 +4559,7 @@ impl App {
         self.polaroids = None;
         self.phase = Phase::Doze { cart };
         self.dozed_at = self.now();
+        self.doze_began = self.dozed_at;
         #[cfg(feature = "brick")]
         if let Some(leds) = &mut self.brick_leds {
             if let Err(e) = leds.sleep() {
@@ -5157,8 +5166,26 @@ impl App {
         self.begin_power_off();
     }
 
+    pub fn set_cloud_busy(&mut self, busy: bool) {
+        let held = self.holding_for_sync();
+        self.cloud_busy = busy;
+        if held && !self.holding_for_sync() {
+            // The doze's own timers run from when sync let go.
+            self.dozed_at = self.now();
+        }
+    }
+
+    /// Dozing, but kept up (screen off) so cloud sync can finish what it is sending
+    /// or fetching: neither sleep nor the power-off timer runs until it's done, or
+    /// until [`SYNC_HOLD_MS`] after the doze began.
+    pub fn holding_for_sync(&self) -> bool {
+        self.cloud_busy
+            && matches!(self.phase, Phase::Doze { .. })
+            && self.now().saturating_sub(self.doze_began) < SYNC_HOLD_MS
+    }
+
     fn doze_expired(&self) -> bool {
-        if self.link_active() {
+        if self.link_active() || self.holding_for_sync() {
             return false;
         }
         let (Phase::Doze { .. }, Some(power)) = (&self.phase, &self.power) else {

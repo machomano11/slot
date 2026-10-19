@@ -21,6 +21,13 @@ struct Memory {
     cancel_on_put: Option<Arc<AtomicBool>>,
     /// Refuses MOVE, as a few servers do.
     no_move: bool,
+    /// Uploads to names containing this are refused, as a server's size limit would.
+    refuse: Option<&'static str>,
+    /// The server stops answering at the first refused upload.
+    goes_down: bool,
+    down: bool,
+    /// Files stored, in order.
+    puts: Vec<String>,
 }
 
 impl Memory {
@@ -76,6 +83,9 @@ impl Remote for Memory {
     }
 
     fn stat(&mut self, rel: &str) -> Result<Option<Listed>, Error> {
+        if self.down {
+            return Err(Error::offline("connection refused"));
+        }
         Ok(self.listed(rel))
     }
 
@@ -93,6 +103,10 @@ impl Remote for Memory {
         if !parent.is_empty() && !self.dirs.contains(parent) {
             return Err(Error::new(format!("409 no folder for {rel}")));
         }
+        if self.refuse.is_some_and(|r| rel.contains(r)) {
+            self.down = self.goes_down;
+            return Err(Error::new("HTTP 413 Payload Too Large"));
+        }
         if let Some(cancel) = &self.cancel_on_put {
             cancel.store(true, Ordering::Relaxed);
         }
@@ -103,6 +117,7 @@ impl Remote for Memory {
         self.clock += 1;
         let now = self.clock;
         self.store(rel, &bytes, now);
+        self.puts.push(rel.into());
         Ok(())
     }
 
@@ -545,4 +560,75 @@ fn a_conflict_on_a_big_file_streams_and_keeps_both() {
         2,
         "the card's copy is kept beside it: {names:?}"
     );
+}
+
+#[test]
+fn saves_go_first_then_the_smallest_games() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/PS/Big (USA).chd", &[0; 5000], HOUR);
+    write_aged(root, "Games/WS/Small.ws", &[0; 10], HOUR);
+    write_aged(root, "Games/32X/Middle.32x", &[0; 500], HOUR);
+    write_aged(root, "Saves/WS/Small.sav", b"save", HOUR);
+    let mut remote = Memory::default();
+    run(root, &mut remote);
+    let order: Vec<&str> = remote
+        .puts
+        .iter()
+        .map(|p| p.rsplit('/').next().unwrap())
+        .collect();
+    assert_eq!(
+        order,
+        [
+            ".Small.sav.cloud-part",
+            ".Small.ws.cloud-part",
+            ".Middle.32x.cloud-part",
+            ".Big (USA).chd.cloud-part"
+        ]
+    );
+}
+
+#[test]
+fn a_file_the_server_refuses_is_skipped_and_the_rest_still_go() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/PS/Huge.chd", &[0; 900], HOUR);
+    write_aged(root, "Games/PS/Huge 2.chd", &[0; 1000], HOUR);
+    write_aged(root, "Games/WSC/After.wsc", &[0; 950], HOUR);
+    let mut remote = Memory {
+        refuse: Some("Huge.chd"),
+        ..Memory::default()
+    };
+    let r = run(root, &mut remote);
+    assert_eq!(r.uploaded, 2, "{r:?}");
+    assert_eq!(r.failed.len(), 1);
+    assert_eq!(r.failed[0].0, "Games/PS/Huge.chd");
+    assert!(r.failed[0].1.contains("413"), "{:?}", r.failed);
+    assert!(remote.bytes("Games/WSC/After.wsc").is_some());
+
+    remote.refuse = None;
+    let r = run(root, &mut remote);
+    assert_eq!((r.uploaded, r.failed.len()), (1, 0), "tried again: {r:?}");
+}
+
+#[test]
+fn a_server_that_stops_answering_ends_the_run() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/PS/a.chd", &[0; 10], HOUR);
+    write_aged(root, "Games/PS/b.chd", &[0; 20], HOUR);
+    let mut remote = Memory {
+        refuse: Some("a.chd"),
+        goes_down: true,
+        ..Memory::default()
+    };
+    let e = sync(
+        root,
+        &root.join("Config/cloudsync.manifest"),
+        &mut remote,
+        &AtomicBool::new(false),
+    )
+    .unwrap_err();
+    assert!(e.offline, "the server is gone, not the file: {e}");
+    assert!(remote.bytes("Games/PS/b.chd").is_none());
 }

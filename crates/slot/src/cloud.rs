@@ -40,6 +40,8 @@ pub struct CloudSync {
     rescan: bool,
     /// How many files the last run had no room for, so a full card is said once.
     no_room: usize,
+    /// The same for files that failed, so a file the server keeps refusing is said once.
+    failed: usize,
 }
 
 struct Job {
@@ -62,6 +64,7 @@ impl CloudSync {
             failing: false,
             rescan: false,
             no_room: 0,
+            failed: 0,
         })
     }
 
@@ -85,6 +88,7 @@ impl CloudSync {
             self.next = None;
         }
         self.poll(app);
+        app.set_cloud_busy(self.job.is_some());
         if self.rescan && !playing {
             self.rescan = !app.rescan();
         }
@@ -152,6 +156,9 @@ impl CloudSync {
                 {
                     report.no_room.clear();
                 }
+                if std::mem::replace(&mut self.failed, report.failed.len()) == report.failed.len() {
+                    report.failed.clear();
+                }
                 if let Some((title, detail)) = summary(&report) {
                     app.show_message(title, detail);
                 }
@@ -188,6 +195,14 @@ fn summary(r: &Report) -> Option<(String, String)> {
         r.conflicts.len(),
         if r.cancelled { ", cut short" } else { "" }
     );
+    if let Some((rel, why)) = r.failed.first() {
+        let name = rel.rsplit('/').next().unwrap_or(rel);
+        let detail = match r.failed.len() {
+            1 => format!("Couldn't sync {name}: {why}"),
+            n => format!("Couldn't sync {n} files, {name} among them: {why}"),
+        };
+        return Some((TITLE.into(), detail));
+    }
     if !r.no_room.is_empty() {
         let detail = match r.no_room.len() {
             1 => "The card is full: 1 file wasn't received".to_string(),

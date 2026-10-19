@@ -145,6 +145,8 @@ pub struct Report {
     pub received: Vec<String>,
     /// What the server has that the card had no room for; tried again next run.
     pub no_room: Vec<String>,
+    /// Files that couldn't be moved, with why; tried again next run.
+    pub failed: Vec<(String, String)>,
     /// The run stopped early because it was asked to.
     pub cancelled: bool,
 }
@@ -243,9 +245,17 @@ impl Run<'_> {
             .chain(seen.keys().filter(|k| ours(k)))
             .cloned()
             .collect();
-        // Saves and states first, so a big batch of games never holds them up.
+        // Saves and states first, so a big batch of games never holds them up;
+        // then the rest smallest first, so one huge disc image can't hold up
+        // every game after it.
         let progress = |rel: &String| PROGRESS.iter().any(|f| rel.starts_with(&format!("{f}/")));
-        let (first, rest): (Vec<String>, Vec<String>) = names.into_iter().partition(progress);
+        let (first, mut rest): (Vec<String>, Vec<String>) = names.into_iter().partition(progress);
+        let size = |rel: &String| {
+            let here = local.get(rel).map_or(0, |l| l.size);
+            let there = remote.get(rel).map_or(0, |r: &Listed| r.size);
+            here.max(there)
+        };
+        rest.sort_by_cached_key(|rel| (size(rel), rel.clone()));
         for rel in first.into_iter().chain(rest) {
             if settling.contains(&rel) {
                 continue;
@@ -279,7 +289,16 @@ impl Run<'_> {
                     self.report.cancelled = true;
                     return Ok(());
                 }
-                Err(e) => return Err(e),
+                // One file going wrong (too big for the server, say) doesn't
+                // stop the rest, as long as the server still answers.
+                Err(e) => {
+                    if let Err(down) = self.remote.stat("") {
+                        return Err(if e.offline { e } else { down });
+                    }
+                    eprintln!("slot: cloud: skipped {rel}: {e}");
+                    self.report.failed.push((rel, e.message));
+                    continue;
+                }
             };
         }
         Ok(())

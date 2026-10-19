@@ -408,3 +408,28 @@ fn a_shut_lid_over_a_session_takes_its_network_down_too() {
     );
     assert!(jobs.contains(&RadioJob::Cool));
 }
+
+#[test]
+fn a_doze_waits_for_cloud_sync_and_then_times_out_as_usual() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let mut a = app_playing_in(d.path(), "Emerald");
+    a.set_power(panel(d.path(), Duration::from_secs(2)).0);
+    a.apply(Action::LidClose);
+    a.set_cloud_busy(true);
+    for _ in 0..300 {
+        a.update(DT);
+    }
+    assert!(a.holding_for_sync());
+    assert!(!a.powering_off(), "a transfer still running holds the power-off");
+
+    a.set_cloud_busy(false);
+    assert!(!a.holding_for_sync());
+    for _ in 0..100 {
+        a.update(DT);
+    }
+    assert!(!a.powering_off(), "the timeout runs from when sync let go");
+    for _ in 0..40 {
+        a.update(DT);
+    }
+    assert!(a.powering_off());
+}
