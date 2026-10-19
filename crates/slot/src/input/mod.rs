@@ -1,3 +1,4 @@
+mod bind;
 #[cfg(feature = "brick")]
 pub mod brick;
 mod device;
@@ -13,6 +14,7 @@ mod mask;
 mod pad;
 pub mod trace;
 
+pub use bind::{btn_device, carousel_action, device_btn, shortcut_table};
 pub use device::DeviceInput;
 #[cfg(feature = "host")]
 pub use host::HostInput;

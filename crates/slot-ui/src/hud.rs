@@ -154,6 +154,7 @@ pub struct Hud {
     ff: FfState,
     said: Option<(Toast, Millis)>,
     alarm: Option<Millis>,
+    alarm_toast: Option<Toast>,
     icons: Vec<TexId>,
     toasts: Vec<TexId>,
     message: Option<TexId>,
@@ -205,6 +206,15 @@ impl Hud {
             (true, None) => Some(now),
             (false, _) => None,
         };
+    }
+
+    pub fn set_alarm_toast(&mut self, toast: Toast) {
+        self.alarm_toast = Some(toast);
+    }
+
+    pub fn alarm_toast(&self) -> Option<Toast> {
+        self.alarm
+            .map(|_| self.alarm_toast.unwrap_or(Toast::CardUnwritable))
     }
 
     pub fn alarmed(&self) -> bool {
@@ -351,7 +361,7 @@ impl Hud {
             h: ALARM_BAND_H,
             colour: pulse(age),
         });
-        let alarm = Toast::CardUnwritable;
+        let alarm = self.alarm_toast.unwrap_or(Toast::CardUnwritable);
         let Some(tex) = self.toasts.get(alarm.index()).copied() else {
             return;
         };
@@ -438,7 +448,7 @@ impl Hud {
 
     fn toast_alpha(&self, now: Millis) -> f32 {
         match self.said {
-            Some((_, shown)) => fade(shown, now),
+            Some((toast, shown)) => fade_after(shown, now, toast.hold_ms()),
             None => 0.0,
         }
     }

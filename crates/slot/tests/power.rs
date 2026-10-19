@@ -410,6 +410,31 @@ fn a_shut_lid_over_a_session_takes_its_network_down_too() {
 }
 
 #[test]
+fn a_shut_lid_powers_off_after_the_minutes_set_in_the_menu() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    write_slot_state(
+        d.path(),
+        &SlotState {
+            clock_set: true,
+            lid_off_min: Some(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut a = boot(d.path());
+    a.set_power(panel(d.path(), Duration::from_secs(300)).0);
+    a.apply(Action::LidClose);
+    for _ in 0..59 * 60 {
+        a.update(1.0 / 60.0);
+    }
+    assert!(!a.powering_off(), "59 s is short of the minute");
+    for _ in 0..120 {
+        a.update(1.0 / 60.0);
+    }
+    assert!(a.powering_off());
+}
+
+#[test]
 fn a_doze_waits_for_cloud_sync_and_then_times_out_as_usual() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let mut a = app_playing_in(d.path(), "Emerald");
