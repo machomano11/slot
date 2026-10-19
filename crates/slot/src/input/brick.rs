@@ -85,6 +85,9 @@ pub struct BrickInput {
 }
 
 impl BrickInput {
+    /// The Brick has no analog stick to steer with.
+    pub fn steer_with_stick(&self, _on: bool) {}
+
     pub fn open(root: &Path) -> Result<Self, String> {
         unsafe {
             let lib = Library::new("libSDL2-2.0.so.0")
