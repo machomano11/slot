@@ -51,7 +51,27 @@ pub enum Action {
     PowerOff,
     LidClose,
     LidOpen,
+    MenuChordDown(Btn),
+    MenuChordUp(Btn),
     RepairCard,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Mod {
+    Select,
+    Menu,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct Chord {
+    pub modifier: Option<Mod>,
+    pub button: Btn,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Release {
+    Nothing,
+    Send(Action),
 }
 
 #[derive(Copy, Clone, Default)]
@@ -70,13 +90,15 @@ enum Select {
 pub struct Gestures {
     select: Select,
     home_chords: bool,
-    menu_dpad_display: bool,
-    repair_chord: bool,
-    chord_held: u16,
+    shortcuts: Vec<(Chord, Action)>,
+    playing: bool,
+    held: Vec<(Btn, Release)>,
+    ff_button: Option<Btn>,
+    rewind_button: Option<Btn>,
     menu_down_at: Option<Millis>,
     menu_last_tap: Option<Millis>,
     menu_eject_fired: bool,
-    menu_display_chorded: bool,
+    menu_chorded: bool,
     power_down_at: Option<Millis>,
     power_hold_fired: bool,
     vol_up_at: Option<Millis>,
@@ -117,10 +139,6 @@ impl Gestures {
         }
     }
 
-    pub fn set_menu_dpad_display(&mut self, enabled: bool) {
-        self.menu_dpad_display = enabled;
-    }
-
     pub fn set_triggers_to_game(&mut self, on: bool) {
         self.triggers_to_game = on;
     }
@@ -129,8 +147,47 @@ impl Gestures {
         self.triggers_to_game
     }
 
-    pub fn set_repair_chord(&mut self, on: bool) {
-        self.repair_chord = on;
+    pub fn set_shortcuts(&mut self, shortcuts: Vec<(Chord, Action)>) {
+        self.shortcuts = shortcuts;
+    }
+
+    pub fn set_playing(&mut self, playing: bool) {
+        self.playing = playing;
+    }
+
+    fn shortcut(&self, modifier: Option<Mod>, button: Btn) -> Option<Action> {
+        let chord = Chord { modifier, button };
+        self.shortcuts
+            .iter()
+            .find(|(c, _)| *c == chord)
+            .map(|(_, a)| *a)
+    }
+
+    /// The Brick's own HOME chords, for a HOME + button no shortcut takes.
+    /// (Its picture shortcut is SELECT + X, beside Y's colour correction.)
+    fn home_chord(&self, b: Btn) -> Option<Action> {
+        if !self.home_chords {
+            return None;
+        }
+        match b {
+            Btn::A => Some(Action::ShaderNext),
+            Btn::B => Some(Action::LedToggle),
+            _ => None,
+        }
+    }
+
+    fn hold(&mut self, b: Btn, action: Action) -> Vec<Action> {
+        let release = match action {
+            Action::FfStart => Release::Send(Action::FfStop),
+            Action::RewindStart => Release::Send(Action::RewindStop),
+            _ => Release::Nothing,
+        };
+        self.held.push((b, release));
+        vec![action]
+    }
+
+    fn menu_held(&self) -> bool {
+        !self.menu_eject_fired && (self.menu_down_at.is_some() || self.menu_chorded)
     }
 
     pub fn ff_latched(&self) -> bool {
@@ -195,53 +252,67 @@ impl Gestures {
     }
 
     fn down(&mut self, b: Btn, now: Millis) -> Vec<Action> {
-        if self.home_chords && self.menu_down_at.is_some() && matches!(b, Btn::A | Btn::B) {
-            let (bit, action) = match b {
-                Btn::A => (512, Action::ShaderNext),
-                _ => (1024, Action::LedToggle),
-            };
-            if self.chord_held & bit != 0 {
-                return Vec::new();
-            }
-            self.chord_held |= bit;
-            self.menu_eject_fired = true; // consume Home: no tap menu or hold eject
-            return vec![action];
+        // A repeated press of a key a shortcut still holds.
+        if self.held.iter().any(|(h, _)| *h == b) {
+            return Vec::new();
         }
-        // Brick: the picture shortcut sits with Y (colour correction) and A (shaders).
-        if self.home_chords && b == Btn::X && self.chording(now) {
-            self.mark_chorded();
-            self.chord_held |= HOME_X;
-            return vec![Action::PictureToggle];
-        }
-        if let Some((bit, action)) = self.menu_display_chord(b) {
-            self.menu_display_chorded = true;
+        // L2 and R2 are the game's (a PlayStation's): HOME + R2 switches fast-forward on and off.
+        if self.triggers_to_game && b == Btn::R2 && self.menu_held() {
+            self.menu_chorded = true;
             self.menu_down_at = None;
             self.menu_last_tap = None;
             self.menu_eject_fired = false;
-            self.chord_held |= bit;
-            return vec![action];
-        }
-        if let (true, Some((bit, action))) = (self.chording(now), self.select_chord(b)) {
-            self.mark_chorded();
-            self.chord_held |= bit;
-            return vec![action];
-        }
-        if self.triggers_to_game && matches!(b, Btn::L2 | Btn::R2) {
-            if b == Btn::R2 && self.menu_down_at.is_some() {
-                self.menu_eject_fired = true; // consume Home: no tap menu or hold eject
-                self.chord_held |= HOME_R2;
-                return match self.ff_on {
-                    true => self.ff_clear(),
-                    false => {
-                        self.ff_on = true;
-                        self.ff_latched = true;
-                        vec![Action::FfStart]
-                    }
-                };
+            self.held.push((b, Release::Nothing));
+            if self.ff_on {
+                return self.ff_clear();
             }
-            let mut out = self.hand_over_select(now);
-            out.push(Action::GbaDown(b));
-            return out;
+            self.ff_on = true;
+            self.ff_latched = true;
+            return vec![Action::FfStart];
+        }
+        if !matches!(b, Btn::Menu | Btn::Select) && self.menu_held() {
+            self.menu_chorded = true;
+            self.menu_down_at = None;
+            self.menu_last_tap = None;
+            self.menu_eject_fired = false;
+            return match self
+                .shortcut(Some(Mod::Menu), b)
+                .or_else(|| self.home_chord(b))
+            {
+                Some(action) => self.hold(b, action),
+                None => {
+                    self.held.push((b, Release::Send(Action::MenuChordUp(b))));
+                    vec![Action::MenuChordDown(b)]
+                }
+            };
+        }
+        if self.chording(now) {
+            let action = match b {
+                Btn::VolUp | Btn::VolDown => Some(Action::MuteToggle),
+                Btn::X if self.home_chords => self
+                    .shortcut(Some(Mod::Select), b)
+                    .or(Some(Action::PictureToggle)),
+                _ => self.shortcut(Some(Mod::Select), b),
+            };
+            if let Some(action) = action {
+                self.mark_chorded();
+                return self.hold(b, action);
+            }
+        }
+        let game_trigger = self.triggers_to_game && matches!(b, Btn::L2 | Btn::R2);
+        if self.playing && !game_trigger {
+            match self.shortcut(None, b) {
+                Some(Action::FfStart) => {
+                    self.ff_button = Some(b);
+                    return self.ff_down(now);
+                }
+                Some(Action::RewindStart) => {
+                    self.rewind_button = Some(b);
+                    return self.rewind_start();
+                }
+                Some(action) => return self.hold(b, action),
+                None => {}
+            }
         }
         match b {
             Btn::Select => self.select_down(now),
@@ -253,8 +324,6 @@ impl Gestures {
             }
             Btn::Lid => vec![Action::LidClose],
             Btn::VolUp | Btn::VolDown => self.volume_press(b, now),
-            Btn::L2 => self.rewind_start(),
-            Btn::R2 => self.ff_down(now),
             _ => {
                 let mut out = self.hand_over_select(now);
                 out.push(Action::GbaDown(b));
@@ -264,19 +333,17 @@ impl Gestures {
     }
 
     fn up(&mut self, b: Btn, now: Millis) -> Vec<Action> {
-        if b == Btn::X && self.chord_held & HOME_X != 0 {
-            self.chord_held &= !HOME_X;
-            return Vec::new();
+        if let Some(at) = self.held.iter().position(|(h, _)| *h == b) {
+            return match self.held.remove(at).1 {
+                Release::Nothing => Vec::new(),
+                Release::Send(action) => vec![action],
+            };
         }
-        if b == Btn::R2 && self.chord_held & HOME_R2 != 0 {
-            self.chord_held &= !HOME_R2;
-            return Vec::new();
+        if self.ff_button == Some(b) && (self.ff_on || self.r2_refused) {
+            return self.ff_up(now);
         }
-        if let Some(bit) = held_bit(b) {
-            if self.chord_held & bit != 0 {
-                self.chord_held &= !bit;
-                return Vec::new();
-            }
+        if self.rewind_button == Some(b) && self.rewinding {
+            return self.rewind_stop();
         }
         match b {
             Btn::Select => self.select_up(now),
@@ -284,9 +351,6 @@ impl Gestures {
             Btn::Power => self.power_up(),
             Btn::Lid => vec![Action::LidOpen],
             Btn::VolUp | Btn::VolDown => self.volume_release(b),
-            Btn::L2 | Btn::R2 if self.triggers_to_game => vec![Action::GbaUp(b)],
-            Btn::L2 => self.rewind_stop(),
-            Btn::R2 => self.ff_up(now),
             _ => vec![Action::GbaUp(b)],
         }
     }
@@ -356,7 +420,7 @@ impl Gestures {
     }
 
     fn menu_down(&mut self, now: Millis) -> Vec<Action> {
-        self.menu_display_chorded = false;
+        self.menu_chorded = false;
         if self.chording(now) {
             self.mark_chorded();
             self.menu_down_at = None;
@@ -376,8 +440,8 @@ impl Gestures {
     }
 
     fn menu_up(&mut self, now: Millis) -> Vec<Action> {
-        if self.menu_display_chorded {
-            self.menu_display_chorded = false;
+        if self.menu_chorded {
+            self.menu_chorded = false;
             self.menu_down_at = None;
             self.menu_eject_fired = false;
             return Vec::new();
@@ -501,63 +565,4 @@ impl Gestures {
         self.ff_on = false;
         vec![Action::FfStop]
     }
-}
-
-/// Held-bit for the Brick's picture shortcut on X (X has no shared chord).
-const HOME_X: u16 = 2048;
-const HOME_R2: u16 = 8192;
-
-impl Gestures {
-    fn menu_display_chord(&self, b: Btn) -> Option<(u16, Action)> {
-        (self.menu_dpad_display
-            && !self.menu_eject_fired
-            && (self.menu_down_at.is_some() || self.menu_display_chorded))
-            .then(|| display_chord(b))
-            .flatten()
-    }
-}
-
-/// Clear of HOME_R2 (8192), which the Brick's fast-forward chord holds.
-const REPAIR_BIT: u16 = 16384;
-
-impl Gestures {
-    fn select_chord(&self, b: Btn) -> Option<(u16, Action)> {
-        match b {
-            Btn::Start if self.repair_chord => Some((REPAIR_BIT, Action::RepairCard)),
-            _ => chord(b),
-        }
-    }
-}
-
-fn held_bit(b: Btn) -> Option<u16> {
-    match b {
-        Btn::Start => Some(REPAIR_BIT),
-        _ => chord(b).map(|(bit, _)| bit),
-    }
-}
-
-fn display_chord(b: Btn) -> Option<(u16, Action)> {
-    Some(match b {
-        Btn::Up => (1, Action::BrightnessUp),
-        Btn::Down => (2, Action::BrightnessDown),
-        Btn::Left => (4, Action::BlueLightDown),
-        Btn::Right => (8, Action::BlueLightUp),
-        _ => return None,
-    })
-}
-
-fn chord(b: Btn) -> Option<(u16, Action)> {
-    Some(match b {
-        Btn::Up | Btn::Down | Btn::Left | Btn::Right => display_chord(b)?,
-        Btn::L1 => (16, Action::LoadState),
-        Btn::R1 => (32, Action::SaveState),
-        Btn::Y => (64, Action::ColourCorrectionToggle),
-        Btn::L2 => (128, Action::PalettePrev),
-        Btn::R2 => (256, Action::PaletteNext),
-        Btn::A => (512, Action::ShaderNext),
-        Btn::B => (1024, Action::ShaderPrev),
-        Btn::VolUp => (2048, Action::MuteToggle),
-        Btn::VolDown => (4096, Action::MuteToggle),
-        _ => return None,
-    })
 }

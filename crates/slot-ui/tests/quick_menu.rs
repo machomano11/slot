@@ -80,7 +80,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     #[cfg(not(feature = "brick"))]
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Gameplay", "About"]
+        ["General", "Screen", "Gameplay", "Controls", "About"]
     );
     #[cfg(feature = "brick")]
     assert_eq!(
@@ -88,9 +88,11 @@ fn the_rows_run_in_the_order_the_user_chose() {
         [
             "Screen",
             "Gameplay",
+            "Controls",
             "General",
             "LEDs",
             "Wi-Fi",
+            "Cart Art",
             "RetroAchievements",
             "About"
         ]
@@ -98,13 +100,22 @@ fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
         [
+            "Theme",
             "Wallpaper",
             "Wallpaper Tint",
-            "Theme",
             "Recents",
             "Game Titles",
+            "Lid Power Off",
             "Date & Time"
         ]
+    );
+    assert_eq!(
+        QuickRow::CONTROL_PAGES.map(QuickRow::label),
+        ["Shelf", "Shortcuts", "In-Game"]
+    );
+    assert_eq!(
+        QuickRow::SHELF_KEYS.map(QuickRow::label),
+        ["Previous Shelf", "Next Shelf", "Favorite"]
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
@@ -146,6 +157,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Rewind",
             "Turbo Buttons",
             "Rumble",
+            "Left Stick as D-Pad",
             "Auto Save on Eject"
         ]
     );
@@ -157,7 +169,6 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::DateTime,
             QuickRow::About,
             QuickRow::Game,
-            QuickRow::General,
             QuickRow::Lights,
             QuickRow::Wifi,
             QuickRow::Resume,
@@ -182,7 +193,13 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenNgpc,
             QuickRow::ScreenWs,
             QuickRow::ScreenWsc,
-            QuickRow::ScreenPs
+            QuickRow::ScreenPs,
+            QuickRow::General,
+            QuickRow::PlayControls,
+            QuickRow::Shortcuts,
+            QuickRow::Controls,
+            QuickRow::ControlsShelf,
+            QuickRow::ControlsInGame
         ]
     );
     for page in [
@@ -206,14 +223,14 @@ fn the_rows_run_in_the_order_the_user_chose() {
 #[test]
 fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     let hidden = [QuickRow::WallpaperTint];
-    assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::Theme);
-    assert_eq!(QuickRow::Theme.up(&hidden), QuickRow::Wallpaper);
-    assert_eq!(QuickRow::Wallpaper.up(&hidden), QuickRow::DateTime);
-    assert_eq!(QuickRow::Theme.position(&hidden), 1);
+    assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::Recents);
+    assert_eq!(QuickRow::Recents.up(&hidden), QuickRow::Wallpaper);
+    assert_eq!(QuickRow::Theme.up(&hidden), QuickRow::DateTime);
+    assert_eq!(QuickRow::Recents.position(&hidden), 2);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
-    assert_eq!(QuickRow::Theme.position(&[]), 2);
+    assert_eq!(QuickRow::Recents.position(&[]), 3);
     assert_eq!(
-        slot_ui::quick_row_top(QuickRow::Theme, &hidden)
+        slot_ui::quick_row_top(QuickRow::Recents, &hidden)
             - slot_ui::quick_row_top(QuickRow::Wallpaper, &hidden),
         slot_ui::QUICK_PITCH
     );
@@ -254,6 +271,12 @@ fn the_values_read_as_the_menu_prints_them() {
             "25%",
             "45%",
             "65%",
+            "1 min",
+            "3 min",
+            "5 min",
+            "10 min",
+            "15 min",
+            "30 min",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -357,8 +380,15 @@ fn the_in_game_pages_hold_their_rows_in_order() {
         ]
     );
     assert_eq!(
-        QuickRow::SETTINGS,
-        [QuickRow::PlayScreen, QuickRow::PlayGameplay]
+        QuickRow::SETTINGS.map(QuickRow::label),
+        ["Screen", "Gameplay", "Controls"]
+    );
+    assert_eq!(
+        QuickRow::CONTROLS.map(QuickRow::label),
+        [
+            "Up", "Down", "Left", "Right", "A Button", "B Button", "Select", "Start", "L Button",
+            "R Button", "Turbo A", "Turbo B"
+        ]
     );
     assert_eq!(
         QuickRow::PLAY_SCREEN,

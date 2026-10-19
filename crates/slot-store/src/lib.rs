@@ -1,4 +1,5 @@
 mod atomic;
+mod bindings;
 pub mod cart_shell;
 mod config;
 mod core;
@@ -15,6 +16,11 @@ mod stamp;
 mod thumbs;
 
 pub use atomic::atomic_write;
+pub use bindings::{
+    read_carousel, read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
+    Binding, CarouselAction, CarouselKeys, Controls, Device, GameButton, Modifier, Shortcut,
+    ShortcutKeys,
+};
 pub use cart_shell::{Outline, ShellChoice, ShellFinish, CART_SHELL_FILE, LABELS_SHELL_FILE};
 pub use config::{move_config, CONFIG_DIR};
 pub use core::{
@@ -30,7 +36,7 @@ pub use scan::{
 pub use slot_state::{
     read_slot_state, write_slot_state, Appearance, BezelPick, Recent, Shader, SlotState,
     WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, FF_SPEED_DEFAULT,
-    RECENTS_MAX, UTC_OFFSET_MAX, UTC_OFFSET_MIN, VOLUME_MAX,
+    LID_OFF_MIN, RECENTS_MAX, UTC_OFFSET_MAX, UTC_OFFSET_MIN, VOLUME_MAX,
 };
 pub use stamp::{
     civil_from_days, days_from_civil, days_in_month, format_stamp, parse_stamp, stamp_now,

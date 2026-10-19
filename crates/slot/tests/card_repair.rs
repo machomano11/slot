@@ -1,3 +1,6 @@
+// The Brick has no repair script, so it never offers the repair (App::repair_offered).
+#![cfg(not(feature = "brick"))]
+
 mod common;
 
 use std::path::{Path, PathBuf};

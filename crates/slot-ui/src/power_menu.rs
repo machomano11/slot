@@ -10,9 +10,17 @@ pub enum PowerChoice {
 
 impl PowerChoice {
     pub const ALL: [PowerChoice; 3] = if cfg!(feature = "brick") {
-        [PowerChoice::PowerOff, PowerChoice::Restart, PowerChoice::Repair]
+        [
+            PowerChoice::PowerOff,
+            PowerChoice::Restart,
+            PowerChoice::Repair,
+        ]
     } else {
-        [PowerChoice::Restart, PowerChoice::PowerOff, PowerChoice::Repair]
+        [
+            PowerChoice::Restart,
+            PowerChoice::PowerOff,
+            PowerChoice::Repair,
+        ]
     };
 
     pub fn index(self) -> usize {
