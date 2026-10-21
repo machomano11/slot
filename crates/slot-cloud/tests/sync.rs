@@ -475,6 +475,27 @@ fn a_game_already_on_both_sides_is_not_fetched_to_compare() {
 }
 
 #[test]
+fn art_or_a_game_on_both_sides_stays_as_each_side_has_it() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Labels/GBA/a.png", b"this card's art", HOUR);
+    write_aged(root, "Games/GBA/a.gba", b"one dump", HOUR);
+    let mut remote = Memory::default();
+    remote.store("Labels/GBA/a.png", b"another device's art", secs_now());
+    remote.store("Games/GBA/a.gba", b"another dump", secs_now());
+    let r = run(root, &mut remote);
+    assert_eq!(r, Report::default(), "no copies, no conflicts");
+    assert!(remote.gets.is_empty());
+    assert_eq!(read(root, "Labels/GBA/a.png").unwrap(), b"this card's art");
+    let run2 = run(root, &mut remote);
+    assert_eq!(
+        run2,
+        Report::default(),
+        "and nothing on the next run either"
+    );
+}
+
+#[test]
 fn a_run_of_some_folders_leaves_the_rest_and_what_it_knows_of_them() {
     let card = tempfile::tempdir().unwrap();
     let root = card.path();
@@ -695,39 +716,31 @@ fn the_tally_counts_the_files_to_copy_and_the_bytes_of_each() {
 
 #[test]
 fn devices_check_in_and_see_each_other() {
-    use slot_cloud::devices::{check_in, clean_space, Device};
+    use slot_cloud::devices::{check_in, systems, Device};
     let mut remote = Memory::default();
     let brick = Device {
         id: "brick-1a2b".into(),
         name: "TrimUI Brick".into(),
-        space: String::new(),
+        systems: vec!["GBA".into(), "GB".into()],
         seen: 10,
     };
-    let rgsp = Device {
-        id: "rgsp-3c4d".into(),
-        name: "RG SP".into(),
-        space: "Spaces/rgsp-3c4d".into(),
+    let rgds = Device {
+        id: "rgds-3c4d".into(),
+        name: "Anbernic RG DS".into(),
+        systems: vec!["NDS".into()],
         seen: 20,
     };
     assert_eq!(
         check_in(&mut remote, &brick).unwrap(),
         std::slice::from_ref(&brick)
     );
-    let all = check_in(&mut remote, &rgsp).unwrap();
-    assert_eq!(all, [rgsp.clone(), brick.clone()]);
-    assert!(
-        remote.dirs.contains("Spaces/rgsp-3c4d"),
-        "its space is made"
-    );
+    let all = check_in(&mut remote, &rgds).unwrap();
+    assert_eq!(all, [rgds.clone(), brick.clone()]);
     assert_eq!(
         String::from_utf8_lossy(remote.bytes("Devices/brick-1a2b.ini").unwrap()),
-        "name=TrimUI Brick\nspace=\nseen=10\n"
+        "name=TrimUI Brick\nsystems=GBA,GB\nseen=10\n"
     );
-
-    assert_eq!(clean_space("Spaces/../x"), "");
-    assert_eq!(clean_space("/Spaces/rg-ds/"), "Spaces/rg-ds");
-    assert_eq!(brick.own_space(""), "Spaces/brick-1a2b");
-    assert_eq!(brick.own_space("Spaces/brick-1a2b"), "Spaces/brick-1a2b-10");
+    assert_eq!(systems(" GBA, ../x,,N64 "), ["GBA", "N64"]);
 }
 
 #[test]
