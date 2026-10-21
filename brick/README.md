@@ -263,11 +263,10 @@ art now**. The screen shows how many files are left and the one being copied, wi
 The device stays on until the sync is done, even with the lid closed or the screen asleep. A
 again stops it.
 
-The same screen lists your other devices under **Share with**. Ticked devices share saves,
-states, games and art. Untick one and this device moves to a space of its own on the server,
-taking its files with it on its next sync. Tick one again to join it; files on both sides are
-compared and a conflict keeps both copies, as below. Nothing is deleted from a space a device
-leaves.
+Below that, **Systems to sync** lists every system this device plays. Press A on one to switch
+it off or on: a switched-off system's saves, states, games and art are left alone, on the card
+and on the server. Each device has its own choice, so the Brick can skip PlayStation games while
+another device keeps them. A device only ever syncs the systems it can play.
 
 - While a game is running, its own save and states are only ever **sent**. Anything newer
   for it on the server comes down after you close the game.
@@ -285,9 +284,13 @@ leaves.
   the card is full and it's tried again later.
 - The first sync of a big library can take a long time over Wi-Fi. Add `roms=0` to leave
   games out, or `art=0` to leave art out.
-- This device's id and the space it syncs in are kept in `Slot/Config/cloudsync-device.ini`.
-  On the server, each device is listed in `Devices/<id>.ini`, and spaces other than the top
-  of the folder are under `Spaces/`.
+- This device's id and the systems it syncs are kept in `Slot/Config/cloudsync-device.ini`.
+  On the server, each device is listed in `Devices/<id>.ini`.
+- A game or its art found on both the card and the server, before either has been synced, is
+  left as each side has it: nothing is downloaded just to compare.
+- Uploads go through whatever is in front of the server. Cloudflare, for one, refuses files over
+  100 MB, which rules out most PlayStation and Sega CD discs; point the URL straight at the
+  server to sync those.
 
 Add `enabled=0` to pause sync. Details are in `Slot/Logs/slot.log` on lines starting with
 `slot: cloud`.

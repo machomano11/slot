@@ -146,57 +146,21 @@ fn a_cd_sized_game_goes_up_and_comes_down_whole() {
 
 #[test]
 #[ignore = "needs a WebDAV server"]
-fn devices_check_in_and_sync_in_their_own_space() {
+fn devices_check_in_and_see_each_other() {
     use slot_cloud::devices::{check_in, Device};
-    use slot_cloud::Account;
-    let url = std::env::var("SLOT_WEBDAV_URL").expect("SLOT_WEBDAV_URL");
-    let mut ini = std::collections::HashMap::new();
-    ini.insert(
-        "url".to_string(),
-        format!("{}/spaces", url.trim_end_matches('/')),
-    );
-    for (k, v) in [
-        ("username", "SLOT_WEBDAV_USER"),
-        ("password", "SLOT_WEBDAV_PASSWORD"),
-    ] {
-        if let Ok(v) = std::env::var(v) {
-            ini.insert(k.to_string(), v);
-        }
-    }
-    let account = Account::from_ini(&ini).unwrap();
     let me = Device {
         id: "brick-1a2b".into(),
         name: "TrimUI Brick".into(),
-        space: "Spaces/brick-1a2b".into(),
+        systems: vec!["GBA".into()],
         seen: 7,
     };
     let them = Device {
         id: "rgds-9f".into(),
         name: "Anbernic RG DS".into(),
-        ..Device::default()
+        systems: vec!["NDS".into(), "GBA".into()],
+        seen: 8,
     };
-    check_in(&mut account.remote(), &them).unwrap();
-    let all = check_in(&mut account.remote(), &me).unwrap();
-    assert_eq!(all, [me.clone(), them]);
-
-    let card = tempfile::tempdir().unwrap();
-    aged(&card.path().join("Saves/GBA/Zelda.sav"), b"mine");
-    let r = sync(
-        card.path(),
-        &card.path().join("m"),
-        &mut account.remote_in(&me.space),
-        &AtomicBool::new(false),
-    )
-    .unwrap();
-    assert_eq!(r.uploaded, 1);
-    let mut top = account.remote();
-    use slot_cloud::Remote;
-    assert!(top
-        .stat("Spaces/brick-1a2b/Saves/GBA/Zelda.sav")
-        .unwrap()
-        .is_some());
-    assert!(
-        top.stat("Saves/GBA/Zelda.sav").unwrap().is_none(),
-        "not in the top space"
-    );
+    check_in(&mut dav("devices"), &them).unwrap();
+    let all = check_in(&mut dav("devices"), &me).unwrap();
+    assert_eq!(all, [me, them]);
 }

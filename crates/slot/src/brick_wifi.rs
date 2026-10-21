@@ -1133,7 +1133,7 @@ impl WifiMenu {
         };
         let shown = panel.shown();
         let full = shown.running == Some(true);
-        let rows = if full { 1 } else { shown.devices.len() + 1 };
+        let rows = if full { 1 } else { Platform::ALL.len() + 1 };
         match a {
             Action::GbaDown(Btn::B) => return true,
             Action::GbaDown(Btn::Up) => self.row = (self.row + rows - 1) % rows,
@@ -1143,12 +1143,8 @@ impl WifiMenu {
                 None if !online() => self.status = "Connect to Wi-Fi first".into(),
                 None => panel.sync_all(),
                 Some(i) => {
-                    if let Some(d) = shown.devices.get(i) {
-                        self.status = match shown.shares_with(d) {
-                            true => format!("Stopped sharing with {}", d.name),
-                            false => format!("Sharing with {}; sync to bring in its games", d.name),
-                        };
-                        panel.toggle(d);
+                    if let Some(p) = Platform::ALL.get(i) {
+                        panel.flip(p.dir_name());
                     }
                 }
             },
@@ -1471,47 +1467,36 @@ impl WifiMenu {
             }
             line(&mut p, 360, "The device stays on until the sync is done");
         } else if c.panel.is_some() {
-            let state = match (&shown.last, shown.waiting, shown.running) {
-                (_, true, _) => "Starting once the saves have synced...".to_string(),
-                (_, _, Some(false)) => "Syncing saves and states...".to_string(),
-                (Some(last), _, _) => format!("Last sync: {last}"),
-                (None, _, _) => String::new(),
+            let state = match (&shown.offline, &shown.last, shown.waiting, shown.running) {
+                (_, _, true, _) => "Starting once the saves have synced...".to_string(),
+                (_, _, _, Some(false)) => "Syncing saves and states...".to_string(),
+                (Some(why), _, _, _) => why.clone(),
+                (None, Some(last), _, _) => format!("Last sync: {last}"),
+                (None, None, _, _) => String::new(),
             };
             line(&mut p, 160, &state);
-            line(&mut p, 200, "SHARE WITH");
-            if shown.devices.is_empty() {
-                line(&mut p, 240, "No other device has synced yet");
-            }
+            line(&mut p, 196, "SYSTEMS TO SYNC");
             let first = self.row.saturating_sub(1).saturating_sub(4);
-            for (k, d) in shown.devices.iter().enumerate().skip(first).take(5) {
-                let y = 232 + (k - first) * 38;
+            for (k, platform) in Platform::ALL.iter().enumerate().skip(first).take(5) {
+                let y = 226 + (k - first) * 38;
                 if self.row == k + 1 {
                     p.band(y, 36, slot_ui::edge());
                 }
-                let twin = shown.devices.iter().filter(|o| o.name == d.name).count() > 1;
-                let label = format!(
-                    "[{}]  {}{}",
-                    if shown.shares_with(d) { "X" } else { " " },
-                    d.name,
-                    if twin {
-                        format!(" ({})", d.id)
-                    } else {
-                        String::new()
-                    }
-                );
+                let on = shown.syncs(platform.dir_name());
+                let label = format!("[{}]  {}", if on { "X" } else { " " }, platform.name());
                 p.text(&label, 32, y + 2, 576, 21.0);
             }
         }
-        let shared = self
+        let picked = self
             .row
             .checked_sub(1)
-            .and_then(|i| shown.devices.get(i))
-            .map(|d| shown.shares_with(d));
+            .and_then(|i| Platform::ALL.get(i))
+            .map(|p| shown.syncs(p.dir_name()));
         p.text(
-            match (c.panel.is_some(), stoppable, shared) {
+            match (c.panel.is_some(), stoppable, picked) {
                 (false, _, _) => "B BACK",
-                (true, _, Some(true)) => "B BACK    A STOP SHARING",
-                (true, _, Some(false)) => "B BACK    A SHARE",
+                (true, _, Some(true)) => "B BACK    A DON'T SYNC",
+                (true, _, Some(false)) => "B BACK    A SYNC THIS SYSTEM",
                 (true, false, None) => "B BACK    A SYNC",
                 (true, true, None) => "B BACK    A STOP",
             },
@@ -2038,27 +2023,21 @@ mod tests {
             e.set_depth(png::BitDepth::Eight);
             e.write_header().unwrap().write_image_data(&f.rgba).unwrap();
         }
-        let dev = |id: &str, name: &str, space: &str| slot_cloud::devices::Device {
-            id: id.into(),
-            name: name.into(),
-            space: space.into(),
-            seen: 0,
-        };
         let c = s.cloud.as_mut().unwrap();
         c.drawn.0 = crate::cloud::Shown {
-            running: None,
-            waiting: false,
             last: Some("3 sent, 12 received".into()),
-            me: dev("brick-1a2b", "TrimUI Brick", ""),
-            devices: vec![
-                dev("rgds-77aa", "Anbernic RG DS", "Spaces/rgds-77aa"),
-                dev("rgsp-3c4d", "Anbernic RG SP", ""),
-            ],
+            me: slot_cloud::devices::Device {
+                id: "brick-1a2b".into(),
+                name: "TrimUI Brick".into(),
+                systems: vec!["GBA".into(), "GBC".into()],
+                seen: 0,
+            },
+            ..Default::default()
         };
         s.row = 2;
         let f = s.render();
         if let Ok(path) = std::env::var("SLOT_CLOUD_PREVIEW") {
-            let path = path.replace(".png", "-devices.png");
+            let path = path.replace(".png", "-systems.png");
             let mut e = png::Encoder::new(fs::File::create(path).unwrap(), W as u32, H as u32);
             e.set_color(png::ColorType::Rgba);
             e.set_depth(png::BitDepth::Eight);

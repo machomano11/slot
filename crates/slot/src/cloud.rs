@@ -8,9 +8,10 @@
 //! HOME > Cloud Sync, which shows the run's progress through a [`Panel`].
 //! Games that arrive join the game list without a restart.
 //!
-//! The panel also picks which of the owner's devices this one shares with:
-//! each device checks in on the server and syncs inside one space (see
-//! [`slot_cloud::devices`]), kept with this device's id in [`DEVICE_FILE`].
+//! The panel also picks which systems this device syncs: saves, states,
+//! games and art of the others stay on the server. The choice is kept with
+//! this device's id in [`DEVICE_FILE`], and each run checks in on the server
+//! with it (see [`slot_cloud::devices`]).
 //!
 //! Nothing happens without that file, so a card without it behaves exactly
 //! as before.
@@ -30,8 +31,9 @@ use crate::app::App;
 /// `url` of the WebDAV folder, plus `username` and `password`; `roms=0` and
 /// `art=0` leave those out.
 pub const ACCOUNT_FILE: &str = "Config/cloudsync.ini";
-/// This device's `id` and the `space` it syncs in.
+/// This device's `id`, and the `systems` it syncs (all it plays when missing).
 pub const DEVICE_FILE: &str = "Config/cloudsync-device.ini";
+const MANIFEST: &str = "Config/cloudsync.manifest";
 const EVERY: Duration = Duration::from_secs(10 * 60);
 const RETRY: Duration = Duration::from_secs(60);
 const TITLE: &str = "Cloud sync";
@@ -44,8 +46,8 @@ pub struct Panel {
     asked: AtomicBool,
     stop: AtomicBool,
     refresh: AtomicBool,
-    /// The space to move to, once nothing runs.
-    join: Mutex<Option<String>>,
+    /// Systems switched on or off on the screen, waiting to be saved.
+    flips: Mutex<Vec<String>>,
     shown: Mutex<Shown>,
 }
 
@@ -57,16 +59,17 @@ pub struct Shown {
     pub waiting: bool,
     /// How the last full run ended.
     pub last: Option<String>,
-    /// This device.
+    /// Why the last run couldn't reach the server, if it couldn't.
+    pub offline: Option<String>,
+    /// This device, with the systems it syncs.
     pub me: Device,
     /// The other devices on the server, as of the last run.
     pub devices: Vec<Device>,
 }
 
 impl Shown {
-    /// Whether this device shares a space with `other`.
-    pub fn shares_with(&self, other: &Device) -> bool {
-        other.space == self.me.space
+    pub fn syncs(&self, system: &str) -> bool {
+        self.me.systems.iter().any(|s| s == system)
     }
 }
 
@@ -83,15 +86,16 @@ impl Panel {
         self.stop.store(true, Ordering::Relaxed);
     }
 
-    /// Starts sharing with `other`, or stops if this device already does.
-    pub fn toggle(&self, other: &Device) {
-        let shown = self.shown();
-        let to = match shown.shares_with(other) {
-            true => shown.me.own_space(&shown.me.space),
-            false => other.space.clone(),
-        };
-        if let Ok(mut j) = self.join.lock() {
-            *j = Some(to);
+    /// Switches syncing `system` (a platform's folder name) on or off.
+    pub fn flip(&self, system: &str) {
+        self.show(|s| match s.me.systems.iter().position(|x| x == system) {
+            Some(i) => {
+                s.me.systems.remove(i);
+            }
+            None => s.me.systems.push(system.to_string()),
+        });
+        if let Ok(mut f) = self.flips.lock() {
+            f.push(system.to_string());
         }
     }
 
@@ -148,8 +152,10 @@ impl CloudSync {
         let account = Account::from_ini(&ini::read(root, ACCOUNT_FILE))?;
         let me = this_device(root);
         eprintln!(
-            "slot: cloud: syncing with {} as {} in {:?}",
-            account.url, me.id, me.space
+            "slot: cloud: syncing {} with {} as {}",
+            me.systems.join(","),
+            account.url,
+            me.id
         );
         let panel: Arc<Panel> = Arc::default();
         panel.show(|s| s.me = me.clone());
@@ -193,13 +199,19 @@ impl CloudSync {
             self.next = None;
         }
         self.poll(app);
-        let join = self.panel.join.lock().ok().and_then(|j| j.clone());
+        let flips = self
+            .panel
+            .flips
+            .lock()
+            .map(|mut f| std::mem::take(&mut *f))
+            .unwrap_or_default();
+        if !flips.is_empty() {
+            self.flip(&flips);
+        }
         if let Some(job) = &self.job {
-            if join.is_some() || job.full && self.panel.stop.swap(false, Ordering::Relaxed) {
+            if job.full && self.panel.stop.swap(false, Ordering::Relaxed) {
                 job.cancel.store(true, Ordering::Relaxed);
             }
-        } else if let Some(space) = join {
-            self.move_to(&space);
         } else if self.panel.refresh.swap(false, Ordering::Relaxed) {
             self.next = None;
         }
@@ -216,20 +228,32 @@ impl CloudSync {
         }
     }
 
-    /// Syncs in `space` from now on; the next run starts straight away.
-    fn move_to(&mut self, space: &str) {
-        if let Ok(mut j) = self.panel.join.lock() {
-            *j = None;
+    /// Saves the systems switched on or off; the next run uses them.
+    fn flip(&mut self, systems: &[String]) {
+        for system in systems {
+            match self.me.systems.iter().position(|x| x == system) {
+                Some(i) => {
+                    self.me.systems.remove(i);
+                }
+                None => self.me.systems.push(system.clone()),
+            }
         }
-        self.me.space = devices::clean_space(space);
-        let saved = ini::write(&self.root, DEVICE_FILE, "space", &self.me.space);
+        self.me.systems = plays()
+            .filter(|p| self.me.systems.iter().any(|x| x == p))
+            .map(str::to_string)
+            .collect();
+        let saved = ini::write(
+            &self.root,
+            DEVICE_FILE,
+            "systems",
+            &self.me.systems.join(","),
+        );
         if let Err(e) = saved {
             eprintln!("slot: cloud: saving {DEVICE_FILE}: {e}");
         }
-        eprintln!("slot: cloud: now syncing in {:?}", self.me.space);
+        eprintln!("slot: cloud: now syncing {}", self.me.systems.join(","));
         let me = self.me.clone();
         self.panel.show(|s| s.me = me);
-        self.next = None;
     }
 
     fn start(&mut self, full: bool) {
@@ -237,16 +261,19 @@ impl CloudSync {
         let (tx, done) = mpsc::channel();
         let root = self.root.clone();
         let mut top = self.account.remote();
-        let mut remote = self.account.remote_in(&self.me.space);
+        let mut remote = self.account.remote();
         let mut me = self.me.clone();
         me.seen = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
-        let manifest = root.join(manifest_for(&me.space));
+        let manifest = root.join(MANIFEST);
         let stop = cancel.clone();
         let held = self.game.clone();
         let game = held.clone();
-        let folders = library(&self.account.folders(!full || held.is_some()));
+        let folders = library(
+            &self.account.folders(!full || held.is_some()),
+            &self.me.systems,
+        );
         let panel = self.panel.clone();
         let spawned = std::thread::Builder::new()
             .name("slot-cloud".into())
@@ -306,11 +333,16 @@ impl CloudSync {
         let full = job.full;
         self.job = None;
         self.panel.show(|s| s.running = None);
+        let offline = match &result {
+            Err(e) if e.offline => Some(unreachable(e)),
+            _ => None,
+        };
+        self.panel.show(|s| s.offline = offline.clone());
         if full {
             let last = match &result {
                 Ok(r) if r.cancelled => "Stopped".to_string(),
                 Ok(r) => ended(r),
-                Err(e) if e.offline => format!("Can't reach the server: {}", e.message),
+                Err(_) if offline.is_some() => offline.unwrap_or_default(),
                 Err(e) => e.message.clone(),
             };
             self.panel.show(|s| s.last = Some(last));
@@ -357,27 +389,18 @@ impl Drop for CloudSync {
     }
 }
 
-/// The folders a run covers: games and art only for the consoles Slot
-/// plays, so another system's games (a DS's, say) stay on the server.
-fn library(folders: &[&'static str]) -> Vec<String> {
+/// The folders a run covers: each of `folders` for each of `systems`, so
+/// another system's files (a DS's, say) stay on the server.
+fn library(folders: &[&'static str], systems: &[String]) -> Vec<String> {
     folders
         .iter()
-        .flat_map(|&f| match f {
-            slot_cloud::GAMES | slot_cloud::ART => Platform::ALL
-                .iter()
-                .map(|p| format!("{f}/{}", p.dir_name()))
-                .collect(),
-            f => vec![f.to_string()],
-        })
+        .flat_map(|f| systems.iter().map(move |p| format!("{f}/{p}")))
         .collect()
 }
 
-/// The manifest for a space: what the last run there saw.
-fn manifest_for(space: &str) -> String {
-    match space.rsplit('/').next().filter(|_| !space.is_empty()) {
-        Some(name) => format!("Config/cloudsync-{name}.manifest"),
-        None => "Config/cloudsync.manifest".into(),
-    }
+/// The systems this build plays, by folder name.
+fn plays() -> impl Iterator<Item = &'static str> {
+    Platform::ALL.iter().map(|p| p.dir_name())
 }
 
 /// This device as [`DEVICE_FILE`] has it, given an id the first time.
@@ -397,10 +420,21 @@ fn this_device(root: &Path) -> Device {
             id
         }
     };
+    // Only systems this build plays; every one of them until some are switched off.
+    let systems = match saved.get("systems") {
+        Some(v) => {
+            let picked = devices::systems(v);
+            plays()
+                .filter(|p| picked.iter().any(|x| x == p))
+                .map(str::to_string)
+                .collect()
+        }
+        None => plays().map(str::to_string).collect(),
+    };
     Device {
         id,
         name: MODEL.1.into(),
-        space: devices::clean_space(saved.get("space").map_or("", |s| s.as_str())),
+        systems,
         seen: 0,
     }
 }
@@ -422,6 +456,18 @@ fn random16() -> u16 {
         Err(_) => SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.subsec_nanos() as u16),
+    }
+}
+
+/// Why the server can't be reached, in a few words.
+fn unreachable(e: &Error) -> String {
+    let m = e.message.to_ascii_lowercase();
+    if m.contains("dns") || m.contains("name resolution") || m.contains("unreachable") {
+        "No connection: check Wi-Fi".into()
+    } else if m.contains("timed out") || m.contains("timeout") {
+        "The server didn't answer".into()
+    } else {
+        "Can't reach the server".into()
     }
 }
 
@@ -493,56 +539,31 @@ fn summary(r: &Report) -> Option<(String, String)> {
 mod tests {
     use super::*;
 
-    fn dev(id: &str, space: &str) -> Device {
-        Device {
-            id: id.into(),
-            name: id.into(),
-            space: space.into(),
-            seen: 5,
-        }
-    }
-
     #[test]
-    fn ticking_a_device_joins_its_space_and_unticking_leaves_for_our_own() {
+    fn a_system_switched_off_and_on_again_is_synced_again() {
         let panel = Panel::default();
-        let ds = dev("rgds-1", "Spaces/rgds-1");
-        let sp = dev("rgsp-2", "");
-        panel.show(|s| s.me = dev("brick-3", ""));
-        assert!(panel.shown().shares_with(&sp));
-        assert!(!panel.shown().shares_with(&ds));
-
-        panel.toggle(&ds);
-        assert_eq!(panel.join.lock().unwrap().as_deref(), Some("Spaces/rgds-1"));
-        panel.toggle(&sp);
-        assert_eq!(
-            panel.join.lock().unwrap().as_deref(),
-            Some("Spaces/brick-3")
-        );
-        panel.show(|s| s.me.space = "Spaces/brick-3".into());
-        panel.toggle(&dev("rgsp-2", "Spaces/brick-3"));
-        assert_eq!(
-            panel.join.lock().unwrap().as_deref(),
-            Some("Spaces/brick-3-5"),
-            "a space of our own that others joined is left for a new one"
-        );
+        panel.show(|s| s.me.systems = vec!["GBA".into(), "GB".into()]);
+        panel.flip("GB");
+        assert!(!panel.shown().syncs("GB"));
+        panel.flip("N64");
+        panel.flip("GB");
+        assert!(panel.shown().syncs("GB"));
+        assert_eq!(*panel.flips.lock().unwrap(), ["GB", "N64", "GB"]);
     }
 
     #[test]
-    fn games_and_art_only_for_the_consoles_slot_plays() {
-        let f = library(&["Saves", slot_cloud::GAMES, slot_cloud::ART]);
-        assert_eq!(f[0], "Saves");
-        assert!(f.contains(&"Games/GBA".to_string()));
-        assert!(f.contains(&"Labels/PS".to_string()));
-        assert!(!f.iter().any(|f| f == "Games" || f.ends_with("/NDS")));
-        assert_eq!(f.len(), 1 + 2 * Platform::ALL.len());
+    fn a_run_covers_each_folder_for_each_system() {
+        let f = library(&["Saves", "Games"], &["GBA".into(), "PS".into()]);
+        assert_eq!(f, ["Saves/GBA", "Saves/PS", "Games/GBA", "Games/PS"]);
     }
 
     #[test]
-    fn each_space_keeps_its_own_manifest() {
-        assert_eq!(manifest_for(""), "Config/cloudsync.manifest");
+    fn no_connection_says_so_plainly() {
+        let dns = Error::offline("listing : https://x/: Dns Failed: resolve dns name 'x:443'");
+        assert_eq!(unreachable(&dns), "No connection: check Wi-Fi");
         assert_eq!(
-            manifest_for("Spaces/rgds-1"),
-            "Config/cloudsync-rgds-1.manifest"
+            unreachable(&Error::offline("connection refused")),
+            "Can't reach the server"
         );
     }
 
@@ -552,8 +573,19 @@ mod tests {
         let first = this_device(d.path());
         assert!(first.id.starts_with(&format!("{}-", MODEL.0)), "{first:?}");
         assert_eq!(this_device(d.path()).id, first.id);
-        ini::write(d.path(), DEVICE_FILE, "space", "Spaces/x-1").unwrap();
-        assert_eq!(this_device(d.path()).space, "Spaces/x-1");
+        assert_eq!(
+            first.systems.len(),
+            Platform::ALL.len(),
+            "everything at first"
+        );
+        ini::write(d.path(), DEVICE_FILE, "systems", "GBA,N64, PS").unwrap();
+        assert_eq!(
+            this_device(d.path()).systems,
+            ["GBA", "PS"],
+            "only what it plays"
+        );
+        ini::write(d.path(), DEVICE_FILE, "systems", "").unwrap();
+        assert!(this_device(d.path()).systems.is_empty());
     }
 
     #[test]
