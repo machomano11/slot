@@ -316,7 +316,8 @@ fn request_address() {
 /// The firmware starts its own supplicant at boot, which joins a saved network
 /// but runs no DHCP client, so Wi-Fi sat on "Waiting for IP" until it was
 /// switched off and on. Watch it for a minute after boot and ask for an address
-/// once it has joined. On the RG SP, Wi-Fi left on is first switched on again.
+/// once it has joined. On the RG SP, Wi-Fi left on is first switched on again, and
+/// the watch lasts the whole session.
 /// Never blocks startup.
 pub fn ensure_address_at_boot() {
     thread::spawn(|| {
@@ -333,19 +334,53 @@ pub fn ensure_address_at_boot() {
                 thread::sleep(Duration::from_secs(5));
             }
         }
-        let deadline = Instant::now() + Duration::from_secs(60);
-        while Instant::now() < deadline {
-            if let Ok(s) = Control::open().and_then(|c| c.command("STATUS")) {
-                if field(&s, "wpa_state") == Some("COMPLETED") {
-                    if field(&s, "ip_address").is_some() {
-                        return;
+        if cfg!(feature = "brick") {
+            let deadline = Instant::now() + Duration::from_secs(60);
+            while Instant::now() < deadline {
+                if let Ok(s) = Control::open().and_then(|c| c.command("STATUS")) {
+                    if field(&s, "wpa_state") == Some("COMPLETED") {
+                        if field(&s, "ip_address").is_some() {
+                            return;
+                        }
+                        request_address();
                     }
-                    request_address();
                 }
+                thread::sleep(Duration::from_secs(1));
             }
-            thread::sleep(Duration::from_secs(1));
+        } else {
+            watch_link();
         }
     });
+}
+/// The RG SP's DHCP client only gets an address once it is asked again after the
+/// supplicant has joined, and a join can come long after boot (back in range, a slow
+/// router, after sleep). Watches for the whole session and logs each change of state.
+fn watch_link() {
+    let mut was = String::new();
+    loop {
+        let s = Control::open()
+            .and_then(|c| c.command("STATUS"))
+            .unwrap_or_default();
+        let state = field(&s, "wpa_state").unwrap_or("off");
+        let joined = state == "COMPLETED";
+        let addressed = field(&s, "ip_address").is_some();
+        let now = format!(
+            "{state}{}",
+            match (joined, addressed) {
+                (true, true) => ", has an address",
+                (true, false) => ", no address yet",
+                _ => "",
+            }
+        );
+        if now != was {
+            eprintln!("slot: wifi: {now}");
+            was = now;
+        }
+        if joined && !addressed {
+            request_address();
+        }
+        thread::sleep(Duration::from_secs(3));
+    }
 }
 fn run_helper(verb: &str, limit: Duration) -> Result<()> {
     let root =
