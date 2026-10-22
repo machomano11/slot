@@ -141,6 +141,9 @@ fn failed(what: &str, rel: &str, e: ureq::Error) -> Error {
         ureq::Error::Status(401 | 403, _) => {
             Error::new("the server refused the username or password")
         }
+        ureq::Error::Status(413, _) => Error::new(format!(
+            "{what} {rel}: the server refused a file this big (HTTP 413); raise its upload limit"
+        )),
         ureq::Error::Status(code, r) => {
             Error::new(format!("{what} {rel}: HTTP {code} {}", r.status_text()))
         }

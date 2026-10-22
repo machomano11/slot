@@ -72,6 +72,9 @@ impl Session {
             cloud: None,
         };
         session.cloud = CloudSync::boot(&session.root);
+        if let Some(cloud) = &session.cloud {
+            session.app.set_cloud_panel(cloud.panel());
+        }
         if crate::ra::load(&session.root).is_none() && old_ra_config(&session.root) {
             eprintln!("slot: cheevos: an old RetroAchievements config file is no longer read");
             session

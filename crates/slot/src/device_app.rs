@@ -219,6 +219,8 @@ pub fn run() {
     let mut sleep_since: Option<Instant> = None;
     #[cfg(feature = "brick")]
     let mut sleep_attempted = false;
+    #[cfg(feature = "brick")]
+    let mut sync_hold_said = false;
     loop {
         pacer.wait();
         let began = Instant::now();
@@ -251,7 +253,12 @@ pub fn run() {
             if matches!(frontend.app().phase(), slot::app::Phase::Doze { .. }) {
                 let since = *sleep_since.get_or_insert_with(Instant::now);
                 // Let the paused audio sink release ALSA and pending saves finish.
-                if !sleep_attempted && since.elapsed() >= Duration::from_millis(3300) {
+                let holding = frontend.app().holding_for_sync();
+                if holding && !sync_hold_said {
+                    sync_hold_said = true;
+                    eprintln!("slot: sleep: waiting for cloud sync to finish");
+                }
+                if !sleep_attempted && !holding && since.elapsed() >= Duration::from_millis(3300) {
                     sleep_attempted = true;
                     if frontend.prepare_sleep() {
                         slot::brick_link::quiesce();
@@ -293,6 +300,7 @@ pub fn run() {
             }
             sleep_since = None;
             sleep_attempted = false;
+            sync_hold_said = false;
         }
         #[cfg(feature = "brick")]
         if !frontend.needs_render() {

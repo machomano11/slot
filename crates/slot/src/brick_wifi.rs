@@ -699,6 +699,26 @@ impl ArtList {
         Self { games, armed: None }
     }
 }
+/// The Cloud Sync screen: what sync is doing, as last drawn.
+struct CloudScreen {
+    panel: Option<Arc<crate::cloud::Panel>>,
+    drawn: (crate::cloud::Shown, slot_cloud::Moment),
+    at: Instant,
+}
+/// A progress bar across the screen, `at` of `of` filled.
+fn bar(p: &mut Painter, y: usize, at: u64, of: u64) {
+    p.rect(32, y, 576, 14, slot_ui::edge());
+    let done = (576 * at.min(of)).checked_div(of).unwrap_or(0) as usize;
+    p.rect(32, y, done, 14, [0.93, 0.93, 0.95, 1.0]);
+}
+/// Bytes as KB, MB or GB.
+fn size(b: u64) -> String {
+    match b {
+        b if b >= 1 << 30 => format!("{:.2} GB", b as f64 / (1u64 << 30) as f64),
+        b if b >= 1 << 20 => format!("{:.1} MB", b as f64 / (1u64 << 20) as f64),
+        b => format!("{} KB", b.div_ceil(1024)),
+    }
+}
 /// The RetroAchievements screen: log in, test the connection, show a test unlock, log out.
 /// `test`: a pretend unlock waiting for the app to toast it.
 struct RaScreen {
@@ -757,6 +777,8 @@ pub struct WifiMenu {
     list: Option<ArtList>,
     /// Set when this overlay is the RetroAchievements screen rather than Wi-Fi.
     ra: Option<RaScreen>,
+    /// Set when this overlay is the Cloud Sync screen rather than Wi-Fi.
+    cloud: Option<CloudScreen>,
 }
 impl WifiMenu {
     #[allow(clippy::new_without_default)] // new() starts a status query on a worker thread
@@ -776,6 +798,7 @@ impl WifiMenu {
             fetched: Vec::new(),
             list: None,
             ra: None,
+            cloud: None,
         };
         s.start(Job::Status);
         s
@@ -802,6 +825,7 @@ impl WifiMenu {
             fetched: Vec::new(),
             list: Some(list),
             ra: None,
+            cloud: None,
         }
     }
     /// The overlay behind HOME > RetroAchievements.
@@ -831,6 +855,38 @@ impl WifiMenu {
                 password: String::new(),
                 job: None,
                 test: None,
+            }),
+            cloud: None,
+        }
+    }
+    /// The overlay behind HOME > Cloud Sync; `panel` is none without an account.
+    pub fn cloud(panel: Option<Arc<crate::cloud::Panel>>) -> Self {
+        if let Some(p) = &panel {
+            p.refresh();
+        }
+        let status = match &panel {
+            Some(_) => "Saves sync by themselves; games and art sync from here",
+            None => "Set up sync in Config/cloudsync.ini on the card first",
+        };
+        Self {
+            worker: None,
+            face: None,
+            dirty: true,
+            on: true,
+            status: status.into(),
+            networks: Vec::new(),
+            row: 0,
+            keyboard: None,
+            refreshed: Instant::now(),
+            awaiting_ip: false,
+            art: None,
+            fetched: Vec::new(),
+            list: None,
+            ra: None,
+            cloud: Some(CloudScreen {
+                panel,
+                drawn: Default::default(),
+                at: Instant::now(),
             }),
         }
     }
@@ -941,6 +997,7 @@ impl WifiMenu {
     pub fn poll(&mut self) {
         self.poll_art();
         self.poll_ra();
+        self.poll_cloud();
         if let Some(w) = &self.worker {
             match w.rx.try_recv() {
                 Ok(r) => {
@@ -974,6 +1031,7 @@ impl WifiMenu {
         let every = Duration::from_secs(if self.awaiting_ip { 2 } else { 15 });
         if self.ra.is_none()
             && self.list.is_none()
+            && self.cloud.is_none()
             && !self.busy()
             && self.keyboard.is_none()
             && self.refreshed.elapsed() > every
@@ -997,6 +1055,9 @@ impl WifiMenu {
         self.dirty = true;
         if self.list.is_some() {
             return self.art_input(a);
+        }
+        if self.cloud.is_some() {
+            return self.cloud_input(a);
         }
         if let Some(k) = &mut self.keyboard {
             match a {
@@ -1089,6 +1150,44 @@ impl WifiMenu {
         } else {
             self.start(Job::Connect(n, None));
         }
+    }
+    /// Redraws as the run moves on, at most a few times a second.
+    fn poll_cloud(&mut self) {
+        let Some(c) = &mut self.cloud else { return };
+        let Some(panel) = &c.panel else { return };
+        let now = (panel.shown(), panel.tally.read());
+        if now != c.drawn && (now.0 != c.drawn.0 || c.at.elapsed() >= Duration::from_millis(250)) {
+            c.drawn = now;
+            c.at = Instant::now();
+            self.dirty = true;
+        }
+    }
+    fn cloud_input(&mut self, a: Action) -> bool {
+        let Some(panel) = self.cloud.as_ref().and_then(|c| c.panel.clone()) else {
+            return matches!(a, Action::GbaDown(Btn::B));
+        };
+        let shown = panel.shown();
+        let full = shown.running == Some(true);
+        let rows = if full { 1 } else { Platform::ALL.len() + 1 };
+        match a {
+            Action::GbaDown(Btn::B) => return true,
+            Action::GbaDown(Btn::Up) => self.row = (self.row + rows - 1) % rows,
+            Action::GbaDown(Btn::Down) => self.row = (self.row + 1) % rows,
+            Action::GbaDown(Btn::A) | Action::Insert => match self.row.checked_sub(1) {
+                None if full || shown.waiting => panel.stop(),
+                None if !online() => self.status = "Connect to Wi-Fi first".into(),
+                None => panel.sync_all(),
+                Some(i) => {
+                    if let Some(p) = Platform::ALL.get(i) {
+                        panel.flip(p.dir_name());
+                    }
+                }
+            },
+            _ => {}
+        }
+        self.row = self.row.min(rows - 1);
+        self.poll_cloud();
+        false
     }
     fn poll_ra(&mut self) {
         let Some(ra) = &mut self.ra else { return };
@@ -1359,9 +1458,100 @@ impl WifiMenu {
             h: H as u32,
         }
     }
+    fn render_cloud(&self, c: &CloudScreen) -> UndoFace {
+        let mut p = Painter::new();
+        p.text("CLOUD SYNC", 32, 24, 576, 30.0);
+        p.text(&self.status, 32, 66, 576, 18.0);
+        let (shown, m) = &c.drawn;
+        let full = shown.running == Some(true);
+        let stoppable = full || shown.waiting;
+        let line = |p: &mut Painter, y: usize, s: &str| p.text(s, 32, y, 576, 19.0);
+        if c.panel.is_some() {
+            if self.row == 0 {
+                p.band(110, 38, slot_ui::edge());
+            }
+            p.text(
+                if stoppable {
+                    "STOP SYNC"
+                } else {
+                    "SYNC GAMES AND ART NOW"
+                },
+                32,
+                111,
+                576,
+                23.0,
+            );
+        }
+        if full {
+            if m.files == 0 && m.moved == 0 {
+                line(&mut p, 176, "Comparing the card with the server...");
+            } else {
+                line(
+                    &mut p,
+                    176,
+                    &format!("{} of {} files", m.moved.min(m.files), m.files),
+                );
+                bar(&mut p, 206, m.moved as u64, m.files as u64);
+            }
+            if !m.name.is_empty() {
+                let name = m.name.rsplit('/').next().unwrap_or(&m.name);
+                let verb = if m.sending { "Sending" } else { "Receiving" };
+                line(&mut p, 250, &format!("{verb} {name}"));
+                line(&mut p, 280, &format!("{} of {}", size(m.at), size(m.of)));
+                bar(&mut p, 310, m.at, m.of);
+            }
+            line(&mut p, 360, "The device stays on until the sync is done");
+        } else if c.panel.is_some() {
+            let state = match (&shown.offline, &shown.last, shown.waiting, shown.running) {
+                (_, _, true, _) => "Starting once the saves have synced...".to_string(),
+                (_, _, _, Some(false)) => "Syncing saves and states...".to_string(),
+                (Some(why), _, _, _) => why.clone(),
+                (None, Some(last), _, _) => format!("Last sync: {last}"),
+                (None, None, _, _) => String::new(),
+            };
+            line(&mut p, 160, &state);
+            line(&mut p, 196, "SYSTEMS TO SYNC");
+            let first = self.row.saturating_sub(1).saturating_sub(4);
+            for (k, platform) in Platform::ALL.iter().enumerate().skip(first).take(5) {
+                let y = 226 + (k - first) * 38;
+                if self.row == k + 1 {
+                    p.band(y, 36, slot_ui::edge());
+                }
+                let on = shown.syncs(platform.dir_name());
+                let label = format!("[{}]  {}", if on { "X" } else { " " }, platform.name());
+                p.text(&label, 32, y + 2, 576, 21.0);
+            }
+        }
+        let picked = self
+            .row
+            .checked_sub(1)
+            .and_then(|i| Platform::ALL.get(i))
+            .map(|p| shown.syncs(p.dir_name()));
+        p.text(
+            match (c.panel.is_some(), stoppable, picked) {
+                (false, _, _) => "B BACK",
+                (true, _, Some(true)) => "B BACK    A DON'T SYNC",
+                (true, _, Some(false)) => "B BACK    A SYNC THIS SYSTEM",
+                (true, false, None) => "B BACK    A SYNC",
+                (true, true, None) => "B BACK    A STOP",
+            },
+            24,
+            430,
+            592,
+            20.0,
+        );
+        UndoFace {
+            rgba: p.rgba,
+            w: W as u32,
+            h: H as u32,
+        }
+    }
     pub fn render(&self) -> UndoFace {
         if let Some(list) = &self.list {
             return self.render_art(list);
+        }
+        if let Some(c) = &self.cloud {
+            return self.render_cloud(c);
         }
         if let (None, Some(ra)) = (&self.keyboard, &self.ra) {
             return self.render_ra(ra);
@@ -1807,6 +1997,7 @@ mod tests {
                 job: None,
                 test: None,
             }),
+            cloud: None,
         }
     }
     #[test]
@@ -1842,6 +2033,66 @@ mod tests {
         assert!(!m.busy());
     }
     #[test]
+    fn the_cloud_screen_shows_a_full_sync_as_it_goes() {
+        let mut s = WifiMenu::cloud(Some(Arc::default()));
+        let c = s.cloud.as_mut().unwrap();
+        c.drawn = (
+            crate::cloud::Shown {
+                running: Some(true),
+                ..Default::default()
+            },
+            slot_cloud::Moment {
+                files: 40,
+                moved: 12,
+                name: "Games/PS/Crash Bandicoot (USA).chd".into(),
+                sending: true,
+                at: 180 << 20,
+                of: 512 << 20,
+            },
+        );
+        let f = s.render();
+        assert_eq!(f.rgba.len(), W * H * 4);
+        if let Ok(path) = std::env::var("SLOT_CLOUD_PREVIEW") {
+            let mut e = png::Encoder::new(fs::File::create(path).unwrap(), W as u32, H as u32);
+            e.set_color(png::ColorType::Rgba);
+            e.set_depth(png::BitDepth::Eight);
+            e.write_header().unwrap().write_image_data(&f.rgba).unwrap();
+        }
+        let c = s.cloud.as_mut().unwrap();
+        c.drawn.0 = crate::cloud::Shown {
+            last: Some("3 sent, 12 received".into()),
+            me: slot_cloud::devices::Device {
+                id: "brick-1a2b".into(),
+                name: "TrimUI Brick".into(),
+                systems: vec!["GBA".into(), "GBC".into()],
+                seen: 0,
+            },
+            ..Default::default()
+        };
+        s.row = 2;
+        let f = s.render();
+        if let Ok(path) = std::env::var("SLOT_CLOUD_PREVIEW") {
+            let path = path.replace(".png", "-systems.png");
+            let mut e = png::Encoder::new(fs::File::create(path).unwrap(), W as u32, H as u32);
+            e.set_color(png::ColorType::Rgba);
+            e.set_depth(png::BitDepth::Eight);
+            e.write_header().unwrap().write_image_data(&f.rgba).unwrap();
+        }
+        assert_eq!(size(180 << 20), "180.0 MB");
+        assert_eq!(size(3 << 30), "3.00 GB");
+        assert_eq!(size(10), "1 KB");
+        // A is stop while a full run goes, and B leaves the screen.
+        assert!(!s.cloud_input(Action::GbaDown(Btn::Up)));
+        assert!(s.cloud_input(Action::GbaDown(Btn::B)));
+    }
+    #[test]
+    fn without_an_account_the_cloud_screen_only_goes_back() {
+        let mut s = WifiMenu::cloud(None);
+        assert!(s.status.contains("cloudsync.ini"));
+        assert!(!s.cloud_input(Action::GbaDown(Btn::A)));
+        assert!(s.cloud_input(Action::GbaDown(Btn::B)));
+    }
+    #[test]
     fn render_fixture() {
         let s = WifiMenu {
             worker: None,
@@ -1864,6 +2115,7 @@ mod tests {
             }),
             refreshed: Instant::now(),
             ra: None,
+            cloud: None,
         };
         let f = s.render();
         assert_eq!(f.rgba.len(), W * H * 4);

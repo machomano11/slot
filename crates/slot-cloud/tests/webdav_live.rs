@@ -143,3 +143,24 @@ fn a_cd_sized_game_goes_up_and_comes_down_whole() {
     .unwrap();
     assert!(!r.changed(), "{r:?}");
 }
+
+#[test]
+#[ignore = "needs a WebDAV server"]
+fn devices_check_in_and_see_each_other() {
+    use slot_cloud::devices::{check_in, Device};
+    let me = Device {
+        id: "brick-1a2b".into(),
+        name: "TrimUI Brick".into(),
+        systems: vec!["GBA".into()],
+        seen: 7,
+    };
+    let them = Device {
+        id: "rgds-9f".into(),
+        name: "Anbernic RG DS".into(),
+        systems: vec!["NDS".into(), "GBA".into()],
+        seen: 8,
+    };
+    check_in(&mut dav("devices"), &them).unwrap();
+    let all = check_in(&mut dav("devices"), &me).unwrap();
+    assert_eq!(all, [me, them]);
+}

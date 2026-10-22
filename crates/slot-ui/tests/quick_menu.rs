@@ -196,6 +196,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenGb,
             QuickRow::Achievements,
             QuickRow::CartArt,
+            QuickRow::Cloud,
             QuickRow::ScreenNes,
             QuickRow::ScreenSnes,
             QuickRow::ScreenGg,

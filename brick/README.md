@@ -254,9 +254,19 @@ Synology or other NAS, or `rclone serve webdav` on a computer.
    On Nextcloud, make an app password under *Settings → Security* rather than using your
    real one. The folder is created if it doesn't exist.
 
-Sync runs in the background when Slot starts, as soon as you close a game, and every 10
-minutes. A banner says when files were sent or received. Use the same folder on every device
-to carry a game between them.
+Saves and states sync in the background when Slot starts, as soon as you close a game, and
+every 10 minutes. A banner says when files were sent or received. Use the same folder on every
+device to carry a game between them.
+
+Games and art sync when you ask: open **HOME > Cloud Sync** and press A on **Sync games and
+art now**. The screen shows how many files are left and the one being copied, with its size.
+The device stays on until the sync is done, even with the lid closed or the screen asleep. A
+again stops it.
+
+Below that, **Systems to sync** lists every system this device plays. Press A on one to switch
+it off or on: a switched-off system's saves, states, games and art are left alone, on the card
+and on the server. Each device has its own choice, so the Brick can skip PlayStation games while
+another device keeps them. A device only ever syncs the systems it can play.
 
 - While a game is running, its own save and states are only ever **sent**. Anything newer
   for it on the server comes down after you close the game.
@@ -266,14 +276,21 @@ to carry a game between them.
   missing on one side is copied back from the other.
 - With only one game on the card, Slot never leaves it, so saves from other devices only
   arrive after you close it.
-- Games and art only sync while you're on the game list; starting a game pauses them. Saves
-  and states always go first. Games that arrive appear on their shelf without a restart.
+- Starting a game stops a games-and-art sync; sync again afterwards. Saves and states always
+  go first. Games that arrive appear on their shelf without a restart.
 - Games and art are never deleted by sync either: remove a game from both the card and the
   server to get rid of it.
 - A game is only downloaded if the card keeps 64 MB free afterwards; otherwise a banner says
   the card is full and it's tried again later.
 - The first sync of a big library can take a long time over Wi-Fi. Add `roms=0` to leave
   games out, or `art=0` to leave art out.
+- This device's id and the systems it syncs are kept in `Slot/Config/cloudsync-device.ini`.
+  On the server, each device is listed in `Devices/<id>.ini`.
+- A game or its art found on both the card and the server, before either has been synced, is
+  left as each side has it: nothing is downloaded just to compare.
+- Uploads go through whatever is in front of the server. Cloudflare, for one, refuses files over
+  100 MB, which rules out most PlayStation and Sega CD discs; point the URL straight at the
+  server to sync those.
 
 Add `enabled=0` to pause sync. Details are in `Slot/Logs/slot.log` on lines starting with
 `slot: cloud`.

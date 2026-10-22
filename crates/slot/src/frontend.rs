@@ -951,6 +951,11 @@ impl Frontend {
         if !self.auto_sleep || self.rebuild.is_some() || self.app().link_active() {
             return;
         }
+        // A full cloud sync keeps the screen on; the idle clock starts once it's done.
+        if self.app().full_sync_running() {
+            self.last_input = Instant::now();
+            return;
+        }
         let limit = match self.app().phase() {
             Phase::Shelf | Phase::QuickMenu { .. } => IDLE_MENU,
             Phase::Playing { .. } => IDLE_GAME,

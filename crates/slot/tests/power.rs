@@ -433,3 +433,49 @@ fn a_shut_lid_powers_off_after_the_minutes_set_in_the_menu() {
     }
     assert!(a.powering_off());
 }
+
+#[test]
+fn a_doze_waits_for_cloud_sync_and_then_times_out_as_usual() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let mut a = app_playing_in(d.path(), "Emerald");
+    a.set_power(panel(d.path(), Duration::from_secs(2)).0);
+    a.apply(Action::LidClose);
+    a.set_cloud_busy(Some(false));
+    for _ in 0..300 {
+        a.update(DT);
+    }
+    assert!(a.holding_for_sync());
+    assert!(
+        !a.powering_off(),
+        "a transfer still running holds the power-off"
+    );
+
+    a.set_cloud_busy(None);
+    assert!(!a.holding_for_sync());
+    for _ in 0..100 {
+        a.update(DT);
+    }
+    assert!(!a.powering_off(), "the timeout runs from when sync let go");
+    for _ in 0..40 {
+        a.update(DT);
+    }
+    assert!(a.powering_off());
+}
+
+#[test]
+fn a_full_sync_holds_a_doze_for_as_long_as_it_runs() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let mut a = app_playing_in(d.path(), "Emerald");
+    a.set_power(panel(d.path(), Duration::from_secs(2)).0);
+    a.set_cloud_busy(Some(true));
+    assert!(a.full_sync_running());
+    a.apply(Action::LidClose);
+    for _ in 0..60 {
+        a.update(60.0);
+    }
+    assert!(a.holding_for_sync(), "an hour on, a full sync still holds");
+    assert!(!a.powering_off());
+
+    a.set_cloud_busy(None);
+    assert!(!a.holding_for_sync());
+}

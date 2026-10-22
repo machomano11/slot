@@ -58,6 +58,7 @@ pub enum QuickRow {
     ScreenGb,
     Achievements,
     CartArt,
+    Cloud,
     ScreenNes,
     ScreenSnes,
     ScreenGg,
@@ -121,7 +122,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 108] = [
+    pub const ALL: [QuickRow; 109] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -170,6 +171,7 @@ impl QuickRow {
         QuickRow::ScreenGb,
         QuickRow::Achievements,
         QuickRow::CartArt,
+        QuickRow::Cloud,
         QuickRow::ScreenNes,
         QuickRow::ScreenSnes,
         QuickRow::ScreenGg,
@@ -251,7 +253,7 @@ impl QuickRow {
         QuickRow::DateTime,
     ];
     #[cfg(all(feature = "wifi", not(feature = "brick")))]
-    pub const MAIN: [QuickRow; 8] = [
+    pub const MAIN: [QuickRow; 9] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Game,
@@ -259,10 +261,11 @@ impl QuickRow {
         QuickRow::Wifi,
         QuickRow::CartArt,
         QuickRow::Achievements,
+        QuickRow::Cloud,
         QuickRow::About,
     ];
     #[cfg(feature = "brick")]
-    pub const MAIN: [QuickRow; 9] = [
+    pub const MAIN: [QuickRow; 10] = [
         QuickRow::Screen,
         QuickRow::Game,
         QuickRow::Controls,
@@ -271,6 +274,7 @@ impl QuickRow {
         QuickRow::Wifi,
         QuickRow::CartArt,
         QuickRow::Achievements,
+        QuickRow::Cloud,
         QuickRow::About,
     ];
     pub const LIGHTS: [QuickRow; 6] = [
@@ -562,6 +566,7 @@ impl QuickRow {
             QuickRow::Wifi => "Wi-Fi",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::CartArt => "Cart Art",
+            QuickRow::Cloud => "Cloud Sync",
             QuickRow::Lights => "LEDs",
             QuickRow::LedMode => "Lights",
             QuickRow::LedTop => "Top Bar",
@@ -680,6 +685,7 @@ impl QuickRow {
                 | QuickRow::Lights
                 | QuickRow::Wifi
                 | QuickRow::CartArt
+                | QuickRow::Cloud
                 | QuickRow::Achievements
                 | QuickRow::Resume
                 | QuickRow::States
