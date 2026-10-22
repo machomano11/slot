@@ -208,7 +208,10 @@ pub fn run() {
     #[cfg(not(feature = "brick"))]
     let _ = std::thread::Builder::new()
         .name("slot-bootlogo".into())
-        .spawn(move || slot::bootlogo::refresh(&card));
+        .spawn(move || {
+            slot::bootlogo::refresh(&card);
+            slot::root::sweep_temps(&card);
+        });
     #[cfg(feature = "brick")]
     let mut cpu = slot::brick_power::CpuPower::open(&root);
     let mut drawn = false;
@@ -308,6 +311,13 @@ pub fn run() {
             std::thread::sleep(Duration::from_millis(25));
             continue;
         }
+        if slot::crash::stopping() {
+            eprintln!("slot: told to stop, saving first");
+            #[cfg(feature = "brick")]
+            cpu.restore();
+            frontend.stop();
+            return;
+        }
         let frame_ready = frontend.step_emulator(pacer.period, STEP_TIMEOUT);
         #[cfg(not(feature = "brick"))]
         let _ = frame_ready;
@@ -320,7 +330,8 @@ pub fn run() {
             eprintln!("slot: {e}");
             #[cfg(feature = "brick")]
             cpu.restore();
-            std::process::exit(1);
+            frontend.stop();
+            return;
         }
         let swap_took = swap.elapsed();
         slot::latency::swapped(swap_took.as_secs_f64() * 1000.0);
