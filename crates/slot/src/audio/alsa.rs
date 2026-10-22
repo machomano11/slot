@@ -235,19 +235,12 @@ struct Playback {
 fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
     let alsa = Alsa::load()?;
     let usb = present_usb_card();
-    let pcm = match alsa.open_pcm(sample_rate, usb) {
-        Ok(pcm) => Some(pcm),
-        Err(e) => {
-            eprintln!("slot: audio: {e}, retrying");
-            None
-        }
-    };
     ring.reopen(sample_rate);
     Ok(Playback {
         alsa,
-        pcm,
+        pcm: None,
         rate: sample_rate,
-        failing: pcm.is_none(),
+        failing: false,
         usb,
     })
 }
@@ -256,7 +249,7 @@ impl Playback {
     fn run(&mut self, ring: &Ring, stop: &AtomicBool) {
         let mut buf = vec![0i16; PERIOD_FRAMES * CHANNELS as usize];
         let span = Duration::from_secs_f64(PERIOD_FRAMES as f64 / self.rate as f64);
-        let mut silence = Silence::new(RELEASE_AFTER);
+        let mut silence = Silence::quiet(RELEASE_AFTER);
         let mut pace = Pacer::new(span);
         let mut routed = Instant::now();
         while !stop.load(Ordering::Relaxed) {
