@@ -2,8 +2,8 @@ mod common;
 
 use common::tmp_root;
 use slot_store::{
-    atomic_write, read_slot_state, write_slot_state, Appearance, BezelPick, GbPalette, Platform,
-    Recent, Shader, SlotState, WallpaperPick, WallpaperTint, FF_SPEEDS, FF_SPEED_DEFAULT,
+    atomic_write, read_slot_state, sweep_temps, write_slot_state, Appearance, BezelPick, GbPalette,
+    Platform, Recent, Shader, SlotState, WallpaperPick, WallpaperTint, FF_SPEEDS, FF_SPEED_DEFAULT,
 };
 use tempfile::tempdir;
 
@@ -20,6 +20,33 @@ fn atomic_write_leaves_no_partial_file_and_no_temp_behind() {
         .filter(|e| e.file_name() != "x.bin")
         .collect();
     assert!(strays.is_empty(), "temp files left behind: {strays:?}");
+}
+
+#[test]
+fn a_temp_left_by_an_interrupted_write_is_swept_and_nothing_else() {
+    let d = tempdir().unwrap();
+    let deep = d.path().join("States/GBA/mgba/Emerald");
+    std::fs::create_dir_all(&deep).unwrap();
+    let stray = deep.join(".resume.state.4242.7.tmp");
+    let mine = deep.join(format!(".resume.state.{}.0.tmp", std::process::id()));
+    let keep = [
+        deep.join("resume.state"),
+        deep.join(".hidden.tmp"),
+        deep.join("notes.4242.7.tmp"),
+        d.path().join(".x.y.tmp"),
+    ];
+    for p in keep.iter().chain([&stray, &mine]) {
+        std::fs::write(p, b"bytes").unwrap();
+    }
+    sweep_temps(d.path());
+    assert!(
+        !stray.exists(),
+        "a temp from an earlier run was left behind"
+    );
+    assert!(mine.exists(), "swept a temp this run may still be writing");
+    for p in &keep {
+        assert!(p.exists(), "swept {}", p.display());
+    }
 }
 
 #[test]
@@ -209,6 +236,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_nes: Shader::Off,
             shader_snes: Shader::Off,
             other_shaders: Vec::new(),
+            auto_load: true,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -246,6 +274,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         shader_gb: Shader::Off,
         shader_nes: Shader::Off,
         shader_snes: Shader::Off,
+        auto_load: false,
         eject_save: false,
         turbo: false,
         rewind: false,
@@ -275,6 +304,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "colour_correction_gb=0",
         "shader_gba=dot",
         "shader_gb=off",
+        "auto_load=0",
         "eject_save=0",
         "turbo=0",
         "rewind=0",
@@ -351,7 +381,7 @@ fn an_out_of_range_setting_falls_back_to_its_default() {
     for bad in [
         "rumble=2\nff_speed=5\nff_sound=9\n",
         "rumble=\nff_speed=1\nff_sound=on\n",
-        "rumble=-1\nff_speed=0\nff_sound=-1\n",
+        "rumble=-1\nff_speed=7\nff_sound=-1\n",
         "ff_speed=x\n",
         "colour_correction=2\n",
         "colour_correction=\n",

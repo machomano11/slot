@@ -3,8 +3,8 @@ use slot_ui::{sticker_lines, StickerFields};
 fn fields() -> StickerFields<'static> {
     StickerFields {
         battery: Some(87),
-        serial: "0473885",
-        dirty_digit: '0',
+        serial: "04738857",
+        version: "0.1.0",
     }
 }
 
@@ -64,7 +64,7 @@ fn the_compliance_block_is_the_credits() {
 #[test]
 fn the_serial_row_matches_the_encoded_hash() {
     let all = sticker_lines(&fields()).join("\n");
-    assert!(all.contains("0473885"), "{all}");
+    assert!(all.contains("0473885 7"), "{all}");
 }
 
 #[test]

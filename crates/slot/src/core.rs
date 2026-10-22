@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use slot_retro::{LibretroCore, MockCore, RetroCore};
-use slot_store::{Core, GbPalette, Platform};
+use slot_store::{Core, GbColors, Platform};
 
 use crate::root;
 
@@ -43,7 +43,7 @@ pub fn open_core(
     platform: Platform,
     serial: &str,
     colour: bool,
-    palette: Option<GbPalette>,
+    palette: Option<GbColors>,
     link: Option<u8>,
 ) -> Opened {
     let paths = candidates(root, core);
@@ -75,7 +75,7 @@ pub fn open_core_for_palette(
     platform: Platform,
     serial: &str,
     colour: bool,
-    palette: Option<GbPalette>,
+    palette: Option<GbColors>,
     paths: &[PathBuf],
 ) -> Box<dyn RetroCore> {
     open_named(root, core, platform, serial, colour, palette, None, paths).unwrap_or_else(|| {
@@ -91,7 +91,7 @@ fn open_named(
     platform: Platform,
     serial: &str,
     colour: bool,
-    palette: Option<GbPalette>,
+    palette: Option<GbColors>,
     link: Option<u8>,
     paths: &[PathBuf],
 ) -> Option<Box<dyn RetroCore>> {
@@ -134,13 +134,13 @@ fn open_named(
 }
 
 pub fn palette_for(
-    chosen: Option<GbPalette>,
+    chosen: GbColors,
     platform: Platform,
     rom: &Path,
     link: Option<u8>,
-) -> Option<GbPalette> {
+) -> Option<GbColors> {
     let game_boy = matches!(platform, Platform::Gb | Platform::Gbc);
-    chosen.filter(|_| link.is_none() && game_boy && dmg_only(rom))
+    (link.is_none() && game_boy && dmg_only(rom)).then_some(chosen)
 }
 
 pub fn dmg_only(rom: &Path) -> bool {
@@ -219,7 +219,7 @@ pub fn apply_core_options(
     serial: &str,
     bios: bool,
     colour: bool,
-    palette: Option<GbPalette>,
+    palette: Option<GbColors>,
 ) {
     // FCEUmm and snes9x have no frameskip option; slot's own skipping covers them.
     if matches!(which, Core::Mgba | Core::Gpsp) {
