@@ -10,6 +10,7 @@ use slot_store::{
     read_slot_state, write_slot_state, Appearance, BezelPick, Platform, Shader, SlotState,
     WallpaperPick,
 };
+use slot_ui::quick_window;
 use slot_ui::{
     Draw, Icon, QuickMenuFaces, QuickRow, QuickValue, TexId, HINT_EDGE, MENU_PAD, MOUTH_H, OUT_H,
     OUT_W, QUICK_EDGE, QUICK_LABEL_X,
@@ -54,7 +55,7 @@ fn open_at(a: &mut App, row: QuickRow) {
         if depth > 0 {
             press(a, Btn::A);
         }
-        for _ in 0..step.position(a.hidden_rows()) {
+        for _ in 0..step.position(&a.hidden_rows()) {
             press(a, Btn::Down);
         }
     }
@@ -260,24 +261,6 @@ fn fast_forward_steps_through_its_speeds_wraps_at_both_ends_and_saves_each_one()
 }
 
 #[test]
-fn run_ahead_steps_through_its_frames_wraps_at_both_ends_and_saves_each_one() {
-    let (d, mut a, _) = on_carousel();
-    open_at(&mut a, QuickRow::RunAhead);
-    assert_eq!(a.quick_value(QuickRow::RunAhead), Some(QuickValue::Off));
-    for (btn, want) in [
-        (Btn::Right, 1),
-        (Btn::Right, 0),
-        (Btn::Left, 1),
-        (Btn::Left, 0),
-    ] {
-        press(&mut a, btn);
-        assert_eq!(a.runahead(), want, "{btn:?}");
-        assert_eq!(read_slot_state(d.path()).runahead, want, "not on the card");
-        assert_eq!(a.quick_value(QuickRow::RunAhead), QuickValue::frames(want));
-    }
-}
-
-#[test]
 fn rumble_and_fast_forward_sound_flip_on_either_arrow_and_save() {
     let (d, mut a, _) = on_carousel();
     let card = |d: &TempDir| {
@@ -356,7 +339,6 @@ fn the_game_page_flips_eject_save_turbo_and_rewind_and_saves_each() {
     press(&mut a, Btn::Right);
     assert_eq!(card(&d), (true, true, false));
     assert!(!a.may_rewind(), "rewind still offered with it off");
-    press(&mut a, Btn::Down);
     press(&mut a, Btn::Down);
     press(&mut a, Btn::Left);
     assert_eq!(card(&d), (true, false, false));
@@ -695,7 +677,7 @@ fn fake_faces(a: &mut App) {
             .collect(),
         pointer: (id(700), 32, 48),
         values: (0..QuickValue::ALL.len())
-            .map(|i| [(id(200 + i), 60, 40), (id(210 + i), 60, 40)])
+            .map(|i| [(id(2000 + i), 60, 40), (id(2100 + i), 60, 40)])
             .collect(),
         carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
@@ -704,6 +686,9 @@ fn fake_faces(a: &mut App) {
             (id(402), 80),
             (id(403), 90),
             (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
         ],
         legend_light: [
             (id(400), 70),
@@ -711,7 +696,11 @@ fn fake_faces(a: &mut App) {
             (id(402), 80),
             (id(403), 90),
             (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
         ],
+        descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
     });
     a.set_quick_clock_faces((id(500), 150, 40), (id(501), 150, 40));
 }
@@ -726,9 +715,9 @@ fn label(row: QuickRow, lit: bool) -> usize {
 
 fn value(v: QuickValue, lit: bool) -> usize {
     if lit {
-        210 + v.index()
+        2100 + v.index()
     } else {
-        200 + v.index()
+        2000 + v.index()
     }
 }
 
@@ -881,12 +870,14 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
         press(&mut a, Btn::Up);
     }
     press(&mut a, Btn::A);
+    for _ in 0..QuickRow::LidOff.position(&a.hidden_rows()) {
+        press(&mut a, Btn::Down);
+    }
     let out = frame(&a);
     assert!(drawn(&out, 500), "the date and time is not grey");
 
-    for _ in 0..QuickRow::DateTime.position(a.hidden_rows()) {
-        press(&mut a, Btn::Down);
-    }
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
     let out = frame(&a);
     assert!(
         !drawn(&out, 300) && !drawn(&out, 301),
@@ -918,7 +909,12 @@ fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
             ly + lh / 2.0,
             "{row:?}: the pointer is off the row"
         );
-        for other in QuickRow::MAIN.into_iter().filter(|r| *r != row) {
+        // A main page longer than fits draws only the rows in view.
+        let shown = {
+            let (first, count) = quick_window(row, &a.hidden_rows());
+            &QuickRow::MAIN[first..first + count]
+        };
+        for other in shown.iter().copied().filter(|r| *r != row) {
             assert!(drawn(&out, label(other, false)), "{other:?} is not grey");
             assert!(!drawn(&out, label(other, true)), "{other:?} is lit");
         }
@@ -933,7 +929,7 @@ fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
     open_at(&mut a, QuickRow::FastForward);
     let out = frame(&a);
     let right = OUT_W as f32 - QUICK_EDGE;
-    for row in QuickRow::GAME {
+    for row in QuickRow::FastForward.shown(&a.hidden_rows()) {
         let lit = row == QuickRow::FastForward;
         let [x, ..] = placed(&out, label(row, lit)).expect("a label was not drawn");
         assert_eq!(x + MENU_PAD as f32, QUICK_LABEL_X, "{row:?}'s label");
@@ -1039,7 +1035,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             .enumerate()
             .map(|(i, r)| {
                 let w = slot_ui::quick_label_face(*r, true).w;
-                [(id(100 + i), w, 40), (id(130 + i), w, 40)]
+                [(id(1000 + i), w, 40), (id(1100 + i), w, 40)]
             })
             .collect(),
         pointer: (id(700), 32, 48),
@@ -1048,7 +1044,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             .enumerate()
             .map(|(i, v)| {
                 let w = slot_ui::quick_value_face(v.text(), true).w;
-                [(id(200 + i), w, 40), (id(230 + i), w, 40)]
+                [(id(2000 + i), w, 40), (id(2100 + i), w, 40)]
             })
             .collect(),
         carets: [false, true].map(|right| {
@@ -1061,6 +1057,9 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             (id(402), 80),
             (id(403), 90),
             (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
         ],
         legend_light: [
             (id(400), 70),
@@ -1068,7 +1067,11 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             (id(402), 80),
             (id(403), 90),
             (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
         ],
+        descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
     });
     for page in [
         &QuickRow::SCREEN_GBA[..],
@@ -1083,7 +1086,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             }
             open_at(&mut a, row);
             let out = frame(&a);
-            let [lx, _, lw, _] = placed(&out, 130 + row.index()).expect("the lit label");
+            let [lx, _, lw, _] = placed(&out, 1100 + row.index()).expect("the lit label");
             let label_ends = lx + lw - MENU_PAD as f32;
             if let Some([cx, ..]) = placed(&out, 300) {
                 assert!(
@@ -1168,7 +1171,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     press(&mut a, Btn::Down);
     assert_eq!(
         a.quick_menu(),
-        Some(QuickRow::Theme),
+        Some(QuickRow::Recents),
         "the tint row showed on the default wallpaper"
     );
     press(&mut a, Btn::Up);
@@ -1185,7 +1188,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
         let below = if shown {
             QuickRow::WallpaperTint
         } else {
-            QuickRow::Theme
+            QuickRow::Recents
         };
         assert_eq!(a.quick_menu(), Some(below), "below {pick:?}");
         press(&mut a, Btn::Up);
@@ -1316,4 +1319,22 @@ fn a_frame_file_that_is_gone_reads_back_as_none() {
         ..SlotState::default()
     });
     assert_eq!(a.resolved_bezel(Platform::Gb), BezelPick::None);
+}
+
+#[test]
+#[cfg(not(feature = "brick"))] // The Brick has no lid, so no Lid Power Off row.
+fn lid_power_off_steps_through_its_minutes_wraps_and_saves() {
+    let (d, mut a, _) = on_carousel_with(SlotState {
+        lid_off_min: Some(3),
+        ..Default::default()
+    });
+    open_at(&mut a, QuickRow::LidOff);
+    assert_eq!(a.lid_off_min(), 3);
+    for want in [5, 10, 15, 30, 1, 3] {
+        press(&mut a, Btn::Right);
+        assert_eq!(a.lid_off_min(), want);
+        assert_eq!(read_slot_state(d.path()).lid_off_min, Some(want));
+    }
+    press(&mut a, Btn::Left);
+    assert_eq!(a.lid_off_min(), 1);
 }

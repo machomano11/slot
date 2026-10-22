@@ -9,12 +9,13 @@ use slot_store::{format_stamp, BezelPick, Platform as Console};
 use slot_ui::{
     badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face, core_button_legends,
     date_time_text, default_game_bezel_face, footer_ink, game_bezel_face, gb_cart_shadow, hhmm,
-    hint_face, icon_face, link_button_legends, menu_face, photo_face, quick_caret_face,
-    quick_label_face, quick_legend_faces, quick_pointer_face, quick_value_face, rebuild_count_face,
-    rebuild_title_face, set_clock_hint_face, slot_back, slot_back_light, slot_front,
-    slot_front_light, socket_face, sticker_face, title_face, toast_face, wallpaper_face, word_ink,
-    CartFace, GbShell, Icon, LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue,
-    RebuildScreen, StickerFields, Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
+    hint_face, icon_face, link_button_legends, menu_detail_face, menu_face, photo_face,
+    prompt_legends, quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
+    quick_pointer_face, quick_value_face, rebuild_count_face, rebuild_title_face, repair_legends,
+    set_clock_hint_face, slot_back, slot_back_light, slot_front, slot_front_light, socket_face,
+    sticker_face, title_face, toast_face, wallpaper_face, word_ink, CartFace, GbShell, Icon,
+    LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields,
+    Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -74,7 +75,7 @@ pub struct Frontend {
     link_shot: Option<TexId>,
     link_shot_size: (u32, u32),
     link_shot_shown: bool,
-    #[cfg(feature = "brick")]
+    #[cfg(feature = "wifi")]
     wifi_tex: Option<TexId>,
     banner_tex: Option<TexId>,
     #[cfg(feature = "brick")]
@@ -146,6 +147,7 @@ struct Clocks {
 
 struct ShelfLook {
     slot: [[TexId; 2]; 2],
+    plugged: [TexId; 2],
     bolt: [TexId; 2],
     port: [Option<TexId>; 2],
     legend: [Vec<(TexId, u32)>; 2],
@@ -166,7 +168,7 @@ impl Frontend {
     pub fn boot_with(platform: Box<dyn Platform>, sink: Box<dyn crate::audio::AudioSink>) -> Self {
         let now = Instant::now();
         let cart_faces = CartFaces::spawn(platform.root().to_path_buf());
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         crate::brick_wifi::ensure_address_at_boot();
         #[cfg(feature = "brick")]
         let session_root = platform.root().to_path_buf();
@@ -211,7 +213,7 @@ impl Frontend {
             link_shot: None,
             link_shot_size: (0, 0),
             link_shot_shown: false,
-            #[cfg(feature = "brick")]
+            #[cfg(feature = "wifi")]
             wifi_tex: None,
             banner_tex: None,
             #[cfg(feature = "brick")]
@@ -324,6 +326,14 @@ impl Frontend {
                 [upload(slot_back_light()), upload(slot_front_light())],
             ]
         };
+        let plugged = [
+            compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, slot_ui::slot_plugged()),
+            compositor.create_texture(
+                slot_ui::SLOT_W,
+                slot_ui::SLOT_H,
+                slot_ui::slot_plugged_light(),
+            ),
+        ];
         let dark_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(false));
         let light_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(true));
         let bolt = [
@@ -332,6 +342,7 @@ impl Frontend {
         ];
         self.look = Some(ShelfLook {
             slot,
+            plugged,
             bolt,
             port: [None, None],
             legend: [Vec::new(), Vec::new()],
@@ -415,6 +426,7 @@ impl Frontend {
             (
                 look.applied == Some((light, legend_ready, port_ready)),
                 look.slot[i],
+                look.plugged[i],
                 look.bolt[i],
                 look.bolt[0],
                 look.port[i],
@@ -423,7 +435,8 @@ impl Frontend {
                 port_ready,
             )
         });
-        let Some((done, slot, bolt, hud_bolt, port, legend, legend_ready, port_ready)) = ready
+        let Some((done, slot, plugged, bolt, hud_bolt, port, legend, legend_ready, port_ready)) =
+            ready
         else {
             return;
         };
@@ -431,6 +444,7 @@ impl Frontend {
             return;
         }
         self.session.app_mut().set_slot_faces(slot[0], slot[1]);
+        self.session.app_mut().set_plugged_face(plugged);
         self.session.app_mut().set_bolt_face(bolt);
         self.session.app_mut().set_hud_bolt_face(hud_bolt);
         if let Some(tex) = port {
@@ -469,6 +483,8 @@ impl Frontend {
         let shadow = cart(faces.chip_shadow);
         let mut up = |f: UndoFace| (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h);
         let lines = faces.shutdown.into_iter().map(&mut up).collect();
+        let repair = faces.repair.into_iter().map(&mut up).collect();
+        let reset = faces.reset.into_iter().map(&mut up).collect();
         let labels = faces
             .quick_labels
             .into_iter()
@@ -481,7 +497,8 @@ impl Frontend {
             .map(|v| v.map(&mut up))
             .collect();
         let carets = faces.quick_carets.map(&mut up);
-        let mut pack_legend = |faces: [UndoFace; 5]| {
+        let descriptions = faces.descriptions.map(&mut up);
+        let mut pack_legend = |faces: [UndoFace; 8]| {
             faces.map(|f| {
                 let (tex, w, _) = up(f);
                 (tex, w)
@@ -519,6 +536,8 @@ impl Frontend {
         let app = self.session.app_mut();
         app.set_link_badge_faces(link_badges);
         app.set_shutdown_faces(lines);
+        app.set_repair_faces(repair);
+        app.set_reset_faces(reset);
         app.set_quick_menu_faces(QuickMenuFaces {
             labels,
             pointer,
@@ -526,6 +545,7 @@ impl Frontend {
             carets,
             legend,
             legend_light,
+            descriptions,
         });
         app.set_core_part_faces(sockets, chips, blank, shadow);
         app.set_core_legend_faces(core_legend);
@@ -687,12 +707,15 @@ impl Frontend {
         if self.draw_rebuild(compositor) {
             return;
         }
-        if let Some(frame) = self.session.frame() {
+        if let Some([r, g, b]) = self.session.app().blank_panel() {
+            let px = (slot_gfx::SRC_W * slot_gfx::SRC_H) as usize;
+            compositor.upload_game(&[b, g, r, 0xff].repeat(px));
+        } else if let Some(frame) = self.session.frame() {
             compositor.upload_game(&frame);
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
-        #[cfg(feature = "brick")]
+        #[cfg(feature = "wifi")]
         if let Some(wifi) = &mut self.session.app_mut().wifi {
             if wifi.dirty {
                 let f = wifi.render();
@@ -724,6 +747,7 @@ impl Frontend {
             self.session.app_mut().set_banner_face(id, tex);
         }
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
+        sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
@@ -895,8 +919,6 @@ impl Frontend {
         if self.rebuild.is_some() {
             return;
         }
-        self.session
-            .set_menu_dpad_display(input.menu_dpad_display());
         self.session.feed(events, now);
         let dt = self.last.elapsed().as_secs_f32();
         self.last = Instant::now();
@@ -953,14 +975,16 @@ impl Frontend {
         self.session.app()
     }
 
+    pub fn set_left_stick(&mut self, present: bool) {
+        self.session.app_mut().set_left_stick(present);
+    }
+
     pub fn core_settling(&self) -> bool {
         self.session.core_settling()
     }
 
     pub fn advance_at(&mut self, input: &mut dyn InputSource, now: Millis, dt: f32) {
         let events = input.poll(now);
-        self.session
-            .set_menu_dpad_display(input.menu_dpad_display());
         self.session.feed(events, now);
         self.session.update(dt);
     }
@@ -989,6 +1013,14 @@ impl Frontend {
         std::process::exit(0);
     }
 
+    pub fn repairing(&self) -> bool {
+        self.session.app().ready_to_repair()
+    }
+
+    pub fn repair(&mut self) {
+        self.session.app_mut().repair();
+    }
+
     pub fn poweroff(&mut self) {
         self.session.app_mut().poweroff();
     }
@@ -1015,8 +1047,9 @@ struct UiFaces {
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
     quick_carets: [UndoFace; 2],
-    quick_legend: [UndoFace; 5],
-    quick_legend_light: [UndoFace; 5],
+    quick_legend: [UndoFace; 8],
+    quick_legend_light: [UndoFace; 8],
+    descriptions: [UndoFace; 2],
     sockets: Vec<CartFace>,
     chips: Vec<CartFace>,
     blank_chip: CartFace,
@@ -1029,6 +1062,8 @@ struct UiFaces {
     link_steps: Vec<UndoFace>,
     link_fails: Vec<UndoFace>,
     toasts: Vec<CartFace>,
+    repair: Vec<UndoFace>,
+    reset: Vec<UndoFace>,
 }
 
 impl UiFaces {
@@ -1062,6 +1097,7 @@ impl UiFaces {
                                 "Powering Down"
                             }
                         }
+                        PowerChoice::Repair => "Repairing SD Card",
                     })
                 })
                 .collect(),
@@ -1077,6 +1113,10 @@ impl UiFaces {
             quick_carets: [false, true].map(quick_caret_face),
             quick_legend: quick_legend_faces(footer_ink(false)),
             quick_legend_light: quick_legend_faces(footer_ink(true)),
+            descriptions: [
+                quick_description_face(&["Supports single button and MENU+button."]),
+                quick_description_face(&["Supports single button, SELECT+button and MENU+button."]),
+            ],
             sockets: slot_store::Core::ALL
                 .iter()
                 .map(|c| socket_face(*c))
@@ -1098,6 +1138,28 @@ impl UiFaces {
                 .map(|f| menu_face(f.line()))
                 .collect(),
             toasts: Toast::all().into_iter().map(toast_face).collect(),
+            repair: {
+                let [not_now, repair] = repair_legends(footer_ink(false));
+                vec![
+                    menu_face("Repair the SD card?"),
+                    menu_detail_face("slot restarts when it is done."),
+                    not_now,
+                    repair,
+                ]
+            },
+            reset: {
+                let [cancel, reset] = prompt_legends(footer_ink(false), "Cancel", "Reset");
+                vec![
+                    menu_face("Reset all controls?"),
+                    menu_detail_face("Every button goes back to its default."),
+                    menu_face("Reset all shortcuts?"),
+                    menu_detail_face("Every shortcut goes back to its default."),
+                    menu_face("Reset all shelf keys?"),
+                    menu_detail_face("Every shelf key goes back to its default."),
+                    cancel,
+                    reset,
+                ]
+            },
         }
     }
 }
@@ -1160,6 +1222,22 @@ fn sync_message(app: &mut App, compositor: &mut Compositor) {
         None => compositor.create_texture(f.w, f.h, &f.rgba),
     };
     app.message_ready(tex);
+}
+
+fn sync_binding_faces(app: &mut App, compositor: &mut Compositor) {
+    if app.quick_menu().is_none() && app.in_game_menu().is_none() {
+        return;
+    }
+    for text in app.binding_texts() {
+        if app.has_binding_face(&text) {
+            continue;
+        }
+        let faces = [false, true].map(|lit| {
+            let f = quick_value_face(&text, lit);
+            (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
+        });
+        app.add_binding_face(text, faces);
+    }
 }
 
 fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
