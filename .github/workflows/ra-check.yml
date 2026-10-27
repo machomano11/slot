@@ -1,0 +1,43 @@
+name: ra-check
+
+on:
+  push:
+    branches: [main]
+    paths: ['crates/ra-check/**', 'crates/slot-cheevos/**', 'crates/slot-net/**', 'Cargo.lock', '.github/workflows/ra-check.yml']
+  pull_request:
+    paths: ['crates/ra-check/**', 'crates/slot-cheevos/**', 'crates/slot-net/**', 'Cargo.lock', '.github/workflows/ra-check.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    name: ra-check for macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Test
+        run: cargo test -p ra-check
+
+      - name: Build a universal binary
+        run: |
+          set -eu
+          cargo build --release -p ra-check --target aarch64-apple-darwin
+          cargo build --release -p ra-check --target x86_64-apple-darwin
+          mkdir -p dist
+          lipo -create -output dist/ra-check \
+            target/aarch64-apple-darwin/release/ra-check \
+            target/x86_64-apple-darwin/release/ra-check
+          strip dist/ra-check
+          codesign --force --sign - dist/ra-check
+          dist/ra-check --version
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ra-check-macos
+          path: dist/ra-check

@@ -60,6 +60,20 @@ extern "C" {
     fn slot_cheevos_console_scd() -> c_uint;
     fn slot_cheevos_console_32x() -> c_uint;
     fn slot_cheevos_console_ps() -> c_uint;
+    fn slot_cheevos_hash_file(
+        hash: *mut c_char,
+        console: c_uint,
+        path: *const c_char,
+        error: *mut *const c_char,
+    ) -> c_int;
+    fn slot_cheevos_hash_buffer(
+        hash: *mut c_char,
+        console: c_uint,
+        name: *const c_char,
+        data: *const u8,
+        size: usize,
+        error: *mut *const c_char,
+    ) -> c_int;
 }
 
 /// rcheevos' version, for the User-Agent RetroAchievements asks clients to send.
@@ -67,6 +81,48 @@ pub fn version() -> &'static str {
     unsafe { CStr::from_ptr(slot_cheevos_version()) }
         .to_str()
         .unwrap_or("?")
+}
+
+/// The hash RetroAchievements knows the ROM at `path` by, for `console` (an rcheevos
+/// console id, as in rc_consoles.h), or why rcheevos could not make one.
+pub fn hash_file(path: &Path, console: u32) -> Result<String, String> {
+    let path = CString::new(path.to_string_lossy().as_bytes()).map_err(|_| "bad path")?;
+    hash_with(|hash, error| unsafe { slot_cheevos_hash_file(hash, console, path.as_ptr(), error) })
+}
+
+/// [`hash_file`] for a ROM already in memory, such as one read out of a zip. `name`'s
+/// extension picks the method, as the path's would.
+pub fn hash_bytes(name: &str, data: &[u8], console: u32) -> Result<String, String> {
+    let name = CString::new(name).map_err(|_| "bad name")?;
+    hash_with(|hash, error| unsafe {
+        slot_cheevos_hash_buffer(
+            hash,
+            console,
+            name.as_ptr(),
+            data.as_ptr(),
+            data.len(),
+            error,
+        )
+    })
+}
+
+fn hash_with(
+    generate: impl FnOnce(*mut c_char, *mut *const c_char) -> c_int,
+) -> Result<String, String> {
+    // rcheevos reports hashing errors through one global hook.
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut hash = [0 as c_char; 33];
+    let mut error: *const c_char = std::ptr::null();
+    if generate(hash.as_mut_ptr(), &mut error) != 0 {
+        return Ok(text(hash.as_ptr()));
+    }
+    let error = text(error);
+    Err(if error.is_empty() {
+        "rcheevos could not hash it".into()
+    } else {
+        error
+    })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
