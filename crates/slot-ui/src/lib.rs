@@ -27,12 +27,14 @@ mod rebuild;
 mod refusal;
 mod shelf;
 mod shell;
+mod shot_viewer;
 mod silhouette;
 mod slot_chrome;
 mod sticker;
 pub mod text;
 mod toast;
 
+pub use art::decode as decode_png;
 pub use backdrop::{
     bezel_face, blur_background, default_background, default_game_bezel_face, draw_backdrop,
     draw_ground, game_bezel_face, wallpaper_face,
@@ -78,11 +80,14 @@ pub use link_art::{
 };
 pub use plate::{
     arrows_hint_coloured, arrows_hint_face, arrows_hint_width, cap_width, caret_hint_face,
-    centred_hints, hint_coloured, hint_face, hint_quad, hint_row, hint_width, title_face,
-    title_line_face, word_face, word_ink, word_width, Hint, UndoFace, ARROW_GAP, CAP, CAP_GAP,
-    HINT_EDGE, HINT_GAP, HINT_H, LEGEND_GAP, TITLE_H, TITLE_LINE_H, TITLE_W,
+    centred_hints, hint_coloured, hint_face, hint_quad, hint_row, hint_width, pad_hint_face,
+    pad_hint_width, tick_cap_face, title_face, title_line_face, word_face, word_ink, word_width,
+    Hint, UndoFace, ARROW_GAP, CAP, CAP_GAP, HINT_EDGE, HINT_GAP, HINT_H, LEGEND_GAP, TITLE_H,
+    TITLE_LINE_H, TITLE_W,
 };
-pub use polaroids::{photo_face, PhotoFace, Polaroids, DOT, LEGEND, PHOTO_H, PHOTO_W};
+pub use polaroids::{
+    draw_album_chrome, photo_face, AlbumChrome, PhotoFace, Polaroids, DOT, LEGEND, PHOTO_H, PHOTO_W,
+};
 pub use power_menu::{menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
     core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
@@ -101,6 +106,10 @@ pub use shell::{
     snes_pal, table_keys, Finish, Shell, DEFAULT_SHELL, DISC_SHELL, DMG_SHELL, DUAL_MODE_SHELL,
     FAMICOM_SHELLS, GB_CLEAR_SHELL, NES_SHELL, NGP_SHELL, SEGA_SHELL, SNES_PAL_SHELL, SNES_SHELL,
     WS_SHELL,
+};
+pub use shot_viewer::{
+    grid_cell, grid_rows_shown, thumbnail, ShotMode, ShotViewer, GRID_COLS, GRID_GAP, MAX_ZOOM,
+    PAN_KEY, PAN_TAP, SHOT_HINTS,
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell, NesShell, PlainCart, SnesShell};
 pub use slot_chrome::{

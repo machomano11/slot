@@ -196,6 +196,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Wifi,
             QuickRow::Resume,
             QuickRow::States,
+            QuickRow::Screenshots,
             QuickRow::Settings,
             QuickRow::ExitGame,
             QuickRow::PlayScreen,
@@ -224,7 +225,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Controls,
             QuickRow::ControlsShelf,
             QuickRow::ControlsInGame,
-            QuickRow::ScreenGeneral
+            QuickRow::ScreenGeneral,
+            QuickRow::UndoSave,
+            QuickRow::UndoLoad
         ]
     );
     for page in [
@@ -410,7 +413,10 @@ fn the_in_game_pages_hold_their_rows_in_order() {
         QuickRow::PLAY,
         [
             QuickRow::Resume,
+            QuickRow::UndoSave,
+            QuickRow::UndoLoad,
             QuickRow::States,
+            QuickRow::Screenshots,
             QuickRow::Settings,
             QuickRow::ExitGame
         ]
@@ -601,7 +607,7 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
 fn every_console_has_its_screen_row() {
     for platform in slot_store::Platform::ALL {
         let row = match platform {
-            slot_store::Platform::Gba => Some(QuickRow::ScreenGba),
+            slot_store::Platform::Gba | slot_store::Platform::Gbav => Some(QuickRow::ScreenGba),
             slot_store::Platform::Gbc => Some(QuickRow::ScreenGbc),
             slot_store::Platform::Gb => Some(QuickRow::ScreenGb),
             p => QuickRow::CONSOLES.iter().find(|c| c.0 == p).map(|c| c.1),

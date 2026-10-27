@@ -132,7 +132,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
             Some(crate::SnesShell::Pal) => SNES_PAL_SHELL,
             _ => SNES_SHELL,
         },
-        Platform::Gba | Platform::Gb | Platform::Gbc => match cart.shell {
+        Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc => match cart.shell {
             Some(choice) => {
                 let finish = match choice.finish {
                     ShellFinish::Solid => Finish::Solid,
@@ -141,7 +141,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
                 };
                 shell(choice.colour, finish)
             }
-            None if cart.platform == Platform::Gba => gba_shell_for(&gba_code(cart)),
+            None if cart.platform.hardware() == Platform::Gba => gba_shell_for(&gba_code(cart)),
             None => gb_shell_for(&cart.rom),
         },
     }

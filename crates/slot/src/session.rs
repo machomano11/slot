@@ -111,6 +111,10 @@ impl Session {
         self.sink.ring()
     }
 
+    pub fn close_audio(&mut self) {
+        self.sink.close();
+    }
+
     pub fn rumble(&mut self, strength: u16) {
         if strength == self.motor {
             return;
@@ -612,6 +616,7 @@ impl Session {
                     let held = crate::core::wonderswan_held(&rom);
                     opened.core.set_option("wswan_rotate_display", held);
                 }
+                crate::core::apply_game_boy_player(&mut *opened.core, core, platform, &rom);
                 launch("core opened");
                 let sav = persist::read_sav(&root, platform, &stem);
                 launch("save read");
@@ -672,7 +677,7 @@ impl Session {
         self.ra = RaLogin::default();
         if let Some(account) = crate::ra::load(&self.root) {
             let console = match platform {
-                Platform::Gba => slot_cheevos::Console::Gba,
+                Platform::Gba | Platform::Gbav => slot_cheevos::Console::Gba,
                 Platform::Gb => slot_cheevos::Console::Gb,
                 Platform::Gbc => slot_cheevos::Console::Gbc,
                 Platform::Nes => slot_cheevos::Console::Nes,

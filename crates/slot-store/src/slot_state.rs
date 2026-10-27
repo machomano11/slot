@@ -251,7 +251,7 @@ impl SlotState {
     /// The picture shader chosen for a console.
     pub fn shader(&self, platform: Platform) -> Shader {
         match platform {
-            Platform::Gba => self.shader_gba,
+            Platform::Gba | Platform::Gbav => self.shader_gba,
             Platform::Gb => self.shader_gb,
             Platform::Gbc => self.shader_gbc,
             Platform::Nes => self.shader_nes,
@@ -266,7 +266,7 @@ impl SlotState {
 
     pub fn set_shader(&mut self, platform: Platform, shader: Shader) {
         match platform {
-            Platform::Gba => self.shader_gba = shader,
+            Platform::Gba | Platform::Gbav => self.shader_gba = shader,
             Platform::Gb => self.shader_gb = shader,
             Platform::Gbc => self.shader_gbc = shader,
             Platform::Nes => self.shader_nes = shader,

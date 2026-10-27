@@ -5,6 +5,7 @@ fn fields() -> StickerFields<'static> {
         battery: Some(87),
         serial: "04738857",
         version: "0.1.0",
+        model: "RG SP",
     }
 }
 

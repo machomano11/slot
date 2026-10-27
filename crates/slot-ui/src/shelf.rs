@@ -450,7 +450,9 @@ impl Shelf {
 
     fn slot_width(&self, slot: i32) -> (f32, bool) {
         match self.cart_at_offset(slot).map(|i| &self.carts[i]) {
-            Some(c) if c.platform != Platform::Gba => (cart_box_of(c).0 as f32, false),
+            Some(c) if !matches!(c.platform, Platform::Gba | Platform::Gbav) => {
+                (cart_box_of(c).0 as f32, false)
+            }
             _ => (CART_W as f32, true),
         }
     }

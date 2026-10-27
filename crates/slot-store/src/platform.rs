@@ -18,13 +18,15 @@ pub enum Platform {
     Scd,
     S32x,
     Ps,
+    Gbav,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 15] = [
+    pub const ALL: [Platform; 16] = [
         Platform::Gba,
-        Platform::Gb,
+        Platform::Gbav,
         Platform::Gbc,
+        Platform::Gb,
         Platform::Nes,
         Platform::Snes,
         Platform::Gg,
@@ -56,6 +58,7 @@ impl Platform {
             Platform::Scd => "Sega CD",
             Platform::S32x => "Sega 32X",
             Platform::Ps => "PlayStation",
+            Platform::Gbav => "Game Boy Advance Video",
         }
     }
 
@@ -76,12 +79,20 @@ impl Platform {
             Platform::Scd => "SEGACD",
             Platform::S32x => "32X",
             Platform::Ps => "PS",
+            Platform::Gbav => "GBAV",
+        }
+    }
+
+    pub fn hardware(self) -> Platform {
+        match self {
+            Platform::Gbav => Platform::Gba,
+            p => p,
         }
     }
 
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
-            Platform::Gba => &["gba"],
+            Platform::Gba | Platform::Gbav => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Nes => &["nes"],
             Platform::Snes => &["sfc", "smc"],
@@ -98,7 +109,7 @@ impl Platform {
 
     pub fn picture(self) -> (u32, u32) {
         match self {
-            Platform::Gba => (240, 160),
+            Platform::Gba | Platform::Gbav => (240, 160),
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Sms => (256, 192),
             // H40 mode; the H32 games' 256 columns sit in its middle.
@@ -121,6 +132,7 @@ impl Platform {
     pub fn canvas(self) -> (u32, u32) {
         match self {
             Platform::Gba
+            | Platform::Gbav
             | Platform::Gb
             | Platform::Gbc
             | Platform::Gg
@@ -140,7 +152,7 @@ impl Platform {
     /// pixel grid for a TV's.
     pub fn shaders(self) -> &'static [crate::Shader] {
         match self {
-            Platform::Gba => &crate::Shader::GBA,
+            Platform::Gba | Platform::Gbav => &crate::Shader::GBA,
             Platform::Gb
             | Platform::Gbc
             | Platform::Gg
@@ -156,6 +168,7 @@ impl Platform {
     pub fn default_shader(self) -> crate::Shader {
         match self {
             Platform::Gba
+            | Platform::Gbav
             | Platform::Gg
             | Platform::Ngp
             | Platform::Ngpc
@@ -171,14 +184,22 @@ impl Platform {
     pub fn has_own_shader_field(self) -> bool {
         matches!(
             self,
-            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes
+            Platform::Gba
+                | Platform::Gbav
+                | Platform::Gb
+                | Platform::Gbc
+                | Platform::Nes
+                | Platform::Snes
         )
     }
 
     /// Drew on a Game Boy's LCD: has Slot's colour correction, palettes and bezels. The
     /// other consoles drew on a TV, or (the Game Gear) have no such options in their core.
     pub fn game_boy_family(self) -> bool {
-        matches!(self, Platform::Gba | Platform::Gb | Platform::Gbc)
+        matches!(
+            self,
+            Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
+        )
     }
 
     /// A console whose games are disc images: they may sit in a folder of their own, and the

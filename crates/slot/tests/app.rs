@@ -361,11 +361,11 @@ fn a_colour_cart_stands_on_a_shelf_of_its_own() {
         (Platform::Gbc, "Chromatic"),
     ]);
     tap(&mut a, Btn::R1);
-    assert_eq!(a.selected_stem(), Some("Tetris"));
+    assert_eq!(a.selected_stem(), Some("Chromatic"));
     tap(&mut a, Btn::R1);
     assert_eq!(
         a.selected_stem(),
-        Some("Chromatic"),
+        Some("Tetris"),
         "the Colour cart shares the Game Boy shelf"
     );
     tap(&mut a, Btn::R1);
@@ -375,7 +375,7 @@ fn a_colour_cart_stands_on_a_shelf_of_its_own() {
         "three shelves did not ring back round to the first"
     );
     tap(&mut a, Btn::L1);
-    assert_eq!(a.selected_stem(), Some("Chromatic"));
+    assert_eq!(a.selected_stem(), Some("Tetris"));
 }
 
 #[test]
@@ -480,10 +480,10 @@ fn the_switch_changes_the_name_on_the_band_and_says_nothing() {
         "the card did not open on the GBA"
     );
     for (btn, want) in [
-        (Btn::R1, "Game Boy"),
         (Btn::R1, "Game Boy Color"),
+        (Btn::R1, "Game Boy"),
         (Btn::R1, "Game Boy Advance"),
-        (Btn::L1, "Game Boy Color"),
+        (Btn::L1, "Game Boy"),
     ] {
         common::through_at(&mut a, btn, 1_000);
         assert_eq!(
@@ -494,11 +494,7 @@ fn the_switch_changes_the_name_on_the_band_and_says_nothing() {
         assert_eq!(a.toast(), None, "{btn:?} put a banner up over the carts");
     }
     a.update(5.0);
-    assert_eq!(
-        a.shelf_platform_name(),
-        Some("Game Boy Color"),
-        "the name faded"
-    );
+    assert_eq!(a.shelf_platform_name(), Some("Game Boy"), "the name faded");
 }
 
 #[test]
@@ -593,7 +589,7 @@ fn a_cart_in_flight_is_not_also_left_standing_on_the_shelf() {
                     && w <= CART_W as f32 + 0.01
                     && (w / h - CART_W as f32 / CART_H as f32).abs() < 0.05
             }
-            Draw::Game | Draw::Shot { .. } => false,
+            Draw::Game | Draw::Shot { .. } | Draw::Capture => false,
         })
         .count();
     assert_eq!(
@@ -2218,6 +2214,31 @@ fn a_letter_jump_shows_the_letter_in_the_slot_and_fades_like_the_shelf_name() {
     assert!(
         slot_text_alpha(&a, face) > 0.0,
         "jumping to the letter already printed did not show it again"
+    );
+}
+
+#[test]
+fn a_jumped_to_letter_is_set_at_the_titles_size_on_its_baseline() {
+    let mut a = app_with_carts(&["Alpha", "Bravo"]);
+    let face = slot_ui::TexId::from_raw(77);
+    a.apply(Action::GbaDown(Btn::Down));
+    a.apply(Action::GbaUp(Btn::Down));
+    a.set_shelf_platform_face(face, 20);
+    a.update(1.0 / 60.0);
+    a.update(0.5);
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    let Some((y, h)) = out.iter().find_map(|d| match *d {
+        Draw::Tex { tex, y, h, .. } if tex == face => Some((y, h)),
+        _ => None,
+    }) else {
+        panic!("the letter never showed");
+    };
+    assert_eq!(h, slot_ui::TITLE_LINE_H as f32);
+    assert_eq!(
+        y + h,
+        slot_ui::slot_name_y() + slot_ui::HINT_H as f32,
+        "the letter left the title's baseline"
     );
 }
 

@@ -162,13 +162,6 @@ impl AlsaSink {
             device: None,
         }
     }
-
-    fn close(&mut self) {
-        if let Some(d) = self.device.take() {
-            d.stop.store(true, Ordering::Relaxed);
-            let _ = d.join.join();
-        }
-    }
 }
 
 impl Default for AlsaSink {
@@ -220,6 +213,13 @@ impl AudioSink for AlsaSink {
 
     fn ring(&self) -> Arc<Ring> {
         self.ring.clone()
+    }
+
+    fn close(&mut self) {
+        if let Some(d) = self.device.take() {
+            d.stop.store(true, Ordering::Relaxed);
+            let _ = d.join.join();
+        }
     }
 }
 
