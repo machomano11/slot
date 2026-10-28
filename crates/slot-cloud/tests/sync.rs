@@ -6,8 +6,8 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use slot_cloud::{
-    belongs_to, sync, sync_counted, sync_holding, Error, Listed, Moment, Remote, Report, Tally,
-    FOLDERS, PROGRESS,
+    belongs_to, sync, sync_asking, sync_counted, sync_holding, Answer, Card, Error, Listed, Moment,
+    Remote, Report, Tally, FOLDERS, PROGRESS,
 };
 
 #[derive(Default)]
@@ -458,6 +458,90 @@ fn games_and_their_art_sync_and_never_vanish() {
     let r = run(root, &mut remote);
     assert_eq!((r.uploaded, r.downloaded, r.deleted), (1, 1, 0), "{r:?}");
     assert!(read(root, "Games/PS/Vagrant Story (USA).chd").is_some());
+}
+
+/// A run that asks about deleted games, with these answers.
+fn run_asking(root: &Path, remote: &mut Memory, answers: &[(&str, Answer)]) -> Report {
+    let answers = answers.iter().map(|(r, a)| (r.to_string(), *a)).collect();
+    sync_asking(
+        &Card(root),
+        &root.join("Config/cloudsync.manifest"),
+        remote,
+        &FOLDERS,
+        &AtomicBool::new(false),
+        &|_| false,
+        &Tally::default(),
+        &answers,
+    )
+    .expect("sync")
+}
+
+#[test]
+fn a_game_deleted_from_the_server_waits_for_an_answer() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    for g in ["a", "b", "c"] {
+        write_aged(root, &format!("Games/GBA/{g}.gba"), b"rom", HOUR);
+    }
+    write_aged(root, "States/GBA/core/a/1.state", b"state", HOUR);
+    let mut remote = Memory::default();
+    let r = run_asking(root, &mut remote, &[]);
+    assert_eq!(r.uploaded, 4, "{r:?}");
+
+    // Another device deleted a and b from the server; this one deleted c.
+    remote.delete("Games/GBA/a.gba").unwrap();
+    remote.delete("Games/GBA/b.gba").unwrap();
+    std::fs::remove_file(root.join("Games/GBA/c.gba")).unwrap();
+    // States still follow deletions without asking.
+    remote.delete("States/GBA/core/a/1.state").unwrap();
+    let r = run_asking(root, &mut remote, &[]);
+    assert_eq!((r.uploaded, r.downloaded, r.deleted), (0, 1, 1), "{r:?}");
+    assert!(
+        read(root, "Games/GBA/c.gba").is_some(),
+        "deleted here: comes back"
+    );
+    let asked = ["Games/GBA/a.gba", "Games/GBA/b.gba"];
+    assert_eq!(r.gone, asked);
+    // Unanswered, it asks again and still touches nothing.
+    assert_eq!(run_asking(root, &mut remote, &[]).gone, asked);
+    assert!(remote.bytes("Games/GBA/a.gba").is_none(), "not sent back");
+
+    let r = run_asking(
+        root,
+        &mut remote,
+        &[
+            ("Games/GBA/a.gba", Answer::Delete),
+            ("Games/GBA/b.gba", Answer::Keep),
+        ],
+    );
+    assert_eq!((r.uploaded, r.downloaded, r.deleted), (0, 0, 1), "{r:?}");
+    assert!(r.gone.is_empty());
+    assert!(read(root, "Games/GBA/a.gba").is_none(), "deleted here too");
+    assert!(read(root, "Games/GBA/b.gba").is_some(), "kept here");
+    assert!(
+        remote.bytes("Games/GBA/b.gba").is_none(),
+        "but not sent back"
+    );
+
+    // Answered once: the next run neither asks nor sends the kept game.
+    assert_eq!(run_asking(root, &mut remote, &[]), Report::default());
+    // Until the server has it again: then it is the same game on both sides.
+    remote.store("Games/GBA/b.gba", b"rom", secs_now());
+    assert_eq!(run_asking(root, &mut remote, &[]), Report::default());
+    remote.delete("Games/GBA/b.gba").unwrap();
+    assert_eq!(run_asking(root, &mut remote, &[]).gone, ["Games/GBA/b.gba"]);
+}
+
+#[test]
+fn a_game_deleted_on_both_sides_is_simply_forgotten() {
+    let card = tempfile::tempdir().unwrap();
+    let root = card.path();
+    write_aged(root, "Games/GBA/a.gba", b"rom", HOUR);
+    let mut remote = Memory::default();
+    run_asking(root, &mut remote, &[]);
+    remote.delete("Games/GBA/a.gba").unwrap();
+    std::fs::remove_file(root.join("Games/GBA/a.gba")).unwrap();
+    assert_eq!(run_asking(root, &mut remote, &[]), Report::default());
 }
 
 #[test]
