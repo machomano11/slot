@@ -2,24 +2,24 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use slot_gfx::{Canvas, OUT_H, OUT_W};
+use slot_gfx::{Canvas, GameLayout, Sizing, OUT_H, OUT_W, WHOLE_TEXTURE};
 use slot_input::{Action, Btn, RawEvent, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS};
 use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
-    format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core,
-    GbColors, Outline, Platform, Recent, Shader, ShellChoice, ShellFinish, ShotDir, ShotEntry,
-    SlotState, StateEntry, StateRing, WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX,
-    FF_SPEEDS, RING_MAX, VOLUME_MAX,
+    format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Blending, Cart,
+    Core, GbColors, Outline, Platform, Recent, Scale, Shader, ShellChoice, ShellFinish, ShotDir,
+    ShotEntry, SlotState, StateEntry, StateRing, Stretch, WallpaperPick, WallpaperTint,
+    BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, RING_MAX, VOLUME_MAX,
 };
 use slot_ui::{
-    board_from, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_slot_name,
-    draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
-    shelf_cart_at, ClockPicker, Draw, FfState, GbShell, Hud, HudKind, Icon, LinkBadge, Millis,
-    Placed, Polaroids, PowerChoice, QuickMenu, QuickMenuFaces, QuickRow, QuickValue, Refusal,
-    Shelf, ShotMode, ShotViewer, SlotChrome, TexId, Toast, CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W,
-    HINT_EDGE, HOP_LIFT, MOUTH_H, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W, SOCKET_H, SOCKET_U,
-    SOCKET_V, SOCKET_W, TURN_PAD,
+    board_from, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_sticker, ease,
+    footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap, shelf_cart_at, BezelArt,
+    ClockFaces, ClockPicker, ClockRow, ClockScreen, Draw, FfState, GbShell, Hud, HudKind, Icon,
+    LinkBadge, Millis, Placed, Polaroids, PowerChoice, QuickMenu, QuickMenuFaces, QuickRow,
+    QuickValue, Refusal, Shelf, ShotMode, ShotViewer, SlotChrome, TexId, Toast, CART_W, CHIP_H,
+    CHIP_U, CHIP_V, CHIP_W, HINT_EDGE, HOP_LIFT, MOUTH_H, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W,
+    SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
 };
 
 use crate::audio::Sfx;
@@ -409,6 +409,7 @@ pub struct App {
     snapshot: Option<Box<dyn Snapshot>>,
     core: Core,
     colour_pending: Option<bool>,
+    blending_pending: Option<Blending>,
     palette_live: bool,
     palette_pending: Option<GbColors>,
     /// The running game's disc in the tray and count of discs, for a disc system.
@@ -427,8 +428,9 @@ pub struct App {
     pending: Option<(PendingUndo, Millis)>,
     legend_faces: Vec<TexId>,
     undo_face: Option<TexId>,
-    clock_faces: Option<(TexId, TexId)>,
-    clock_back: Option<(TexId, u32)>,
+    clock_faces: Option<ClockFaces>,
+    clock_legends: Option<[[(TexId, u32); 6]; 2]>,
+    clock_title: Option<(TexId, u32, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
@@ -652,6 +654,7 @@ impl App {
             snapshot: None,
             core: Core::default(),
             colour_pending: None,
+            blending_pending: None,
             palette_live: false,
             discs: None,
             disc_pending: None,
@@ -669,7 +672,8 @@ impl App {
             legend_faces: Vec::new(),
             undo_face: None,
             clock_faces: None,
-            clock_back: None,
+            clock_legends: None,
+            clock_title: None,
             quick_menu_faces: None,
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
@@ -773,7 +777,7 @@ impl App {
         if app.state.clock_set {
             app.start();
         } else {
-            app.phase = clock_screen(system_secs(), 0, false);
+            app.phase = clock_screen(system_secs(), &app.state, false);
         }
         app
     }
@@ -1027,12 +1031,18 @@ impl App {
         else {
             return;
         };
-        let (moved, offset, from_menu) = (picker.secs() - *seed, picker.offset_min(), *from_menu);
+        let (moved, zone, clock_24h, from_menu) = (
+            picker.secs() - *seed,
+            picker.zone(),
+            picker.clock_24h(),
+            *from_menu,
+        );
         let utc = self.utc_secs() + moved;
         if let Some(power) = &mut self.power {
             power.set_clock(utc);
         }
-        self.state.utc_offset_min = offset as i16;
+        self.state.zone = zone;
+        self.state.clock_24h = clock_24h;
         self.state.clock_set = true;
         self.persist();
         if from_menu {
@@ -1049,7 +1059,11 @@ impl App {
     }
 
     pub fn wall_secs(&self) -> i64 {
-        self.utc_secs() + i64::from(self.state.utc_offset_min) * 60
+        self.state.zone.local(self.utc_secs())
+    }
+
+    pub fn clock_24h(&self) -> bool {
+        self.state.clock_24h
     }
 
     fn utc_secs(&self) -> i64 {
@@ -1076,12 +1090,16 @@ impl App {
 
     pub fn in_game_hidden(&self) -> Vec<QuickRow> {
         let mut hidden = Vec::new();
-        // A NES, SNES or Sega console has no LCD colour to correct, no palette and no bezel.
+        // A NES, SNES or Sega console has no LCD colour to correct, no palette and no bezel,
+        // and its picture keeps its own canvas: no Scale, Stretch or Frame Blending.
         if !self.playing_platform().game_boy_family() {
             hidden.extend([
                 QuickRow::Palette,
                 QuickRow::ColourCorrection,
                 QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::Blending,
             ]);
         }
         let no_bezel = self.playing_platform().hardware() == Platform::Gba && !self.framed_panel();
@@ -1090,6 +1108,12 @@ impl App {
         }
         if no_bezel {
             hidden.push(QuickRow::Bezel);
+        }
+        if self.scale_choices(self.playing_platform()).len() < 2 {
+            hidden.push(QuickRow::Scale);
+        }
+        if self.stretch_choices(self.playing_platform()).len() < 2 {
+            hidden.push(QuickRow::Stretch);
         }
         if self.single_cart() {
             hidden.push(QuickRow::ExitGame);
@@ -1199,6 +1223,11 @@ impl App {
             (QuickRow::Bezel, Platform::Gba) => QuickRow::GbaBezel,
             (QuickRow::Bezel, Platform::Gb) => QuickRow::GbBezel,
             (QuickRow::Bezel, Platform::Gbc) => QuickRow::GbcBezel,
+            (QuickRow::Scale, Platform::Gba) => QuickRow::GbaScale,
+            (QuickRow::Scale, Platform::Gb) => QuickRow::GbScale,
+            (QuickRow::Scale, Platform::Gbc) => QuickRow::GbcScale,
+            (QuickRow::Stretch, Platform::Gb) => QuickRow::GbStretch,
+            (QuickRow::Stretch, Platform::Gbc) => QuickRow::GbcStretch,
             (QuickRow::PlayBrightness, _) => QuickRow::Brightness,
             (QuickRow::PlayBlueLight, _) => QuickRow::BlueLight,
             (row, _) => row,
@@ -1226,7 +1255,21 @@ impl App {
             QuickRow::Shader
             | QuickRow::ColourCorrection
             | QuickRow::PlayBrightness
-            | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
+            | QuickRow::PlayBlueLight
+            | QuickRow::Scale => self.quick_value(self.playing_row(row)),
+            QuickRow::Stretch => match self.playing_row(row) {
+                QuickRow::Stretch => None,
+                row => self.quick_value(row),
+            },
+            QuickRow::GbaScale => Some(scale_value(self.resolved_scale(Platform::Gba))),
+            QuickRow::GbScale => Some(scale_value(self.resolved_scale(Platform::Gb))),
+            QuickRow::GbcScale => Some(scale_value(self.resolved_scale(Platform::Gbc))),
+            QuickRow::GbStretch => Some(stretch_value(self.resolved_stretch(Platform::Gb))),
+            QuickRow::GbcStretch => Some(stretch_value(self.resolved_stretch(Platform::Gbc))),
+            QuickRow::GbaBlending => Some(blending_value(self.state.blending_gba)),
+            QuickRow::GbcBlending => Some(blending_value(self.state.blending_gbc)),
+            QuickRow::GbBlending => Some(blending_value(self.state.blending_gb)),
+            QuickRow::Blending => Some(blending_value(self.blending_in_play())),
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
             QuickRow::BlueLight => Some(match self.state.blue_light {
                 0 => QuickValue::Off,
@@ -1456,6 +1499,7 @@ impl App {
 
     pub fn sp_frame(&self) -> bool {
         self.resolved_bezel(self.playing_platform()) == BezelPick::Ags102
+            && !self.game_layout().panel
     }
 
     pub fn set_game_bezel(&mut self, tex: Option<TexId>) {
@@ -1463,10 +1507,31 @@ impl App {
     }
 
     pub fn shown_game_bezel(&self) -> Option<TexId> {
-        if self.video_mode == VideoMode::Stretch {
+        if self.picture_fills() {
+            return None;
+        }
+        if self.resolved_bezel(self.playing_platform()) == BezelPick::Default
+            && self.bezel_art().is_none()
+        {
             return None;
         }
         self.game_bezel
+    }
+
+    pub fn bezel_art(&self) -> Option<BezelArt> {
+        if self.picture_fills() {
+            return None;
+        }
+        let gba = self.playing_platform().hardware() == Platform::Gba;
+        match (self.sized_picture().0, self.framed_panel()) {
+            (Sizing::Band, _) => Some(BezelArt::Default),
+            _ if gba => None,
+            (Sizing::Integer, false) => Some(BezelArt::Default),
+            (Sizing::Integer, true) => Some(BezelArt::Integer4x3),
+            (Sizing::Fit, false) => Some(BezelArt::Fit3x2),
+            (Sizing::Fit, true) => Some(BezelArt::Fit4x3),
+            (Sizing::Panel, _) => None,
+        }
     }
 
     pub fn wallpaper_files(&self) -> Vec<String> {
@@ -1587,6 +1652,23 @@ impl App {
         if !self.framed_panel() {
             hidden.push(QuickRow::GbaBezel);
         }
+        for (row, platform) in [
+            (QuickRow::GbaScale, Platform::Gba),
+            (QuickRow::GbScale, Platform::Gb),
+            (QuickRow::GbcScale, Platform::Gbc),
+        ] {
+            if self.scale_choices(platform).len() < 2 {
+                hidden.push(row);
+            }
+        }
+        for (row, platform) in [
+            (QuickRow::GbStretch, Platform::Gb),
+            (QuickRow::GbcStretch, Platform::Gbc),
+        ] {
+            if self.stretch_choices(platform).len() < 2 {
+                hidden.push(row);
+            }
+        }
         if !self.left_stick {
             hidden.push(QuickRow::LeftStick);
         }
@@ -1616,12 +1698,16 @@ impl App {
         self.sticker_face = Some(face);
     }
 
-    pub fn set_clock_faces(&mut self, line: TexId, hint: TexId) {
-        self.clock_faces = Some((line, hint));
+    pub fn set_clock_faces(&mut self, faces: ClockFaces) {
+        self.clock_faces = Some(faces);
     }
 
-    pub fn set_clock_back_face(&mut self, back: (TexId, u32)) {
-        self.clock_back = Some(back);
+    pub fn set_clock_legend_faces(&mut self, legends: [[(TexId, u32); 6]; 2]) {
+        self.clock_legends = Some(legends);
+    }
+
+    pub fn set_clock_title_face(&mut self, title: (TexId, u32, u32)) {
+        self.clock_title = Some(title);
     }
 
     pub fn set_star_face(&mut self, face: TexId, w: u32, h: u32) {
@@ -1720,10 +1806,6 @@ impl App {
             Some(letter) => Some(letter.to_string()),
             None => self.shelf_platform_name().map(str::to_string),
         }
-    }
-
-    pub fn slot_text_is_letter(&self) -> bool {
-        self.slot_letter.is_some()
     }
 
     pub fn title_text(&self) -> Option<String> {
@@ -1977,7 +2059,211 @@ impl App {
     }
 
     pub fn source_rect(&self) -> [f32; 4] {
-        video_mode::picture_source_rect(self.picture(), self.platform.canvas(), self.video_mode)
+        self.sized_picture().1
+    }
+
+    fn sized_picture(&self) -> (Sizing, [f32; 4]) {
+        let platform = self.playing_platform();
+        // The other consoles' pictures sit centred on their own canvas and fill the screen.
+        if !platform.game_boy_family() {
+            let source =
+                video_mode::picture_source_rect(self.picture(), platform.canvas(), self.video_mode);
+            return (Sizing::Band, source);
+        }
+        let (sizing, source) = video_mode::picture_for(
+            platform,
+            self.video_mode,
+            self.drawn_scale(platform),
+            self.resolved_stretch(platform),
+        );
+        // The Brick's 4:3 screen: a picture kept at its own shape is padded to 4:3 there
+        // rather than drawn out of shape across the whole screen.
+        #[cfg(feature = "brick")]
+        if sizing == Sizing::Band && self.video_mode == VideoMode::Actual {
+            let source = video_mode::picture_source_rect(
+                self.picture(),
+                platform.canvas(),
+                VideoMode::Actual,
+            );
+            return (sizing, source);
+        }
+        (sizing, source)
+    }
+
+    fn scale_of(&self, platform: Platform) -> Scale {
+        match platform {
+            Platform::Gb => self.state.scale_gb,
+            Platform::Gbc => self.state.scale_gbc,
+            _ => self.state.scale_gba,
+        }
+    }
+
+    fn stretch_of(&self, platform: Platform) -> Stretch {
+        match platform {
+            Platform::Gb => self.state.stretch_gb,
+            Platform::Gbc => self.state.stretch_gbc,
+            _ => Stretch::Classic,
+        }
+    }
+
+    pub fn game_layout(&self) -> GameLayout {
+        let (sizing, source) = self.sized_picture();
+        self.layout_of(self.playing_platform(), sizing, source)
+    }
+
+    fn layout_of(&self, platform: Platform, sizing: Sizing, source: [f32; 4]) -> GameLayout {
+        let picture = match source == WHOLE_TEXTURE {
+            true => (slot_gfx::SRC_W, slot_gfx::SRC_H),
+            false => platform.picture(),
+        };
+        slot_gfx::game_layout(self.panel, picture, sizing)
+    }
+
+    fn shown_as(
+        &self,
+        platform: Platform,
+        mode: VideoMode,
+        scale: Scale,
+        stretch: Stretch,
+    ) -> (bool, [i32; 4]) {
+        let (sizing, source) = video_mode::picture_for(platform, mode, scale, stretch);
+        let layout = self.layout_of(platform, sizing, source);
+        let (_, crop) =
+            video_mode::picture_for(platform, VideoMode::Actual, Scale::Integer, stretch);
+        let [rx, ry, rw, rh] = layout.rect;
+        let at = |from: f32, len: f32, off: f32, src: f32, size: f32| {
+            ((from + (off - src) / len * size) * 100.0).round() as i32
+        };
+        (
+            layout.panel,
+            [
+                at(rx, source[2], crop[0], source[0], rw),
+                at(ry, source[3], crop[1], source[1], rh),
+                (crop[2] / source[2] * rw * 100.0).round() as i32,
+                (crop[3] / source[3] * rh * 100.0).round() as i32,
+            ],
+        )
+    }
+
+    fn scale_candidates(platform: Platform) -> &'static [Scale] {
+        match platform.hardware() {
+            Platform::Gba => &[Scale::Fit, Scale::Integer, Scale::FullScreen],
+            _ => &[Scale::SpFrame, Scale::Integer, Scale::Fit],
+        }
+    }
+
+    pub fn scale_choices(&self, platform: Platform) -> Vec<Scale> {
+        let mut seen = Vec::new();
+        let mut choices = Vec::new();
+        for &scale in Self::scale_candidates(platform) {
+            let shown = self.shown_as(platform, VideoMode::Actual, scale, Stretch::Classic);
+            match seen.iter().position(|s| *s == shown) {
+                Some(at) if choices[at] == Scale::SpFrame => choices[at] = scale,
+                Some(_) => {}
+                None => {
+                    seen.push(shown);
+                    choices.push(scale);
+                }
+            }
+        }
+        choices
+    }
+
+    pub fn stretch_choices(&self, platform: Platform) -> Vec<Stretch> {
+        if platform.hardware() == Platform::Gba {
+            return Vec::new();
+        }
+        let mut seen = Vec::new();
+        let mut choices = Vec::new();
+        for stretch in [Stretch::Classic, Stretch::FullScreen] {
+            let shown = self.shown_as(platform, VideoMode::Stretch, Scale::SpFrame, stretch);
+            if !seen.contains(&shown) {
+                seen.push(shown);
+                choices.push(stretch);
+            }
+        }
+        choices
+    }
+
+    pub fn resolved_scale(&self, platform: Platform) -> Scale {
+        let stored = self.scale_of(platform);
+        let shown = self.shown_as(platform, VideoMode::Actual, stored, Stretch::Classic);
+        self.scale_choices(platform)
+            .into_iter()
+            .find(|&c| {
+                c == stored
+                    || self.shown_as(platform, VideoMode::Actual, c, Stretch::Classic) == shown
+            })
+            .or_else(|| self.scale_choices(platform).first().copied())
+            .unwrap_or_default()
+    }
+
+    fn drawn_scale(&self, platform: Platform) -> Scale {
+        let stored = self.scale_of(platform);
+        let shown = self.shown_as(platform, VideoMode::Actual, stored, Stretch::Classic);
+        Self::scale_candidates(platform)
+            .iter()
+            .copied()
+            .find(|&c| self.shown_as(platform, VideoMode::Actual, c, Stretch::Classic) == shown)
+            .unwrap_or(stored)
+    }
+
+    pub fn resolved_stretch(&self, platform: Platform) -> Stretch {
+        let stored = self.stretch_of(platform);
+        let shown = self.shown_as(platform, VideoMode::Stretch, Scale::SpFrame, stored);
+        self.stretch_choices(platform)
+            .into_iter()
+            .find(|&c| {
+                c == stored
+                    || self.shown_as(platform, VideoMode::Stretch, Scale::SpFrame, c) == shown
+            })
+            .unwrap_or_default()
+    }
+
+    fn cycle_scale(&mut self, platform: Platform, right: bool) {
+        let choices = self.scale_choices(platform);
+        let at = choices
+            .iter()
+            .position(|&c| c == self.resolved_scale(platform))
+            .unwrap_or(0);
+        let n = choices.len();
+        let to = choices[if right {
+            (at + 1) % n
+        } else {
+            (at + n - 1) % n
+        }];
+        match platform {
+            Platform::Gb => self.state.scale_gb = to,
+            Platform::Gbc => self.state.scale_gbc = to,
+            _ => self.state.scale_gba = to,
+        }
+    }
+
+    fn cycle_stretch(&mut self, platform: Platform, right: bool) {
+        let choices = self.stretch_choices(platform);
+        let Some(at) = choices
+            .iter()
+            .position(|&c| c == self.resolved_stretch(platform))
+        else {
+            return;
+        };
+        let n = choices.len();
+        let to = choices[if right {
+            (at + 1) % n
+        } else {
+            (at + n - 1) % n
+        }];
+        match platform {
+            Platform::Gbc => self.state.stretch_gbc = to,
+            _ => self.state.stretch_gb = to,
+        }
+    }
+
+    pub fn picture_fills(&self) -> bool {
+        match self.playing_platform().hardware() {
+            Platform::Gba => self.sized_picture().0 == Sizing::Panel && self.game_layout().panel,
+            _ => self.video_mode == VideoMode::Stretch,
+        }
     }
 
     /// The picture's size on the canvas: the platform's, or for a console whose games turn
@@ -2476,12 +2762,12 @@ impl App {
     }
 
     pub fn set_power(&mut self, mut power: Power) {
-        power.set_backlight(self.state.brightness);
+        power.set_backlight(self.state.brightness + 1);
         self.headphones = power.headphones();
         self.hud.set_headphones(self.headphones);
         let secs = power.now();
         if matches!(self.phase, Phase::SetClock { .. }) || secs < CLOCK_FLOOR {
-            self.phase = clock_screen(secs, 0, false);
+            self.phase = clock_screen(secs, &self.state, false);
         }
         self.copy_card_log(&power);
         if let Some(result) = power.take_repair_result() {
@@ -2577,6 +2863,19 @@ impl App {
             Platform::Gbc => self.state.colour_correction_gbc,
             _ => false,
         }
+    }
+
+    pub fn blending_for(&self, platform: Platform) -> Blending {
+        match platform {
+            Platform::Gba | Platform::Gbav => self.state.blending_gba,
+            Platform::Gb => self.state.blending_gb,
+            Platform::Gbc => self.state.blending_gbc,
+            _ => Blending::Off,
+        }
+    }
+
+    pub fn blending_in_play(&self) -> Blending {
+        self.blending_for(self.playing_platform()).on(self.core)
     }
 
     pub fn light(&self) -> bool {
@@ -2719,6 +3018,10 @@ impl App {
 
     pub fn take_colour_correction(&mut self) -> Option<bool> {
         self.colour_pending.take()
+    }
+
+    pub fn take_blending(&mut self) -> Option<Blending> {
+        self.blending_pending.take()
     }
 
     pub fn gb_colors(&self) -> GbColors {
@@ -2874,21 +3177,14 @@ impl App {
             }
             return;
         }
-        if let Phase::SetClock {
-            picker, from_menu, ..
-        } = &mut self.phase
-        {
+        if let Phase::SetClock { picker, .. } = &mut self.phase {
             match action {
                 Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.left(),
                 Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.right(),
                 Action::GbaDown(Btn::Up) => picker.up(),
                 Action::GbaDown(Btn::Down) => picker.down(),
-                Action::GbaDown(Btn::A) | Action::Insert => self.confirm_clock(),
-                Action::GbaDown(Btn::B) if *from_menu => {
-                    self.phase = Phase::QuickMenu {
-                        row: QuickRow::DateTime,
-                    }
-                }
+                Action::GbaDown(Btn::A) | Action::Insert => picker.a(),
+                Action::GbaDown(Btn::B) if !picker.b() => self.confirm_clock(),
                 _ => {}
             }
             return;
@@ -3180,7 +3476,7 @@ impl App {
                 }
             }
             QuickRow::DateTime => {
-                self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
+                self.phase = clock_screen(self.utc_secs(), &self.state, true);
             }
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Screen
@@ -3257,6 +3553,17 @@ impl App {
             | QuickRow::GbBezel
             | QuickRow::GbcBezel
             | QuickRow::GbaBezel
+            | QuickRow::GbaScale
+            | QuickRow::GbScale
+            | QuickRow::GbcScale
+            | QuickRow::GbStretch
+            | QuickRow::GbcStretch
+            | QuickRow::GbaBlending
+            | QuickRow::GbcBlending
+            | QuickRow::GbBlending
+            | QuickRow::Blending
+            | QuickRow::Scale
+            | QuickRow::Stretch
             | QuickRow::Bezel
             | QuickRow::NesShader
             | QuickRow::SnesShader
@@ -3305,6 +3612,19 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        if row == QuickRow::Blending {
+            let to = self
+                .blending_in_play()
+                .step(Blending::choices(self.core), right);
+            match self.playing_platform().hardware() {
+                Platform::Gb => self.state.blending_gb = to,
+                Platform::Gbc => self.state.blending_gbc = to,
+                _ => self.state.blending_gba = to,
+            }
+            self.blending_pending = Some(self.blending_in_play());
+            self.persist();
+            return;
+        }
         let console = match row {
             QuickRow::Shader => Some(self.playing_platform()),
             row => row.console_shader(),
@@ -3328,13 +3648,9 @@ impl App {
                 }
                 _ => (HudKind::BlueLight, self.state.blue_light, BLUE_LIGHT_MAX),
             };
-            let floor = match kind {
-                HudKind::Brightness => 1,
-                _ => 0,
-            };
             let to = match right {
-                true => up(now, 1, max).max(floor),
-                false => now.saturating_sub(1).max(floor).min(now),
+                true => up(now, 1, max),
+                false => now.saturating_sub(1),
             };
             self.set_level(kind, to);
             return;
@@ -3346,6 +3662,25 @@ impl App {
             };
             self.state.set_gb_colors(to);
             self.palette_pending = Some(to);
+            self.persist();
+            return;
+        }
+        if let QuickRow::GbaScale | QuickRow::GbScale | QuickRow::GbcScale = row {
+            let platform = match row {
+                QuickRow::GbaScale => Platform::Gba,
+                QuickRow::GbScale => Platform::Gb,
+                _ => Platform::Gbc,
+            };
+            self.cycle_scale(platform, right);
+            self.persist();
+            return;
+        }
+        if let QuickRow::GbStretch | QuickRow::GbcStretch = row {
+            let platform = match row {
+                QuickRow::GbStretch => Platform::Gb,
+                _ => Platform::Gbc,
+            };
+            self.cycle_stretch(platform, right);
             self.persist();
             return;
         }
@@ -3451,6 +3786,18 @@ impl App {
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
+            QuickRow::GbaBlending => {
+                s.blending_gba = s.blending_gba.step(&Blending::MGBA, right);
+                self.blending_pending = Some(self.blending_in_play());
+            }
+            QuickRow::GbcBlending => {
+                s.blending_gbc = s.blending_gbc.step(&Blending::MGBA, right);
+                self.blending_pending = Some(self.blending_in_play());
+            }
+            QuickRow::GbBlending => {
+                s.blending_gb = s.blending_gb.step(&Blending::MGBA, right);
+                self.blending_pending = Some(self.blending_in_play());
+            }
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::ScreenGeneral
@@ -3496,6 +3843,14 @@ impl App {
             | QuickRow::GbBezel
             | QuickRow::GbcBezel
             | QuickRow::GbaBezel
+            | QuickRow::GbaScale
+            | QuickRow::GbScale
+            | QuickRow::GbcScale
+            | QuickRow::GbStretch
+            | QuickRow::GbcStretch
+            | QuickRow::Blending
+            | QuickRow::Scale
+            | QuickRow::Stretch
             | QuickRow::Bezel
             | QuickRow::ScreenNes
             | QuickRow::ScreenSnes
@@ -3700,7 +4055,7 @@ impl App {
         let moved = *level != value;
         *level = value;
         if let (HudKind::Brightness, Some(power)) = (kind, &mut self.power) {
-            power.set_backlight(value);
+            power.set_backlight(value + 1);
         }
         if moved {
             self.persist_soon();
@@ -4685,12 +5040,17 @@ impl App {
             Phase::SetClock {
                 picker, from_menu, ..
             } => {
-                let (line, hint) = match self.clock_faces {
-                    Some((line, hint)) => (Some(line), Some(hint)),
-                    None => (None, None),
-                };
-                let back = self.clock_back.filter(|_| *from_menu);
-                picker.draw(self.canvas(), line, hint, back, out);
+                ClockScreen {
+                    picker,
+                    faces: self.clock_faces.as_ref(),
+                    title: self.clock_title.filter(|_| !from_menu),
+                    pointer: self.quick_menu_faces.as_ref().map(|q| q.pointer),
+                    ground: self.menu_ground(),
+                    canvas: self.canvas(),
+                }
+                .draw(out);
+                slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, out);
+                self.draw_clock_legends(picker, *from_menu, out);
                 return;
             }
             Phase::QuickMenu { row } => QuickMenu {
@@ -4733,20 +5093,12 @@ impl App {
                     _ => {
                         self.shelf()
                             .draw(self.canvas(), self.shelf_shake(), self.slot_faces, out);
-                        match self.slot_letter {
-                            Some(_) => slot_ui::draw_slot_title(
-                                self.canvas(),
-                                self.shelf_platform,
-                                self.slot_name_alpha(),
-                                out,
-                            ),
-                            None => draw_slot_name(
-                                self.canvas(),
-                                self.shelf_platform,
-                                self.slot_name_alpha(),
-                                out,
-                            ),
-                        }
+                        slot_ui::draw_slot_title(
+                            self.canvas(),
+                            self.shelf_platform,
+                            self.slot_name_alpha(),
+                            out,
+                        );
                         slot_ui::draw_slot_title(
                             self.canvas(),
                             self.shelf_title,
@@ -5062,26 +5414,11 @@ impl App {
             false => faces.legend,
         };
         if row.binds() {
-            let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
             let legends = match self.page_is_default(row) {
                 true => vec![back, clear, set],
                 false => vec![back, reset, clear, set],
             };
-            let room = self.canvas().w - 2.0 * LINK_LEGEND_EDGE;
-            let gap = (room - legends.iter().map(|l| seen(l.1)).sum::<f32>())
-                / (legends.len() - 1) as f32;
-            let mut x = LINK_LEGEND_EDGE;
-            for (tex, w) in legends {
-                out.push(Draw::Tex {
-                    x: x.round(),
-                    y,
-                    w: w as f32,
-                    h: MOUTH_H,
-                    tex,
-                    alpha: 1.0,
-                });
-                x += seen(w) + gap;
-            }
+            self.draw_spread_legends(&legends, y, out);
             return;
         }
         let left = match row.page() == QuickRow::PLAY {
@@ -5091,6 +5428,45 @@ impl App {
         self.draw_side_legend(left, false, y, out);
         let right = if row.opens() { open } else { change };
         self.draw_side_legend(right, true, y, out);
+    }
+
+    fn draw_clock_legends(&self, picker: &ClockPicker, from_menu: bool, out: &mut Vec<Draw>) {
+        let (Some(faces), Some(clock)) = (&self.quick_menu_faces, self.clock_legends) else {
+            return;
+        };
+        let [back, change, open, ..] = match self.light() {
+            true => faces.legend_light,
+            false => faces.legend,
+        };
+        let [done, turn, page, edit, select, finish] = clock[self.light() as usize];
+        let back = if from_menu { back } else { finish };
+        let legends = match (picker.highlighted(), picker.editing(), picker.row()) {
+            (Some(_), _, _) => vec![back, page, select],
+            (None, true, _) => vec![back, turn, done],
+            (None, false, ClockRow::Date | ClockRow::Time) => vec![back, edit],
+            (None, false, ClockRow::Zone) => vec![back, open],
+            (None, false, ClockRow::Clock) => vec![back, change],
+        };
+        self.draw_spread_legends(&legends, LINK_LEGEND_Y, out);
+    }
+
+    fn draw_spread_legends(&self, legends: &[(TexId, u32)], y: f32, out: &mut Vec<Draw>) {
+        let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
+        let room = self.canvas().w - 2.0 * LINK_LEGEND_EDGE;
+        let gap =
+            (room - legends.iter().map(|l| seen(l.1)).sum::<f32>()) / (legends.len() - 1) as f32;
+        let mut x = LINK_LEGEND_EDGE;
+        for &(tex, w) in legends {
+            out.push(Draw::Tex {
+                x: x.round(),
+                y,
+                w: w as f32,
+                h: MOUTH_H,
+                tex,
+                alpha: 1.0,
+            });
+            x += seen(w) + gap;
+        }
     }
 
     fn draw_side_legend(&self, face: (TexId, u32), right: bool, y: f32, out: &mut Vec<Draw>) {
@@ -5470,11 +5846,9 @@ impl App {
             });
         }
         let switchable = self.seated().is_some_and(|stem| self.link_switchable(stem));
-        // Cancel and Mode stay on the left of the footer, Swap and Link on the right, so the
-        // socket in the middle of the strip stays clear.
         let (left, right): (&[LinkLegend], &[LinkLegend]) = match menu {
-            GameMenu::Pick(_) if switchable => (&[LinkLegend::Mode], &[LinkLegend::Link]),
-            GameMenu::Pick(_) => (&[], &[LinkLegend::Link]),
+            GameMenu::Pick(_) if switchable => (&[LinkLegend::Cancel], &[LinkLegend::Mode]),
+            GameMenu::Pick(_) => (&[LinkLegend::Cancel], &[LinkLegend::Link]),
             GameMenu::Working { .. } => (&[LinkLegend::Cancel], &[]),
             GameMenu::Linked { opened: true, .. } => (&[LinkLegend::Back], &[LinkLegend::EndLink]),
             GameMenu::Linked { .. } => (&[], &[]),
@@ -6981,11 +7355,11 @@ impl App {
 
     pub fn polaroid_title(&self, now: &str) -> String {
         if let Some(v) = &self.shot_viewer {
-            return v.title(now);
+            return v.title(now, self.state.clock_24h);
         }
         self.polaroids
             .as_ref()
-            .map_or_else(String::new, |p| p.title(now))
+            .map_or_else(String::new, |p| p.title(now, self.state.clock_24h))
     }
 
     pub fn set_polaroid_title_face(&mut self, face: TexId) {
@@ -7047,6 +7421,30 @@ fn up(level: u8, step: u8, max: u8) -> u8 {
     level.saturating_add(step).min(max)
 }
 
+fn blending_value(blending: Blending) -> QuickValue {
+    match blending {
+        Blending::Off => QuickValue::Off,
+        Blending::Mix => QuickValue::Mix,
+        Blending::Ghosting => QuickValue::Ghosting,
+    }
+}
+
+fn scale_value(scale: Scale) -> QuickValue {
+    match scale {
+        Scale::SpFrame => QuickValue::SpFrame,
+        Scale::Integer => QuickValue::Integer,
+        Scale::Fit => QuickValue::Fit,
+        Scale::FullScreen => QuickValue::FullScreen,
+    }
+}
+
+fn stretch_value(stretch: Stretch) -> QuickValue {
+    match stretch {
+        Stretch::Classic => QuickValue::Classic,
+        Stretch::FullScreen => QuickValue::FullScreen,
+    }
+}
+
 fn shader_value(shader: Shader) -> QuickValue {
     match shader {
         Shader::Off => QuickValue::Off,
@@ -7076,9 +7474,9 @@ fn ff_next(from: u8, right: bool) -> u8 {
     }]
 }
 
-fn clock_screen(utc: i64, offset_min: i16, from_menu: bool) -> Phase {
+fn clock_screen(utc: i64, state: &SlotState, from_menu: bool) -> Phase {
     Phase::SetClock {
-        picker: ClockPicker::local(utc, offset_min),
+        picker: ClockPicker::new(utc, state.zone, state.clock_24h),
         seed: utc - utc.rem_euclid(60),
         from_menu,
     }

@@ -1,9 +1,7 @@
 use std::path::Path;
 
-use slot_gfx::WHOLE_TEXTURE;
-#[cfg(all(test, feature = "brick"))]
-use slot_gfx::{SRC_H, SRC_W};
-use slot_store::{ini, Platform};
+use slot_gfx::{Sizing, SRC_H, SRC_W, WHOLE_TEXTURE};
+use slot_store::{ini, Platform, Scale, Stretch};
 
 pub const VIDEO_MODE_FILE: &str = if cfg!(feature = "brick") {
     "Config/brick_video_mode_v3.ini"
@@ -172,5 +170,34 @@ mod brick_tests {
             let [_, _, w, h] = source_rect(platform, VideoMode::Actual);
             assert!((w * SRC_W as f32 / (h * SRC_H as f32) - 4.0 / 3.0).abs() < 0.001);
         }
+    }
+}
+
+pub fn picture_for(
+    platform: Platform,
+    mode: VideoMode,
+    scale: Scale,
+    stretch: Stretch,
+) -> (Sizing, [f32; 4]) {
+    let (w, h) = platform.picture();
+    let x = SRC_W.saturating_sub(w) as f32 / 2.0 / SRC_W as f32;
+    let y = SRC_H.saturating_sub(h) as f32 / 2.0 / SRC_H as f32;
+    let (fw, fh) = (w as f32 / SRC_W as f32, h as f32 / SRC_H as f32);
+    let crop = [x, y, fw, fh];
+    let window = [x, 0.0, fw, 1.0];
+    if platform.hardware() == Platform::Gba {
+        let sizing = match scale {
+            Scale::Integer => Sizing::Integer,
+            Scale::FullScreen => Sizing::Panel,
+            Scale::SpFrame | Scale::Fit => Sizing::Band,
+        };
+        return (sizing, WHOLE_TEXTURE);
+    }
+    match (mode, scale, stretch) {
+        (VideoMode::Actual, Scale::Integer, _) => (Sizing::Integer, crop),
+        (VideoMode::Actual, Scale::Fit, _) => (Sizing::Fit, crop),
+        (VideoMode::Actual, _, _) => (Sizing::Band, WHOLE_TEXTURE),
+        (VideoMode::Stretch, _, Stretch::Classic) => (Sizing::Band, window),
+        (VideoMode::Stretch, _, Stretch::FullScreen) => (Sizing::Panel, crop),
     }
 }

@@ -363,6 +363,15 @@ impl Session {
                 }
             }
         }
+        if let Some(blending) = self.app.take_blending() {
+            if let Some(emu) = &self.emu {
+                let (key, value) = crate::core::blend_option(self.app.core(), blending);
+                if !key.is_empty() {
+                    emu.set_option(key, value);
+                    recoloured = true;
+                }
+            }
+        }
         if recoloured && self.held() && !self.app.link_active() {
             if let Some(emu) = &self.emu {
                 emu.refresh();
@@ -601,6 +610,7 @@ impl Session {
         let player = self.app.link_player();
         let chosen = self.app.gb_colors();
         let colour = self.app.colour_correction_for(platform);
+        let blending = self.app.blending_for(platform);
         let join = std::thread::Builder::new()
             .name("slot-open".into())
             .spawn(move || {
@@ -610,7 +620,9 @@ impl Session {
                 };
                 launch("resume state read");
                 let palette = crate::core::palette_for(chosen, platform, &rom, player);
-                let mut opened = open_core(&root, core, platform, serial, colour, palette, player);
+                let mut opened = open_core(
+                    &root, core, platform, serial, colour, blending, palette, player,
+                );
                 if matches!(platform, Platform::Ws | Platform::Wsc) {
                     // Held the way the game's header says: upright games are shown upright.
                     let held = crate::core::wonderswan_held(&rom);

@@ -37,7 +37,7 @@ mod toast;
 pub use art::decode as decode_png;
 pub use backdrop::{
     bezel_face, blur_background, default_background, default_game_bezel_face, draw_backdrop,
-    draw_ground, game_bezel_face, wallpaper_face,
+    draw_ground, game_bezel_face, wallpaper_face, BezelArt,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
 pub use battery::{draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
@@ -65,7 +65,10 @@ pub use cart_menu::{
     finish_name, CartMenuFaces, CartMenuView, CartRow, FINISHES, MD_SHAPES, NES_SHAPES, SHAPES,
     SMS_SHAPES, SNES_SHAPES,
 };
-pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
+pub use clock::{
+    clock_label, date_time_text, hhmm, time_text, ClockFaceSet, ClockFaces, ClockPicker, ClockRow,
+    ClockScreen, Part,
+};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{draw_corners, draw_footer, Printed, FOOTER_Y};
 pub use hud::{
@@ -90,8 +93,8 @@ pub use polaroids::{
 };
 pub use power_menu::{menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
-    core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
-    quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
+    clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground, link_button_legends,
+    prompt_legends, quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
     quick_warning_value_face, quick_window, repair_legends, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_ROWS_SHOWN,
@@ -113,8 +116,8 @@ pub use shot_viewer::{
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell, NesShell, PlainCart, SnesShell};
 pub use slot_chrome::{
-    draw_empty_slot, draw_plugged_slot, draw_slot_name, draw_slot_title, ease, edge, housing,
-    opening, recess, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H, MOUTH_W,
+    draw_empty_slot, draw_plugged_slot, draw_slot_title, ease, edge, housing, opening, recess,
+    slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H, MOUTH_W,
 };
 pub use sticker::{
     draw_sticker, head_rows, sticker_face, sticker_lines, sticker_rect, StickerFields, COPYRIGHT,
