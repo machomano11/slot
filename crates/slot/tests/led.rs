@@ -16,23 +16,42 @@ fn brick_led_failures_retry_without_blocking_platform_or_spamming_logs() {
     if std::env::var_os("SLOT_LED_FAILURE_TEST").is_none() {
         let hw = tempfile::tempdir().unwrap();
         let output = Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", "brick_led_failures_retry_without_blocking_platform_or_spamming_logs", "--nocapture"])
+            .args([
+                "--exact",
+                "brick_led_failures_retry_without_blocking_platform_or_spamming_logs",
+                "--nocapture",
+            ])
             .env("SLOT_LED_FAILURE_TEST", "1")
             .env("SLOT_HW_ROOT", hw.path())
-            .output().unwrap();
+            .output()
+            .unwrap();
         let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(output.status.success(), "{}\n{stderr}", String::from_utf8_lossy(&output.stdout));
+        assert!(
+            output.status.success(),
+            "{}\n{stderr}",
+            String::from_utf8_lossy(&output.stdout)
+        );
         assert_eq!(stderr.matches("slot: battery LEDs:").count(), 3);
         return;
     }
 
     let sys = slot_power::hw("/sys/class/led_anim");
     fs::create_dir_all(&sys).unwrap();
-    for name in ["max_scale", "max_scale_f1f2", "max_scale_lr", "effect_enable"] {
+    for name in [
+        "max_scale",
+        "max_scale_f1f2",
+        "max_scale_lr",
+        "effect_enable",
+    ] {
         fs::write(sys.join(name), "0\n").unwrap();
     }
     for zone in ["m", "f1", "f2", "lr"] {
-        for prefix in ["effect_rgb_hex", "effect_cycles", "effect_duration", "effect"] {
+        for prefix in [
+            "effect_rgb_hex",
+            "effect_cycles",
+            "effect_duration",
+            "effect",
+        ] {
             fs::write(sys.join(format!("{prefix}_{zone}")), "0\n").unwrap();
         }
     }
@@ -67,10 +86,18 @@ fn brick_led_failures_retry_without_blocking_platform_or_spamming_logs() {
     fs::write(&trigger, "0\n").unwrap();
     a.tick_ms(21_000);
     assert_eq!(fs::read_to_string(&trigger).unwrap().trim(), "5");
-    assert_eq!(fs::read_to_string(sys.join("effect_rgb_hex_f1")).unwrap().trim(), "FF0000");
+    assert_eq!(
+        fs::read_to_string(sys.join("effect_rgb_hex_f1"))
+            .unwrap()
+            .trim(),
+        "FF0000"
+    );
 
     fs::remove_file(&trigger).unwrap();
-    a.on_battery(slot_power::Battery { percent: 5, charge: slot_power::Charge::Discharging });
+    a.on_battery(slot_power::Battery {
+        percent: 5,
+        charge: slot_power::Charge::Discharging,
+    });
     assert_eq!(led.load(Ordering::Relaxed), 0);
 }
 
