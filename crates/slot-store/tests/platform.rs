@@ -6,8 +6,8 @@ fn every_platform_has_a_directory() {
     assert_eq!(
         names,
         vec![
-            "GBA", "GB", "GBC", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS", "WSC",
-            "SEGACD", "32X", "PS"
+            "GBA", "GBAV", "GBC", "GB", "NES", "SNES", "GG", "SMS", "MD", "NGP", "NGPC", "WS",
+            "WSC", "SEGACD", "32X", "PS"
         ]
     );
 }
@@ -18,8 +18,9 @@ fn every_platform_is_a_shelf_of_its_own() {
         Platform::ALL,
         [
             Platform::Gba,
-            Platform::Gb,
+            Platform::Gbav,
             Platform::Gbc,
+            Platform::Gb,
             Platform::Nes,
             Platform::Snes,
             Platform::Gg,
@@ -77,6 +78,8 @@ fn each_platform_takes_only_its_own_extensions() {
     assert!(Platform::Gb.accepts(std::path::Path::new("Tetris.gbc")));
     assert!(!Platform::Gb.accepts(std::path::Path::new("Metroid Fusion.gba")));
     assert!(Platform::Gba.accepts(std::path::Path::new("Shrek.GBA")));
+    assert!(Platform::Gbav.accepts(std::path::Path::new("Shrek.gba")));
+    assert!(!Platform::Gbav.accepts(std::path::Path::new("Tetris.gb")));
     assert!(Platform::Nes.accepts(std::path::Path::new("Super Mario Bros. (World).nes")));
     assert!(!Platform::Nes.accepts(std::path::Path::new("Tetris.gb")));
     assert!(!Platform::Gba.accepts(std::path::Path::new("Zelda.NES")));
@@ -161,4 +164,13 @@ fn a_playstation_game_is_a_disc_with_its_own_triggers() {
     assert!(Platform::Ps.picture_follows_frames());
     assert!(Platform::Ps.bios().is_empty());
     assert!(!Platform::Md.uses_triggers());
+}
+
+#[test]
+fn gba_video_runs_on_gba_hardware() {
+    assert_eq!(Platform::Gbav.hardware(), Platform::Gba);
+    assert_eq!(Platform::Gbav.picture(), Platform::Gba.picture());
+    for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+        assert_eq!(p.hardware(), p);
+    }
 }

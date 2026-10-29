@@ -3,8 +3,10 @@ mod common;
 use common::{app_playing_in, tmp_root_with_carts};
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
-use slot_store::{Platform, Shader, StateRing};
-use slot_ui::{Draw, QuickMenuFaces, QuickRow, TexId, HINT_EDGE, MOUTH_H, OUT_H, OUT_W};
+use slot_store::{Blending, Core, Platform, Shader, StateRing};
+use slot_ui::{
+    Draw, QuickMenuFaces, QuickRow, QuickValue, TexId, HINT_EDGE, MOUTH_H, OUT_H, OUT_W,
+};
 use tempfile::TempDir;
 
 fn playing() -> (TempDir, App) {
@@ -90,12 +92,40 @@ fn b_climbs_the_in_game_pages_and_never_the_shelf_ones() {
 #[test]
 fn screen_shows_the_palette_only_when_palettes_are_live() {
     let (_d, mut a) = playing();
+    let empty = [
+        QuickRow::States,
+        QuickRow::Screenshots,
+        QuickRow::UndoSave,
+        QuickRow::UndoLoad,
+    ];
     assert_eq!(
         a.in_game_hidden(),
-        &[QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick]
+        [
+            &[
+                QuickRow::Palette,
+                QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::LeftStick
+            ][..],
+            &empty
+        ]
+        .concat()
     );
     a.set_palette_live(true);
-    assert_eq!(a.in_game_hidden(), &[QuickRow::Bezel, QuickRow::LeftStick]);
+    assert_eq!(
+        a.in_game_hidden(),
+        [
+            &[
+                QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::LeftStick
+            ][..],
+            &empty
+        ]
+        .concat()
+    );
 }
 
 #[test]
@@ -120,6 +150,62 @@ fn colour_correction_toggles_the_running_platform_and_asks_the_core() {
     press(&mut a, Btn::Right);
     assert_eq!(a.colour_correction(), !before);
     assert_eq!(a.take_colour_correction(), Some(!before));
+}
+
+#[test]
+fn frame_blending_steps_the_running_platform_and_asks_the_core() {
+    let (_d, mut a) = playing();
+    go_to(&mut a, QuickRow::Blending);
+    assert_eq!(a.quick_value(QuickRow::Blending), Some(QuickValue::Off));
+    for want in [Blending::Mix, Blending::Ghosting, Blending::Off] {
+        press(&mut a, Btn::Right);
+        assert_eq!(a.blending_for(Platform::Gba), want);
+        assert_eq!(a.take_blending(), Some(want));
+        assert_eq!(
+            a.quick_value(QuickRow::Blending),
+            a.quick_value(QuickRow::GbaBlending)
+        );
+    }
+}
+
+#[test]
+fn on_gpsp_frame_blending_offers_off_and_mix_and_never_lcd_ghosting() {
+    let (_d, mut a) = playing();
+    a.set_core(Core::Gpsp);
+    go_to(&mut a, QuickRow::Blending);
+    let mut seen = Vec::new();
+    for btn in [Btn::Right, Btn::Right, Btn::Right, Btn::Left, Btn::Left] {
+        press(&mut a, btn);
+        seen.push(a.quick_value(QuickRow::Blending).expect("no value"));
+        assert_ne!(a.take_blending(), Some(Blending::Ghosting));
+    }
+    assert_eq!(
+        seen,
+        [
+            QuickValue::Mix,
+            QuickValue::Off,
+            QuickValue::Mix,
+            QuickValue::Off,
+            QuickValue::Mix
+        ]
+    );
+}
+
+#[test]
+fn an_lcd_ghosting_chosen_for_gba_reads_as_mix_on_gpsp() {
+    let (_d, mut a) = playing();
+    go_to(&mut a, QuickRow::Blending);
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Right);
+    assert_eq!(a.blending_for(Platform::Gba), Blending::Ghosting);
+    a.set_core(Core::Gpsp);
+    assert_eq!(a.quick_value(QuickRow::Blending), Some(QuickValue::Mix));
+    assert_eq!(a.blending_in_play(), Blending::Mix);
+    assert_eq!(
+        a.quick_value(QuickRow::GbaBlending),
+        Some(QuickValue::Ghosting),
+        "the console's own setting was changed just by playing on gpSP"
+    );
 }
 
 #[test]
@@ -149,7 +235,7 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     assert_eq!(a.brightness(), before + 1);
     assert_eq!(
         backlight.load(std::sync::atomic::Ordering::Relaxed),
-        before + 1,
+        before + 2,
         "the row moved the number and not the backlight"
     );
     press(&mut a, Btn::Down);
@@ -173,12 +259,52 @@ fn the_palette_row_shows_with_auto_in_a_game_boy_only_game() {
 }
 
 #[test]
-fn states_with_nothing_saved_is_refused_and_the_menu_stays() {
+fn states_is_hidden_until_a_state_is_saved() {
     let (_d, mut a) = playing();
-    go_to(&mut a, QuickRow::States);
-    press(&mut a, Btn::A);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::States));
-    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::States));
+    a.apply(Action::QuickMenu);
+    a.apply(Action::SaveState);
+    a.apply(Action::QuickMenu);
+    assert!(!a.in_game_hidden().contains(&QuickRow::States));
+}
+
+#[test]
+fn states_is_hidden_while_linked() {
+    let (_d, mut a) = playing();
+    a.apply(Action::SaveState);
+    a.begin_link(0);
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::States));
+    assert!(a.in_game_hidden().contains(&QuickRow::Screenshots));
+}
+
+#[test]
+fn screenshots_is_hidden_until_a_shot_is_taken() {
+    let (_d, mut a) = playing();
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::Screenshots));
+    a.apply(Action::QuickMenu);
+    a.shot_taken(4, 2, vec![0x80; 32]);
+    a.flush_shots();
+    a.apply(Action::QuickMenu);
+    assert!(!a.in_game_hidden().contains(&QuickRow::Screenshots));
+    let at = QuickRow::PLAY.iter().position(|r| *r == QuickRow::States);
+    assert_eq!(
+        at.map(|i| QuickRow::PLAY[i + 1]),
+        Some(QuickRow::Screenshots),
+        "Screenshots does not follow States"
+    );
+}
+
+#[test]
+fn a_state_under_another_core_does_not_show_states() {
+    let (d, mut a) = playing();
+    StateRing::new(d.path(), Platform::Gba, slot_store::Core::Gpsp, "Emerald")
+        .push(&[1; 8], b"png", "2026-10-22_17-30-05")
+        .expect("push");
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::States));
 }
 
 #[test]
@@ -202,6 +328,78 @@ fn loading_from_states_lands_in_the_game_with_no_menu() {
     press(&mut a, Btn::A);
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     assert_eq!(a.in_game_menu(), None);
+}
+
+#[test]
+fn undoing_a_load_from_states_lands_in_the_game_with_no_menu() {
+    let (_d, mut a) = playing();
+    a.apply(Action::SaveState);
+    go_to(&mut a, QuickRow::States);
+    press(&mut a, Btn::A);
+    press(&mut a, Btn::A);
+    go_to(&mut a, QuickRow::States);
+    press(&mut a, Btn::A);
+    assert_eq!(a.undo_label(), Some("undo load"));
+    press(&mut a, Btn::X);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert_eq!(a.in_game_menu(), None);
+}
+
+#[test]
+fn undo_save_sits_under_resume_only_after_a_save() {
+    let (_d, mut a) = playing();
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::UndoSave));
+    assert!(a.in_game_hidden().contains(&QuickRow::UndoLoad));
+    a.apply(Action::QuickMenu);
+    a.apply(Action::SaveState);
+    a.apply(Action::QuickMenu);
+    assert!(!a.in_game_hidden().contains(&QuickRow::UndoSave));
+    assert!(a.in_game_hidden().contains(&QuickRow::UndoLoad));
+    press(&mut a, Btn::Down);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::UndoSave));
+}
+
+#[test]
+fn undo_save_from_the_menu_takes_the_save_back_and_resumes() {
+    let (d, mut a) = playing();
+    a.apply(Action::SaveState);
+    go_to(&mut a, QuickRow::UndoSave);
+    press(&mut a, Btn::A);
+    let r = StateRing::new(d.path(), Platform::Gba, a.core(), "Emerald");
+    assert!(r.list().unwrap().is_empty(), "the save was not undone");
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert_eq!(a.in_game_menu(), None);
+    assert!(!a.undo_available(a.now()));
+}
+
+#[test]
+fn undo_load_from_the_menu_replaces_undo_save_and_resumes() {
+    let (_d, mut a) = playing();
+    a.apply(Action::SaveState);
+    a.apply(Action::LoadState);
+    a.apply(Action::QuickMenu);
+    assert!(a.in_game_hidden().contains(&QuickRow::UndoSave));
+    assert!(!a.in_game_hidden().contains(&QuickRow::UndoLoad));
+    a.apply(Action::QuickMenu);
+    go_to(&mut a, QuickRow::UndoLoad);
+    press(&mut a, Btn::A);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert_eq!(a.in_game_menu(), None);
+    assert!(!a.undo_available(a.now()));
+}
+
+#[test]
+fn an_undo_row_that_expires_under_the_cursor_hands_it_to_resume() {
+    let (_d, mut a) = playing();
+    a.apply_at(Action::SaveState, 1_000);
+    a.apply_at(Action::QuickMenu, 1_100);
+    a.apply_at(Action::GbaDown(Btn::Down), 1_200);
+    a.apply_at(Action::GbaUp(Btn::Down), 1_250);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::UndoSave));
+    a.tick_ms(40_000);
+    assert!(a.in_game_hidden().contains(&QuickRow::UndoSave));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Resume));
 }
 
 #[test]
@@ -352,9 +550,10 @@ fn the_shelf_menu_still_opens_from_the_shelf() {
 fn exit_game_is_not_offered_with_only_one_cart() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let mut a = app_playing_in(d.path(), "Emerald");
+    a.apply(Action::SaveState);
     a.apply(Action::QuickMenu);
     let mut seen = Vec::new();
-    for _ in 0..4 {
+    for _ in 0..5 {
         seen.push(a.in_game_menu().expect("the menu closed"));
         press(&mut a, Btn::Down);
     }
@@ -362,6 +561,7 @@ fn exit_game_is_not_offered_with_only_one_cart() {
         seen,
         [
             QuickRow::Resume,
+            QuickRow::UndoSave,
             QuickRow::States,
             QuickRow::Settings,
             QuickRow::Resume
@@ -424,7 +624,6 @@ fn menu_faces(a: &mut App) {
             .collect(),
         pointer: (id(700), 16, 40),
         values: Vec::new(),
-        carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
             (id(400), 70),
             (id(401), 110),
@@ -600,4 +799,50 @@ fn a_hotkey_eject_slides_the_footer_up_while_the_picture_closes() {
         last > MOUTH_H * 0.8,
         "the footer was only at {last} when the picture went"
     );
+}
+
+fn cursor_on_a_shown_row(a: &App) {
+    let row = a.in_game_menu().expect("the menu closed");
+    assert!(
+        !a.in_game_hidden().contains(&row),
+        "the cursor sits on hidden {row:?}"
+    );
+}
+
+#[test]
+fn deleting_the_last_state_closes_and_hides_the_row() {
+    let (_d, mut a) = playing();
+    a.apply(Action::SaveState);
+    go_to(&mut a, QuickRow::States);
+    press(&mut a, Btn::A);
+    assert!(matches!(a.phase(), Phase::Polaroids { .. }));
+    press(&mut a, Btn::Y);
+    press(&mut a, Btn::X);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert!(a.in_game_hidden().contains(&QuickRow::States));
+    cursor_on_a_shown_row(&a);
+}
+
+#[test]
+fn undoing_the_only_save_from_states_hides_the_row() {
+    let (_d, mut a) = playing();
+    a.apply(Action::SaveState);
+    go_to(&mut a, QuickRow::States);
+    press(&mut a, Btn::A);
+    assert!(matches!(a.phase(), Phase::Polaroids { .. }));
+    press(&mut a, Btn::X);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert!(a.in_game_hidden().contains(&QuickRow::States));
+    cursor_on_a_shown_row(&a);
+}
+
+#[test]
+fn a_refused_double_tap_in_the_menu_with_no_states_stays_on_a_shown_row() {
+    let (_d, mut a) = playing();
+    a.apply(Action::QuickMenu);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Resume));
+    a.apply(Action::QuickMenu);
+    a.apply(Action::Polaroids);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    cursor_on_a_shown_row(&a);
 }

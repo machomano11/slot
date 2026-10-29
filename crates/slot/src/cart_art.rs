@@ -228,7 +228,7 @@ fn photo_specs(cart: &Cart) -> &'static [&'static CartPhoto] {
         Platform::Wsc => &[&WSC_PHOTO, &WS_PHOTO],
         Platform::Scd => &[&SEGACD_DISC],
         Platform::Ps => &[&PS_DISC],
-        Platform::Gba | Platform::Gb | Platform::Gbc => &[],
+        Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc => &[],
     }
 }
 
@@ -490,7 +490,7 @@ enum Outcome {
 /// filed under the other one (Tetris DX is a GBC game many keep with GB games).
 fn platforms_for(platform: Platform) -> &'static [Platform] {
     match platform {
-        Platform::Gba => &[Platform::Gba],
+        Platform::Gba | Platform::Gbav => &[Platform::Gba],
         Platform::Gb => &[Platform::Gb, Platform::Gbc],
         Platform::Gbc => &[Platform::Gbc, Platform::Gb],
         Platform::Nes => &[Platform::Nes],
@@ -510,7 +510,10 @@ fn platforms_for(platform: Platform) -> &'static [Platform] {
 
 /// Consoles the slot art set has label scans of.
 fn has_label_scans(platform: Platform) -> bool {
-    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gba)
+    matches!(
+        platform,
+        Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Gbav
+    )
 }
 
 /// A real label scan. Found by the ROM's CRC32, or failing that (a trimmed or patched
@@ -655,7 +658,7 @@ fn cover_repo(platform: Platform) -> &'static str {
     match platform {
         Platform::Gb => "Nintendo_-_Game_Boy",
         Platform::Gbc => "Nintendo_-_Game_Boy_Color",
-        Platform::Gba => "Nintendo_-_Game_Boy_Advance",
+        Platform::Gba | Platform::Gbav => "Nintendo_-_Game_Boy_Advance",
         Platform::Nes => "Nintendo_-_Nintendo_Entertainment_System",
         Platform::Snes => "Nintendo_-_Super_Nintendo_Entertainment_System",
         Platform::Gg => "Sega_-_Game_Gear",
@@ -966,7 +969,7 @@ impl Games {
             .filter(|g| g.platform == Platform::Gba && named(g))
             .map(|g| slot_store::libretro_name(&g.name))
             .collect();
-        let code_ok = cart.platform == Platform::Gba
+        let code_ok = cart.platform.hardware() == Platform::Gba
             && code.len() == 4
             && code.bytes().all(|b| b.is_ascii_alphanumeric())
             && best_match(&cart.stem, &group).is_some();

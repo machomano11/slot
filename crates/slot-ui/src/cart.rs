@@ -282,7 +282,10 @@ pub fn fitted_label(cart: &Cart, w: u32, h: u32) -> Option<Vec<u8>> {
     } else if plain_cart_of(cart) == Some(PlainCart::MasterSystem) {
         // A title strip's photo is a little longer than the drawn strip: both ends must show.
         art::stretch(path, w, h)
-    } else if matches!(cart.platform, Platform::Gb | Platform::Gbc | Platform::Gba) {
+    } else if matches!(
+        cart.platform,
+        Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Gbav
+    ) {
         art::cover(path, w, h)
     } else {
         // Labels cut from photos of the cart, or covers, whose shapes vary.
@@ -322,7 +325,12 @@ pub fn plain_cart_for(platform: Platform) -> Option<PlainCart> {
         Platform::Ws | Platform::Wsc => Some(PlainCart::WonderSwan),
         Platform::Scd | Platform::Ps => Some(PlainCart::Disc),
         Platform::S32x => Some(PlainCart::Sega32x),
-        Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Nes | Platform::Snes => None,
+        Platform::Gba
+        | Platform::Gbav
+        | Platform::Gb
+        | Platform::Gbc
+        | Platform::Nes
+        | Platform::Snes => None,
     }
 }
 
@@ -530,7 +538,7 @@ pub fn seated_box(platform: Platform) -> (u32, u32) {
         return (SEATED_W, plain_geometry(plain).1);
     }
     match platform {
-        Platform::Gba => (SEATED_W, SEATED_H),
+        Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         Platform::Nes => (SEATED_W, NES_SEATED_H),
         Platform::Snes => (SEATED_W, SNES_SEATED_H),
@@ -557,7 +565,7 @@ pub fn seated_box_of(cart: &Cart) -> (u32, u32) {
 pub fn cart_box(platform: Platform) -> (u32, u32) {
     let s = spec(match (platform, plain_cart_for(platform)) {
         (_, Some(plain)) => Shape::Plain(plain),
-        (Platform::Gba, None) => Shape::Gba,
+        (Platform::Gba | Platform::Gbav, None) => Shape::Gba,
         (Platform::Gb | Platform::Gbc, None) => Shape::Gb(GbShell::Notched),
         (Platform::Nes, None) => Shape::Nes(NesShell::Nes),
         (Platform::Snes, None) => Shape::Snes(SnesShell::Us),
@@ -607,7 +615,11 @@ pub fn is_clear(cart: &Cart) -> bool {
 
 /// Whether the shelf draws this cart's coloured interior under its plastic: any clear cart.
 pub fn shows_interior(cart: &Cart) -> bool {
-    is_clear(cart) && matches!(cart.platform, Platform::Gba | Platform::Gb | Platform::Gbc)
+    is_clear(cart)
+        && matches!(
+            cart.platform,
+            Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
+        )
 }
 
 /// The back plastic, with the game's colour blended onto it by the same overlay as the shells, at

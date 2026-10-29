@@ -1198,3 +1198,22 @@ fn x_and_y_are_turbo_a_and_b_but_a_snes_gets_its_own() {
         "the SNES did not get X and Y as pressed: {native:?}"
     );
 }
+
+#[test]
+fn a_core_stuck_in_a_frame_does_not_hold_the_caller_past_two_seconds() {
+    let (emu, _) = spawn_probe(Duration::from_secs(4));
+    emu.set_speed(Speed::Normal);
+    std::thread::sleep(Duration::from_millis(200));
+    let snapshot = emu.snapshot();
+    let asked = Instant::now();
+    let state = snapshot.state();
+    let waited = asked.elapsed();
+    assert!(
+        state.is_none(),
+        "a state came back from a core that was stuck"
+    );
+    assert!(
+        waited < Duration::from_secs(3),
+        "the caller waited {waited:?} on a stuck core"
+    );
+}

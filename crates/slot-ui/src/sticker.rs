@@ -29,6 +29,7 @@ pub struct StickerFields<'a> {
     pub battery: Option<u8>,
     pub serial: &'a str,
     pub version: &'a str,
+    pub model: &'a str,
 }
 
 /// Version of the TrimUI Brick port (kept in step with System/launch.sh).

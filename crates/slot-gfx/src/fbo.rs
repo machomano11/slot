@@ -32,7 +32,9 @@ pub struct Compositor {
     sprites: Sprites,
     game_bezel: Option<TexId>,
     sp_frame: bool,
+    game_panel: bool,
     turn: Option<Turn>,
+    captured: Option<(u32, u32, Vec<u8>)>,
 }
 
 impl Compositor {
@@ -81,7 +83,9 @@ impl Compositor {
                 sprites: Sprites::new()?,
                 game_bezel: None,
                 sp_frame: true,
+                game_panel: false,
                 turn: None,
+                captured: None,
             })
         }
     }
@@ -142,6 +146,11 @@ impl Compositor {
                         self.in_game_rect(|c| c.game.draw_still(tex, &c.quad));
                     }
                 }
+                Draw::Capture => {
+                    self.sprites.draw(&items[from..i], &self.quad);
+                    let (w, h) = self.size;
+                    self.captured = Some((w, h, self.read_frame()));
+                }
                 _ => continue,
             }
             from = i + 1;
@@ -179,6 +188,11 @@ impl Compositor {
 
     pub fn set_sp_frame(&mut self, on: bool) {
         self.sp_frame = on;
+    }
+
+    pub fn set_game_layout(&mut self, layout: crate::GameLayout) {
+        self.game_panel = layout.panel;
+        self.game.set_layout(layout.rect);
     }
 
     fn draw_game_bezel(&mut self) {
@@ -261,6 +275,10 @@ impl Compositor {
 
     pub fn set_shake(&mut self, dx: f32) {
         self.shake = dx;
+    }
+
+    pub fn take_capture(&mut self) -> Option<(u32, u32, Vec<u8>)> {
+        self.captured.take()
     }
 
     pub fn frame_size(&self) -> (u32, u32) {
@@ -441,7 +459,10 @@ impl Compositor {
         if !self.native() {
             return draw(self);
         }
-        let (x, top, w, h) = crate::bezel::game_rect(self.window, self.sp_frame);
+        let (x, top, w, h) = match self.game_panel {
+            true => (0, 0, self.window.0 as i32, self.window.1 as i32),
+            false => crate::bezel::game_rect(self.window, self.sp_frame),
+        };
         self.game
             .set_fbo_scale(w as f32 / OUT_W as f32, h as f32 / OUT_H as f32);
         let y = self.size.1 as i32 - top - h;

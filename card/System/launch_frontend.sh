@@ -5,6 +5,7 @@ RUN="${AGS_RUN:-/run}"
 LOGS="$SD/Logs"
 SESSION_MAX=65536
 export SLOT_ROOT="$SD"
+export SLOT_RUN="$RUN"
 
 mkdir -p "$LOGS" 2>/dev/null
 for f in slot.log slot.log.1 slot-session.log slot-session.log.1 slot-card.log ags-shutdown-trace.log input-trace.log; do
@@ -33,6 +34,10 @@ if [ -z "$pid" ] || [ ! -d "/proc/$pid" ]; then
 fi
 
 echo "|/bin/sh $SYS/coresave.sh %p %s %e %t" > /proc/sys/kernel/core_pattern 2>/dev/null
+
+for gov in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
+	echo schedutil > "$gov" 2>/dev/null || log "governor: schedutil refused by $gov"
+done
 
 [ -f "$RUN/slotlink.session" ] && sh "$SYS/slotlink.sh" link down > /dev/null 2>&1
 
