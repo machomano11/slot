@@ -222,7 +222,7 @@ pub fn run() {
     let mut drawn = false;
     frontend.drive_emulator();
     let mut pacer = Pacer::new();
-    let (mut frames, mut missed, mut early) = (0u32, 0u32, 0u32);
+    let (mut frames, mut missed, mut early, mut stale) = (0u32, 0u32, 0u32, 0u32);
     #[cfg(feature = "brick")]
     let mut sleep_since: Option<Instant> = None;
     #[cfg(feature = "brick")]
@@ -323,14 +323,12 @@ pub fn run() {
             frontend.stop();
             return;
         }
-        let frame_ready = frontend.step_emulator(pacer.period, STEP_TIMEOUT);
-        #[cfg(not(feature = "brick"))]
-        let _ = frame_ready;
+        let late = frontend.step_emulator(pacer.period, STEP_TIMEOUT);
         frontend.render(&mut compositor, window);
         let swap = Instant::now();
         let work = swap - began;
         #[cfg(feature = "brick")]
-        cpu.sample(frame_ready, work, pacer.period, frontend.audio_underruns());
+        cpu.sample(!late, work, pacer.period, frontend.audio_underruns());
         if let Err(e) = surface.swap() {
             eprintln!("slot: {e}");
             #[cfg(feature = "brick")]
@@ -345,13 +343,14 @@ pub fn run() {
             frames += 1;
             missed += u32::from(dropped);
             early += u32::from(swap_took > pacer.period / 2);
+            stale += u32::from(late);
             if frames == 600 {
                 eprintln!(
-                    "slot: pace: 600 frames, {missed} missed a latch, {early} drawn early, work {:.1} ms, period {:.2} ms",
+                    "slot: pace: 600 frames, {missed} missed a latch, {early} drawn early, {stale} stale, work {:.1} ms, period {:.2} ms",
                     pacer.work.as_secs_f64() * 1e3,
                     pacer.period.as_secs_f64() * 1e3
                 );
-                (frames, missed, early) = (0, 0, 0);
+                (frames, missed, early, stale) = (0, 0, 0, 0);
             }
         }
         if !drawn {
