@@ -356,3 +356,35 @@ unsigned slot_cheevos_console_ws(void) { return RC_CONSOLE_WONDERSWAN; }
 unsigned slot_cheevos_console_scd(void) { return RC_CONSOLE_SEGA_CD; }
 unsigned slot_cheevos_console_32x(void) { return RC_CONSOLE_SEGA_32X; }
 unsigned slot_cheevos_console_ps(void) { return RC_CONSOLE_PLAYSTATION; }
+
+/* Hashing alone, with no client: the hash rc_client would look the file up by. The last
+ * error rcheevos reported goes to `error`. Not thread safe: rcheevos' error hook is global. */
+static char hash_error[256];
+
+static void hash_error_message(const char* message) {
+  snprintf(hash_error, sizeof(hash_error), "%s", message);
+}
+
+int slot_cheevos_hash_file(char hash[33], unsigned console, const char* path, const char** error) {
+  int ok;
+  use_disc_reader();
+  hash_error[0] = '\0';
+  rc_hash_init_error_message_callback(hash_error_message);
+  ok = rc_hash_generate_from_file(hash, console, path);
+  *error = hash_error;
+  return ok;
+}
+
+/* `name` stands in for the path (its extension picks the method), as for a file in a zip. */
+int slot_cheevos_hash_buffer(char hash[33], unsigned console, const char* name, const unsigned char* data,
+                             size_t size, const char** error) {
+  rc_hash_iterator_t iterator;
+  int ok;
+  hash_error[0] = '\0';
+  rc_hash_init_error_message_callback(hash_error_message);
+  rc_hash_initialize_iterator(&iterator, name, data, size);
+  ok = rc_hash_generate(hash, console, &iterator);
+  rc_hash_destroy_iterator(&iterator);
+  *error = hash_error;
+  return ok;
+}
