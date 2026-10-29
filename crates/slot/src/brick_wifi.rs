@@ -704,6 +704,28 @@ struct CloudScreen {
     panel: Option<Arc<crate::cloud::Panel>>,
     drawn: (crate::cloud::Shown, slot_cloud::Moment),
     at: Instant,
+    /// For each game deleted from the server (`drawn.0.gone`), whether to
+    /// delete it here too; kept until picked otherwise.
+    delete: Vec<bool>,
+}
+impl CloudScreen {
+    /// Games deleted from the server wait for an answer, and no full run is
+    /// on its way: the screen asks about them instead of listing systems.
+    fn asking(&self) -> bool {
+        let s = &self.drawn.0;
+        !s.gone.is_empty() && s.running != Some(true) && !s.waiting
+    }
+}
+/// A deleted game's name and system, for the list: `Games/GBA/Name.gba` as
+/// `Name (GBA)`.
+fn gone_name(rel: &str) -> String {
+    let mut parts = rel.rsplit('/');
+    let file = parts.next().unwrap_or(rel);
+    let stem = file.rsplit_once('.').map_or(file, |(s, _)| s);
+    match parts.next() {
+        Some(system) => format!("{stem} ({system})"),
+        None => stem.to_string(),
+    }
 }
 /// A progress bar across the screen, `at` of `of` filled.
 fn bar(p: &mut Painter, y: usize, at: u64, of: u64) {
@@ -887,6 +909,7 @@ impl WifiMenu {
                 panel,
                 drawn: Default::default(),
                 at: Instant::now(),
+                delete: Vec::new(),
             }),
         }
     }
@@ -1157,6 +1180,10 @@ impl WifiMenu {
         let Some(panel) = &c.panel else { return };
         let now = (panel.shown(), panel.tally.read());
         if now != c.drawn && (now.0 != c.drawn.0 || c.at.elapsed() >= Duration::from_millis(250)) {
+            if now.0.gone != c.drawn.0.gone {
+                // Nothing is deleted unless picked.
+                c.delete = vec![false; now.0.gone.len()];
+            }
             c.drawn = now;
             c.at = Instant::now();
             self.dirty = true;
@@ -1166,6 +1193,10 @@ impl WifiMenu {
         let Some(panel) = self.cloud.as_ref().and_then(|c| c.panel.clone()) else {
             return matches!(a, Action::GbaDown(Btn::B));
         };
+        self.poll_cloud();
+        if self.cloud.as_ref().is_some_and(CloudScreen::asking) {
+            return self.cloud_asking(a, &panel);
+        }
         let shown = panel.shown();
         let full = shown.running == Some(true);
         let rows = if full { 1 } else { Platform::ALL.len() + 1 };
@@ -1186,6 +1217,48 @@ impl WifiMenu {
             _ => {}
         }
         self.row = self.row.min(rows - 1);
+        self.poll_cloud();
+        false
+    }
+    /// The list of games deleted from the server: A picks delete or keep for
+    /// one, X for all, and the top row carries out the picks.
+    fn cloud_asking(&mut self, a: Action, panel: &crate::cloud::Panel) -> bool {
+        let Some(c) = &mut self.cloud else {
+            return false;
+        };
+        let rows = c.delete.len() + 1;
+        match a {
+            Action::GbaDown(Btn::B) => return true,
+            Action::GbaDown(Btn::Up) => self.row = (self.row + rows - 1) % rows,
+            Action::GbaDown(Btn::Down) => self.row = (self.row + 1) % rows,
+            Action::GbaDown(Btn::X) => {
+                let all = !c.delete.iter().all(|&d| d);
+                c.delete.iter_mut().for_each(|d| *d = all);
+            }
+            Action::GbaDown(Btn::A) | Action::Insert => match self.row.checked_sub(1) {
+                None if !online() => self.status = "Connect to Wi-Fi first".into(),
+                None => {
+                    let answers = c.drawn.0.gone.iter().zip(&c.delete).map(|(rel, &d)| {
+                        let answer = if d {
+                            slot_cloud::Answer::Delete
+                        } else {
+                            slot_cloud::Answer::Keep
+                        };
+                        (rel.clone(), answer)
+                    });
+                    panel.answer(answers.collect::<Vec<_>>());
+                    self.row = 0;
+                }
+                Some(i) => {
+                    if let Some(d) = c.delete.get_mut(i) {
+                        *d = !*d;
+                    }
+                }
+            },
+            _ => {}
+        }
+        self.row = self.row.min(rows - 1);
+        self.dirty = true;
         self.poll_cloud();
         false
     }
@@ -1466,6 +1539,9 @@ impl WifiMenu {
         let full = shown.running == Some(true);
         let stoppable = full || shown.waiting;
         let line = |p: &mut Painter, y: usize, s: &str| p.text(s, 32, y, 576, 19.0);
+        if c.asking() {
+            return self.render_cloud_asking(c, p);
+        }
         if c.panel.is_some() {
             if self.row == 0 {
                 p.band(110, 38, slot_ui::edge());
@@ -1540,6 +1616,55 @@ impl WifiMenu {
             592,
             20.0,
         );
+        UndoFace {
+            rgba: p.rgba,
+            w: W as u32,
+            h: H as u32,
+        }
+    }
+    fn render_cloud_asking(&self, c: &CloudScreen, mut p: Painter) -> UndoFace {
+        let gone = &c.drawn.0.gone;
+        if self.row == 0 {
+            p.band(110, 38, slot_ui::edge());
+        }
+        let deleting = c.delete.iter().filter(|&&d| d).count();
+        let apply = match deleting {
+            0 => "DONE: KEEP THEM ALL HERE".to_string(),
+            n if n == gone.len() => "DONE: DELETE THEM ALL HERE TOO".to_string(),
+            n => format!("DONE: DELETE {n}, KEEP {}", gone.len() - n),
+        };
+        p.text(&apply, 32, 111, 576, 23.0);
+        let warning = match gone.len() {
+            1 => "1 game was deleted from the cloud. Delete it here too?".to_string(),
+            n => format!("{n} games were deleted from the cloud. Delete them here too?"),
+        };
+        p.text(&warning, 32, 160, 576, 19.0);
+        p.text("Kept games stay on this device only", 32, 190, 576, 17.0);
+        let first = self.row.saturating_sub(1).saturating_sub(4);
+        for (k, rel) in gone.iter().enumerate().skip(first).take(5) {
+            let y = 226 + (k - first) * 38;
+            if self.row == k + 1 {
+                p.band(y, 36, slot_ui::edge());
+            }
+            let pick = if c.delete.get(k) == Some(&true) {
+                "DELETE"
+            } else {
+                "KEEP"
+            };
+            p.text(
+                &format!("[{pick}]  {}", gone_name(rel)),
+                32,
+                y + 2,
+                576,
+                21.0,
+            );
+        }
+        let pick = match self.row.checked_sub(1).map(|i| c.delete.get(i)) {
+            None => "A DONE",
+            Some(Some(true)) => "A KEEP",
+            Some(_) => "A DELETE",
+        };
+        p.text(&format!("B LATER    {pick}    X ALL"), 24, 430, 592, 20.0);
         UndoFace {
             rgba: p.rgba,
             w: W as u32,
@@ -2084,6 +2209,42 @@ mod tests {
         // A is stop while a full run goes, and B leaves the screen.
         assert!(!s.cloud_input(Action::GbaDown(Btn::Up)));
         assert!(s.cloud_input(Action::GbaDown(Btn::B)));
+    }
+    #[test]
+    fn the_cloud_screen_asks_about_games_deleted_from_the_cloud() {
+        let panel: Arc<crate::cloud::Panel> = Arc::default();
+        let mut s = WifiMenu::cloud(Some(panel.clone()));
+        let gone = vec![
+            "Games/GBA/Pokemon - Emerald Version (USA).gba".to_string(),
+            "Games/SNES/Super Metroid (Japan, USA).sfc".to_string(),
+            "Games/PS/Vagrant Story (USA).chd".to_string(),
+        ];
+        panel.show(|p| p.gone = gone.clone());
+        s.poll_cloud();
+        let c = s.cloud.as_ref().unwrap();
+        assert!(c.asking());
+        assert_eq!(c.delete, [false; 3], "nothing deleted unless picked");
+        assert_eq!(gone_name(&gone[1]), "Super Metroid (Japan, USA) (SNES)");
+        // Down to the second game and pick it for deleting.
+        assert!(!s.cloud_asking(Action::GbaDown(Btn::Down), &panel));
+        assert!(!s.cloud_asking(Action::GbaDown(Btn::Down), &panel));
+        assert!(!s.cloud_asking(Action::GbaDown(Btn::A), &panel));
+        assert_eq!(s.cloud.as_ref().unwrap().delete, [false, true, false]);
+        let f = s.render();
+        assert_eq!(f.rgba.len(), W * H * 4);
+        if let Ok(path) = std::env::var("SLOT_CLOUD_PREVIEW") {
+            let path = path.replace(".png", "-deleted.png");
+            let mut e = png::Encoder::new(fs::File::create(path).unwrap(), W as u32, H as u32);
+            e.set_color(png::ColorType::Rgba);
+            e.set_depth(png::BitDepth::Eight);
+            e.write_header().unwrap().write_image_data(&f.rgba).unwrap();
+        }
+        // X picks all, again none; B leaves the choice for later.
+        s.cloud_asking(Action::GbaDown(Btn::X), &panel);
+        assert_eq!(s.cloud.as_ref().unwrap().delete, [true; 3]);
+        s.cloud_asking(Action::GbaDown(Btn::X), &panel);
+        assert_eq!(s.cloud.as_ref().unwrap().delete, [false; 3]);
+        assert!(s.cloud_asking(Action::GbaDown(Btn::B), &panel));
     }
     #[test]
     fn without_an_account_the_cloud_screen_only_goes_back() {

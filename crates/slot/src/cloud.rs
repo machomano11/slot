@@ -6,7 +6,10 @@
 //!
 //! The ROMs in `Games` and their art in `Labels` go only when asked, from
 //! HOME > Cloud Sync, which shows the run's progress through a [`Panel`].
-//! Games that arrive join the game list without a restart.
+//! Games that arrive join the game list without a restart. A game deleted
+//! from the server (on another device, say) isn't deleted here, nor sent
+//! back: the panel lists it and asks whether to delete it here too, or keep
+//! it on this device only. A game deleted here comes back from the server.
 //!
 //! The panel also picks which systems this device syncs: saves, states,
 //! games and art of the others stay on the server. The choice is kept with
@@ -16,6 +19,7 @@
 //! Nothing happens without that file, so a card without it behaves exactly
 //! as before.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -23,7 +27,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use slot_cloud::devices::{self, Device};
-use slot_cloud::{Account, Error, Report, Tally};
+use slot_cloud::{Account, Answer, Card, Error, Report, Tally, GAMES};
 use slot_store::{ini, Platform};
 
 use crate::app::App;
@@ -48,6 +52,8 @@ pub struct Panel {
     refresh: AtomicBool,
     /// Systems switched on or off on the screen, waiting to be saved.
     flips: Mutex<Vec<String>>,
+    /// What to do with games deleted from the server, for the next full run.
+    answers: Mutex<BTreeMap<String, Answer>>,
     shown: Mutex<Shown>,
 }
 
@@ -65,6 +71,9 @@ pub struct Shown {
     pub me: Device,
     /// The other devices on the server, as of the last run.
     pub devices: Vec<Device>,
+    /// Games deleted from the server and still on the card, as of the last
+    /// full run, waiting for an answer.
+    pub gone: Vec<String>,
 }
 
 impl Shown {
@@ -99,6 +108,16 @@ impl Panel {
         }
     }
 
+    /// Answers for games deleted from the server, and a full run to carry
+    /// them out.
+    pub fn answer(&self, answers: impl IntoIterator<Item = (String, Answer)>) {
+        if let Ok(mut a) = self.answers.lock() {
+            a.extend(answers);
+        }
+        self.show(|s| s.gone.clear());
+        self.sync_all();
+    }
+
     /// Asks for a quick run, to see which devices are on the server.
     pub fn refresh(&self) {
         self.refresh.store(true, Ordering::Relaxed);
@@ -110,7 +129,7 @@ impl Panel {
         s
     }
 
-    fn show(&self, f: impl FnOnce(&mut Shown)) {
+    pub(crate) fn show(&self, f: impl FnOnce(&mut Shown)) {
         if let Ok(mut s) = self.shown.lock() {
             f(&mut s);
         }
@@ -145,6 +164,8 @@ struct Job {
     done: Receiver<Finished>,
     /// The game whose files this run leaves alone, if any.
     held: Option<(String, &'static str)>,
+    /// The deleted games this run was told what to do with.
+    answered: Vec<String>,
 }
 
 impl CloudSync {
@@ -275,6 +296,13 @@ impl CloudSync {
             &self.me.systems,
         );
         let panel = self.panel.clone();
+        let answers = self
+            .panel
+            .answers
+            .lock()
+            .map(|a| a.clone())
+            .unwrap_or_default();
+        let answered = answers.keys().cloned().collect();
         let spawned = std::thread::Builder::new()
             .name("slot-cloud".into())
             .spawn(move || {
@@ -286,14 +314,15 @@ impl CloudSync {
                     .map_err(|e| eprintln!("slot: cloud: checking in: {e}"))
                     .ok();
                 let folders: Vec<&str> = folders.iter().map(String::as_str).collect();
-                let result = slot_cloud::sync_counted(
-                    &root,
+                let result = slot_cloud::sync_asking(
+                    &Card(&root),
                     &manifest,
                     &mut remote,
                     &folders,
                     &stop,
                     &holding,
                     &panel.tally,
+                    &answers,
                 );
                 let _ = tx.send((result, seen));
             });
@@ -305,6 +334,7 @@ impl CloudSync {
                     cancel,
                     done,
                     held,
+                    answered,
                 })
             }
             Err(e) => {
@@ -331,6 +361,8 @@ impl CloudSync {
             self.panel.show(|s| s.devices = all);
         }
         let full = job.full;
+        let games = full && job.held.is_none() && self.account.folders(false).contains(&GAMES);
+        let answered = job.answered.clone();
         self.job = None;
         self.panel.show(|s| s.running = None);
         let offline = match &result {
@@ -350,6 +382,14 @@ impl CloudSync {
         match result {
             Ok(mut report) => {
                 self.failing = false;
+                if games && !report.cancelled {
+                    // Whatever was answered has now been done.
+                    if let Ok(mut a) = self.panel.answers.lock() {
+                        a.retain(|rel, _| !answered.contains(rel));
+                    }
+                    let gone = report.gone.clone();
+                    self.panel.show(|s| s.gone = gone);
+                }
                 // A run cut short by a game goes again as soon as it ends.
                 self.next = (!report.cancelled).then(|| Instant::now() + EVERY);
                 if app.take_in_synced(&report.received) {
@@ -483,6 +523,9 @@ fn ended(r: &Report) -> String {
     if !r.no_room.is_empty() {
         out += &format!(", {} didn't fit on the card", r.no_room.len());
     }
+    if r.deleted > 0 {
+        out += &format!(", {} deleted", r.deleted);
+    }
     out
 }
 
@@ -496,6 +539,13 @@ fn summary(r: &Report) -> Option<(String, String)> {
         r.conflicts.len(),
         if r.cancelled { ", cut short" } else { "" }
     );
+    if !r.gone.is_empty() {
+        let detail = match r.gone.len() {
+            1 => "A game was deleted from the cloud: see HOME > Cloud Sync".to_string(),
+            n => format!("{n} games were deleted from the cloud: see HOME > Cloud Sync"),
+        };
+        return Some((TITLE.into(), detail));
+    }
     if let Some((rel, why)) = r.failed.first() {
         let name = rel.rsplit('/').next().unwrap_or(rel);
         let detail = match r.failed.len() {
