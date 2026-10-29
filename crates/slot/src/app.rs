@@ -89,6 +89,9 @@ const BANNER_SLIDE: Millis = 300;
 const BADGE_WAIT: Millis = 1500;
 const HEADPHONES_POLL_MS: Millis = 500;
 
+#[cfg(feature = "brick")]
+const BATTERY_LOW: u8 = 15;
+#[cfg(not(feature = "brick"))]
 const BATTERY_LOW: u8 = 20;
 
 pub const UNDO_GRACE_MS: Millis = 30_000;
@@ -504,6 +507,8 @@ pub struct App {
     #[cfg(feature = "brick")]
     brick_leds: Option<crate::brick_led::BrickLeds>,
     #[cfg(feature = "brick")]
+    brick_led_failed: bool,
+    #[cfg(feature = "brick")]
     brick_mute: Option<bool>,
     #[cfg(feature = "brick")]
     brick_switch_at: Millis,
@@ -738,6 +743,8 @@ impl App {
             last_led: None,
             #[cfg(feature = "brick")]
             brick_leds: None,
+            #[cfg(feature = "brick")]
+            brick_led_failed: false,
             #[cfg(feature = "brick")]
             brick_mute: None,
             #[cfg(feature = "brick")]
@@ -4662,6 +4669,8 @@ impl App {
         match b.charge {
             Charge::Charging => LedState::Charging,
             Charge::Full => LedState::Charged,
+            #[cfg(feature = "brick")]
+            _ if b.percent <= 10 => LedState::VeryLow,
             _ if b.percent <= BATTERY_LOW => LedState::Low,
             _ => LedState::Running,
         }
@@ -4670,6 +4679,20 @@ impl App {
     fn set_led(&mut self, state: LedState) {
         if self.shutting_down() && state != LedState::Off {
             return;
+        }
+        #[cfg(feature = "brick")]
+        if self.last_led != Some(state) || self.brick_led_failed {
+            if let Some(leds) = &mut self.brick_leds {
+                match leds.set_power_state(state) {
+                    Ok(()) => self.brick_led_failed = false,
+                    Err(e) => {
+                        if !self.brick_led_failed {
+                            eprintln!("slot: battery LEDs: {e}");
+                        }
+                        self.brick_led_failed = true;
+                    }
+                }
+            }
         }
         if self.last_led == Some(state) {
             return;
