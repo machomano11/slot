@@ -21,7 +21,7 @@ pub use sfx::Sfx;
 pub use silence::Silence;
 pub use sink::{AudioError, AudioSink};
 pub use stub::StubSink;
-pub use usb::{devices, usb_card};
+pub use usb::devices;
 
 pub const OUTPUT_HZ: u32 = 48_000;
 

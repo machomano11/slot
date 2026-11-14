@@ -194,7 +194,7 @@ Hold <kbd>Y</kbd>
 
 Press both together, or <kbd>SELECT</kbd> + <kbd>VOL+</kbd> or <kbd>VOL&minus;</kbd> to mute.
 
-The speaker and headphones each keep their own volume level and mute status.
+The speaker and headphones each keep their own volume level and mute status. A USB-C audio adapter counts as headphones, and sound moves to it as soon as it is plugged in.
 
 ## The left stick
 

@@ -1,15 +1,7 @@
-pub const CARDS: &str = "/proc/asound/cards";
-
-pub fn usb_card(cards: &str) -> Option<u32> {
-    cards.lines().find_map(|line| {
-        let (index, rest) = line.trim_start().split_once(' ')?;
-        let index = index.parse().ok()?;
-        rest.contains("USB-Audio").then_some(index)
-    })
-}
+use slot_power::{usb_card, SOUND_CARDS};
 
 pub fn present_usb_card() -> Option<u32> {
-    std::fs::read_to_string(CARDS)
+    std::fs::read_to_string(SOUND_CARDS)
         .ok()
         .as_deref()
         .and_then(usb_card)
