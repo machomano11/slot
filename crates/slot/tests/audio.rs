@@ -476,10 +476,10 @@ fn device_xruns_are_counted_until_the_faults_clear() {
 }
 
 #[test]
-fn a_usb_dac_is_tried_before_the_onboard_codec() {
+fn a_usb_dac_replaces_the_onboard_codec() {
     assert_eq!(
         slot::audio::devices(Some(1), &["plug:default"]),
-        ["plughw:1,0", "plug:default"]
+        ["plughw:1,0"]
     );
     assert_eq!(
         slot::audio::devices(None, &["plug:default", "hw:0,0"]),

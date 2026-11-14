@@ -282,7 +282,6 @@ impl Playback {
                             return;
                         }
                         self.release();
-                        self.usb = present_usb_card();
                     }
                 }
                 None => std::thread::sleep(pace.wait(Instant::now())),

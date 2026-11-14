@@ -8,8 +8,8 @@ pub fn present_usb_card() -> Option<u32> {
 }
 
 pub fn devices(usb: Option<u32>, fallback: &[&str]) -> Vec<String> {
-    usb.map(|n| format!("plughw:{n},0"))
-        .into_iter()
-        .chain(fallback.iter().map(|d| d.to_string()))
-        .collect()
+    match usb {
+        Some(n) => vec![format!("plughw:{n},0")],
+        None => fallback.iter().map(|d| d.to_string()).collect(),
+    }
 }
